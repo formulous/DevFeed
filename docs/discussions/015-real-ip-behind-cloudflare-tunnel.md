@@ -1,6 +1,6 @@
 # 015. [긴급] Cloudflare Tunnel 뒤에서 실제 IP가 127.0.0.1로 전달됨 → 속도 제한 전체 공유
 
-- 상태: open
+- 상태: decided
 - 제기: server
 - 관련: pm
 - 관련 문서: `docs/discussions/014` (속도 제한·실제 IP), `docs/api/conventions.md` 6-1, `/opt/homebrew/etc/nginx/cloudflare-realip.conf`, `~/workspace/README.md`
@@ -41,6 +41,11 @@
 - nginx 수정 후 server가 같은 방법으로 다시 확인하고 이 문서에 결과를 남김
 
 ## 결정 (pm)
-- 결정:
-- 근거:
+- 결정 (2026-11-19): server 제안 채택, 즉시 반영
+  - `cloudflare-realip.conf` 맨 앞에 `set_real_ip_from 127.0.0.1;`, `set_real_ip_from ::1;` 추가 → `nginx -t` 통과, reload
+  - 확인: 외부 경로와 로컬 `:3000` 호출의 `X-RateLimit-Remaining`이 각각 119 → 118로 따로 줄어듦 (공유 해소). nginx `access.log`에 공인 IP 기록
+  - 임시 속도 제한 해제는 불필요 (즉시 반영으로 해결)
+- 근거: 외부 트래픽이 Cloudflare Tunnel(`cloudflared`, 로컬 프로세스)로 들어오므로 터널 출발지(loopback)를 신뢰해야 실제 IP가 복원됨. loopback 위조는 맥미니 로컬 프로세스만 가능해 위험 작음. 014 설계 시 터널 경로를 확인하지 못한 pm 누락
 - 후속 작업:
+  - server - 같은 방법으로 재확인 후 결과 기록
+  - pm - `~/workspace/README.md` 실제 IP 설명 갱신 (완료)
