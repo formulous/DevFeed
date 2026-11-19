@@ -28,6 +28,17 @@
 - 요청 1~4와 `DB_DATABASE` 안전장치 동의. DB 생성은 dba 역할 규칙상 사용자 승인 사항이라 사용자에게 확인 요청함
 - `server/.env.test` 작성도 사용자 작업으로 전달함
 
+### dba (1차)
+- 1: `devfeed_test` 생성, 0001~0009 적용 완료 (테이블 15개, `idx_posts_search_filter`·`post_search.feed_categories` 포함)
+- 2: 시드 없음
+- 3: 사용자 결정으로 권한 변경 없음. 서버는 `devfeed`와 같은 계정(root)으로 접속
+- 4: 초기화 스크립트 `db/scripts/test-db-reset.sh` — DB를 지우고 다시 만든 뒤 전체 마이그레이션 적용. `TEST_DB`가 `_test`로 끝나지 않으면 실행 거부. 이후 마이그레이션이 추가되면 이 스크립트로 반영됨
+  ```bash
+  DB_USER=<계정> MYSQL_PWD=<비밀번호> db/scripts/test-db-reset.sh
+  ```
+- e2e 주의: InnoDB FULLTEXT는 **커밋된 행만** 검색됨. 트랜잭션 안에서 글을 넣고 롤백하는 방식의 검색 테스트는 결과 0건이 나옴. 검색 e2e는 커밋 후 검색하고 끝에 삭제할 것
+- 탈퇴 잔존 검사 쿼리는 012 참고 (`db/queries/withdrawal-check.sql`)
+
 ## 결정 (pm)
 - 결정 (2026-11-19): `devfeed_test` 전용 DB 채택 (0001~0009 적용, 시드 없음, 서버 계정 DML 권한, 재생성 스크립트). 사용자 승인 후 dba가 생성
 - 근거: 개발·측정 DB 오염 방지, 002 결정의 탈퇴 e2e 필수 조건 충족에 필요

@@ -7,11 +7,12 @@
 db/
 ├── conf/devfeed.cnf     # MariaDB 서버 설정 (FULLTEXT 토큰 2자, stopword 끔, UTC)
 ├── perf/                # 성능 측정용 대량 시드 생성기, 측정 스크립트
-├── queries/feed.sql     # 피드 기준 쿼리 (EXPLAIN·ANALYZE 검토용, discussion 007)
+├── queries/            # feed.sql(007), personal.sql·withdrawal-check.sql(012) 기준 쿼리
 ├── migrations/          # 0001~0009, -- migrate:up / -- migrate:down
 ├── scripts/migrate.sh   # 컨테이너에 마이그레이션 적용
 ├── scripts/seed.sh      # seeds/*.sql 순서대로 적용 (재실행 안전)
 ├── scripts/perf-seed.sh # 측정 DB(devfeed_perf)에 글 10만·회원 1만 생성
+├── scripts/test-db-reset.sh # e2e DB(devfeed_test) 재생성 + 전체 마이그레이션
 └── seeds/               # 001 소스 36곳, 002 태그 153개·동의어 266개
 ```
 
@@ -39,6 +40,13 @@ db/scripts/seed.sh
 - `002_tags.sql`: 태그 153개(분류 16개), 동의어 266개. 동의어는 태그 간·태그명과 겹치지 않음
   - 오탐 우려로 뺀 짧은 동의어: `CD`, `ES`, `RN`, `PG`, `DW`, `Cursor`, `람다`, `Compose`
 - 모두 `ON DUPLICATE KEY UPDATE`라 여러 번 실행해도 결과 같음
+
+## DB 구성
+| DB | 용도 | 데이터 |
+|---|---|---|
+| `devfeed` | 개발 (server :3000) | 실제 수집 글, 시드 소스·태그 |
+| `devfeed_perf` | 성능 측정 (M2·M3) | 합성 글 10만·회원 1만 |
+| `devfeed_test` | server e2e | 비어 있음, 테스트가 만들고 지움. `test-db-reset.sh`로 초기화 |
 
 ## 성능 측정 DB
 ```bash
