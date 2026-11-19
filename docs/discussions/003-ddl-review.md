@@ -1,6 +1,6 @@
 # 003. DDL 초안 서버 검토 (db/migrations 0001~0006)
 
-- 상태: open
+- 상태: decided
 - 제기: server
 - 관련: dba
 - 관련 문서: `db/migrations/0001~0006`, `db/conf/devfeed.cnf`, `docs/schema/decisions.md`, `docs/discussions/002-server-schema-requirements.md`
@@ -50,9 +50,15 @@
 - 서버 쪽 합의 완료. 남은 결정 없음
 
 ## 결정 (pm)
-- 결정:
-- 근거:
+- 결정 (2026-11-19): DDL `0001~0007` 승인
+  - 1: `sources.next_crawl_at` NOT NULL + 기본값 현재 시각 (dba 반영 완료)
+  - 2: 프로세스 종료로 남은 `RUNNING` 이력은 선점 시 `FAILURE`(`interrupted`)로 정리. F-006 화면에서는 실패로 표시
+  - 3: 재태깅 작업 상태는 서버 메모리 보관, 재시작 시 소실 허용 (관리자 기능이라 재실행으로 충분)
+  - 4: 인기 태그 10분 캐시
+- 근거: server·dba 합의 완료, dba가 컨테이너에서 up → down → up과 핵심 동작(중복 키, bigram 검색, 선점, 커서 EXPLAIN) 검증 완료
 - 후속 작업:
+  - dba - 시드 작성 (소스 30곳+, 태그 사전 100개+) — M1 범위
+  - 사용자 - `server/.env` DB 접속 정보 제공 (server 구현 착수 전 필요)
 
 ### dba (2차)
 - 컨테이너 적용 완료: DB `devfeed` 생성, `devfeed.cnf` 반영, 0001~0007 up → down → up 통과

@@ -1,6 +1,6 @@
 # 001. 화면 기준 API 요구사항 (client → server)
 
-- 상태: open
+- 상태: decided
 - 제기: client
 - 관련: server, pm
 - 관련 문서: `docs/spec/02-features.md`, `docs/spec/03-screens.md`, `client/README.md`
@@ -110,6 +110,12 @@ isBookmarked?: boolean, isRead?: boolean   ← 회원 요청일 때만
 - server 쪽도 합의 완료. 남은 결정 사항 없음 → pm은 결정란에 합의 내용 기록 후 decided 처리해도 됨
 
 ## 결정 (pm)
-- 결정:
-- 근거:
+- 결정 (2026-11-19): client 요구안을 server 수정안과 함께 채택. 최종 규격은 `docs/api/conventions.md`, `docs/api/openapi.yaml` v1(004 승인)을 따름
+  - (2) 리프레시 토큰: `HttpOnly; Secure; SameSite=Strict; Path=/api/auth` 쿠키. dev 한정 `COOKIE_SECURE=false`로 `Secure` 생략 가능 (Safari localhost 대응)
+  - (5) 비회원 식별: 서버 발급 `df_vid` 쿠키
+  - (8) 추천 노출 기록: 응답 시점 서버 기록. 세부는 M5에서 재검토
+  - 기타: 크기 파라미터 `size` 통일, 검색 `page` 최대 50, 하이라이트는 client 처리(`matchedTerms` 없음), 탈퇴 `POST /me/withdraw`, 게스트 허용 API의 만료 토큰은 `401 TOKEN_EXPIRED` 후 client refresh 1회 재시도
+- 근거: client·server 2차까지 합의 완료, 기획 수용 기준(F-012 기록 실패가 이동을 막지 않음, F-022 XSS 방지, F-032 탈퇴)과 충돌 없음
 - 후속 작업:
+  - server - `server/.env.example`에 `COOKIE_SECURE` 키 추가 (구현 시)
+  - client - http 래퍼에 `TOKEN_EXPIRED` refresh 재시도 구현
