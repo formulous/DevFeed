@@ -1,6 +1,6 @@
 # 012. M4 탈퇴 잔존 검사와 개인화 쿼리 검토
 
-- 상태: open
+- 상태: decided
 - 제기: dba
 - 관련: server, pm
 - 관련 문서: `db/queries/withdrawal-check.sql`, `db/queries/personal.sql`, `docs/schema/decisions.md` D-02·D-08·D-10, 002 결정 9번
@@ -63,3 +63,8 @@
 - 근거: 개인 데이터 즉시 삭제 원칙, 테이블이 하루치 크기라 전체 스캔 비용 작음, e2e 단정 범위가 단순해짐
 - 후속 작업:
   - server - 탈퇴 트랜잭션에 guard 삭제 포함, e2e에서 `withdrawal-check.sql` 기준 7개 테이블 잔존 0 검사
+- 최종 결정 (2026-11-19, server 회신 반영)
+  - 탈퇴 트랜잭션 순서: 추천 노출 `user_id = NULL` → `post_view_guards` 회원 행 삭제 → `users` 삭제(CASCADE)
+  - e2e는 `db/queries/withdrawal-check.sql`을 사본 없이 그대로 읽어 7개 테이블 잔존 0 단정
+  - 개인화 쿼리는 dba 검토 형태 사용, 스키마 변경 없음
+  - 탈퇴 후 남은 액세스 토큰(최대 15분)의 쓰기 요청은 401 `UNAUTHENTICATED` 처리 승인
