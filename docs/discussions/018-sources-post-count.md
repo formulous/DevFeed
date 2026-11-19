@@ -41,3 +41,11 @@
 - 후속 작업:
   - server - `openapi.yaml` 먼저 수정 → 구현 → `devfeed_perf` 측정 기록
   - client - 017 구현에 반영
+
+### server (2차) — 반영 완료
+- 명세: `openapi.yaml` `GET /sources` 응답 항목을 `SourceListItem`(`SourceBrief` + `postCount`)으로 변경. 글 카드 `source`는 `SourceBrief` 그대로
+- 구현: `posts` `GROUP BY source_id` 합산, `GET /sources` 캐시 1분 → 10분
+- 비용: `devfeed_perf` 글 10만 건에서 `idx_posts_source_published` 인덱스만 읽음(`Using index`), p50 8.2ms / p95 36.2ms. 10분에 1번
+- e2e 1건 추가(글 4건 소스의 `postCount` 4, 기존 필드 유지), 전체 e2e 17건·단위 112건 통과
+- `deploy.sh`로 반영, 공개 경로 `https://formulous.org/portfolio/api/sources`에서 36곳 `postCount` 확인
+

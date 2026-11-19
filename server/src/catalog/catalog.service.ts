@@ -3,7 +3,7 @@ import { DataSource } from 'typeorm';
 import { PublicTagsQuery } from './catalog.dto';
 import { TagCountsService } from './tag-counts.service';
 
-const SOURCES_TTL_MS = 60 * 1000;
+const SOURCES_TTL_MS = 10 * 60 * 1000;
 
 @Injectable()
 export class CatalogService {
@@ -55,11 +55,23 @@ export class CatalogService {
   }
 
   private async loadSources() {
-    const rows = (await this.dataSource.query(
-      'SELECT id, name, logo_url, source_type FROM sources ORDER BY name, id',
-    )) as { id: number | string; name: string; logo_url: string | null; source_type: string }[];
+    const [rows, counts] = await Promise.all([
+      this.dataSource.query('SELECT id, name, logo_url, source_type FROM sources ORDER BY name, id') as Promise<
+        { id: number | string; name: string; logo_url: string | null; source_type: string }[]
+      >,
+      this.dataSource.query('SELECT source_id, COUNT(*) AS cnt FROM posts GROUP BY source_id') as Promise<
+        { source_id: number | string; cnt: number | string }[]
+      >,
+    ]);
+    const countBySource = new Map(counts.map((c) => [Number(c.source_id), Number(c.cnt)]));
     return {
-      items: rows.map((r) => ({ id: Number(r.id), name: r.name, logoUrl: r.logo_url, type: r.source_type })),
+      items: rows.map((r) => ({
+        id: Number(r.id),
+        name: r.name,
+        logoUrl: r.logo_url,
+        type: r.source_type,
+        postCount: countBySource.get(Number(r.id)) ?? 0,
+      })),
     };
   }
 }
