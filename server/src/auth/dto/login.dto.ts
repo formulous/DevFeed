@@ -3,8 +3,8 @@ import { IsEmail, IsString, Length, MaxLength } from 'class-validator';
 
 export class LoginDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
-  @IsEmail({}, { message: '이메일 형식이 아님' })
   @MaxLength(255, { message: '최대 255자임' })
+  @IsEmail({}, { message: '이메일 형식이 아님' })
   email: string;
 
   @IsString({ message: '문자열이어야 함' })
