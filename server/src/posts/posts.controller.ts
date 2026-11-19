@@ -30,10 +30,10 @@ export class PostsController {
   @HttpCode(204)
   async view(
     @Param('postId', IdParamPipe) postId: number,
-    @Body() _dto: RecordViewDto,
+    @Body() dto: RecordViewDto,
     @Req() req: VisitorRequest,
     @CurrentUser() user?: AuthUser,
   ): Promise<void> {
-    await this.views.record(postId, { userId: user?.id, visitorId: req.visitorId });
+    await this.views.record(postId, { userId: user?.id, visitorId: req.visitorId }, dto.recommendationId);
   }
 }

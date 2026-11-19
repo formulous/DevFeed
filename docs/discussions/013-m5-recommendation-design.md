@@ -147,6 +147,29 @@
   - 무한 스크롤은 화면 끝 400px 전에 다음 페이지를 미리 요청함. 그래서 노출 기록은 실제로 본 카드보다 최대 1페이지(20건) 많을 수 있음 (004에서 허용한 차이). 클릭률 해석 시 참고
   - 관심 태그를 저장하면(설정·온보딩) client가 추천 캐시를 지워 새 스냅샷을 받음
 
+### server (4차) — 구현·검증 결과
+- 구현: `server/src/recommendations/` (점수·다양성·이유 `scoring.ts`, 스냅샷·커서 `snapshot.ts`, 서비스), 클릭은 `POST /posts/{id}/views`(`ViewsService`), 일별 집계→90일 삭제는 일일 정리(`MaintenanceService.recommendationStats`)
+- 결정 반영: 북마크·읽은 글 제외, 20건 미만 시 `COLD_POPULAR` 채움(`fallback=false`), 이유 최대 2개, 같은 소스 최대 2연속(채운 뒤 전체에 적용)
+- e2e (`devfeed_test`, `test/e2e/recommendations.e2e-spec.ts`)
+  - 콜드 스타트: `fallback=true`, 20건, 이유 `POPULAR`, 노출 20행 `COLD_POPULAR`, position 1~20
+  - 개인화: 첫 카드 `INTEREST_TAG`, 읽은 글·북마크 글 제외, 부족분 인기순 채움, 같은 소스 3연속 없음, 다음 페이지는 새 `recommendationId`
+  - 다른 회원이 커서 사용 시 400 `INVALID_CURSOR`
+  - 클릭: 같은 카드 2번 클릭해도 1건, 다른 회원이 같은 `recommendationId`로 보내면 무시
+  - 일별 집계: `TAG_V1` 클릭 1건, `COLD_POPULAR` 노출 집계 확인
+  - 탈퇴 시 노출 행 익명화는 기존 탈퇴 e2e에서 확인
+- 성능 (`devfeed_perf`, 회원 1만, 30회, API 응답 ms)
+
+| 회원 | 최근 30일 읽기 | 첫 페이지 p50 / p95 | 다음 페이지 p50 / p95 |
+|---|---|---|---|
+| 최다 활동 | 150 | 10.4 / 15.4 | 2.3 / 4.7 |
+| 중간 | 42 | 14.5 / 18.9 | 4.0 / 5.1 |
+| 최근 읽기 없음(관심 태그만) | 0 | 16.9 / 18.6 | 5.3 / 6.8 |
+| **전체** | | **14.5 / 18.6** | **4.1 / 5.9** |
+
+- c=10(무작위 회원 10명) 첫 페이지 p50 35ms / p95 52ms. 목표(c=1 p95 300ms) 충족
+- 콜드 스타트 회원은 `devfeed_perf`에 없어 e2e로만 검증함
+- 측정 중 `devfeed_perf`에 노출 행 약 6천 건이 추가됨 (dba 측정용 48만 행과 함께 남겨 둠)
+
 ## 결정 (pm)
 - 결정 (2026-11-19): server 설계안 1~9 채택, pm 보완·dba·client 의견 포함
   - 선호도: 관심 3.0 / 북마크 2.0 × 감쇠 / 읽기 1.0 × 감쇠, 반감기 7일, 최근 30일, 0~1 정규화

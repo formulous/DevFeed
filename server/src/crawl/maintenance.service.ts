@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { DataSource } from 'typeorm';
 import { addDays } from '../common/time/time';
+import { impressionRetentionThreshold, statsRange } from '../recommendations/recommendation-stats';
 
 export const CRAWL_RUN_RETENTION_DAYS = 90;
 export const READ_HISTORY_RETENTION_DAYS = 365;
@@ -24,6 +25,8 @@ export class MaintenanceService {
         addDays(now, -READ_HISTORY_RETENTION_DAYS),
       );
       this.logger.log(`crawl_runs ${runs}건, read_histories ${reads}건 삭제`);
+      const impressions = await this.recommendationStats(now);
+      this.logger.log(`추천 일별 집계 완료, 노출 원본 ${impressions}건 삭제`);
     } catch (error) {
       this.logger.error(`일일 정리 실패: ${(error as Error).stack}`);
     }
@@ -37,6 +40,24 @@ export class MaintenanceService {
     } catch (error) {
       this.logger.error(`시간별 정리 실패: ${(error as Error).stack}`);
     }
+  }
+
+  async recommendationStats(now: Date): Promise<number> {
+    const { from, to } = statsRange(now);
+    await this.dataSource.query(
+      `INSERT INTO recommendation_daily_stats (stat_date, algorithm, impression_count, click_count, request_count)
+       SELECT DATE(shown_at), algorithm, COUNT(*), COUNT(clicked_at), COUNT(DISTINCT request_id)
+         FROM recommendation_impressions
+        WHERE shown_at >= ? AND shown_at < ?
+        GROUP BY DATE(shown_at), algorithm
+       ON DUPLICATE KEY UPDATE impression_count = VALUES(impression_count),
+         click_count = VALUES(click_count), request_count = VALUES(request_count)`,
+      [from, to],
+    );
+    return this.deleteInChunks(
+      'DELETE FROM recommendation_impressions WHERE shown_at < ? LIMIT ?',
+      impressionRetentionThreshold(now),
+    );
   }
 
   deleteOldCrawlRuns(now: Date): Promise<number> {

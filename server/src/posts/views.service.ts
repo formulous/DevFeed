@@ -1,17 +1,25 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { withDeadlockRetry } from '../common/database/deadlock-retry';
 import { isMissingReference } from '../common/database/mysql-errors';
 import { Errors } from '../common/errors/app.exception';
 import { viewerKey } from '../common/visitor/visitor';
+import { uuidToBuffer } from '../recommendations/snapshot';
 
 export const VIEW_DEDUP_HOURS = 24;
 
 @Injectable()
 export class ViewsService {
+  private readonly logger = new Logger(ViewsService.name);
+
   constructor(private readonly dataSource: DataSource) {}
 
-  async record(postId: number, viewer: { userId?: number; visitorId?: string }, now = new Date()): Promise<void> {
+  async record(
+    postId: number,
+    viewer: { userId?: number; visitorId?: string },
+    recommendationId?: string,
+    now = new Date(),
+  ): Promise<void> {
     const [exists] = (await this.dataSource.query('SELECT id FROM posts WHERE id = ?', [postId])) as unknown[];
     if (!exists) throw Errors.notFound('글을 찾을 수 없음');
 
@@ -37,6 +45,16 @@ export class ViewsService {
         .catch((error: unknown) => {
           if (!isMissingReference(error)) throw error;
         });
+    }
+
+    if (recommendationId && viewer.userId !== undefined) {
+      await this.dataSource
+        .query(
+          `UPDATE recommendation_impressions SET clicked_at = COALESCE(clicked_at, ?)
+            WHERE request_id = ? AND post_id = ? AND user_id = ?`,
+          [now, uuidToBuffer(recommendationId), postId, viewer.userId],
+        )
+        .catch((error: Error) => this.logger.error(`추천 클릭 기록 실패: ${error.message}`));
     }
   }
 }
