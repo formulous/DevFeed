@@ -6,20 +6,49 @@ import { mockPosts, mockSources, mockTags } from './fixtures';
 
 const MOCK_TOKEN = 'mock-access-token';
 
+export const TAKEN_EMAIL = 'taken@devfeed.dev';
+const BOOKMARK_LIMIT = 5000;
+
 const state = {
   loggedIn: false,
   me: null as Me | null,
-  bookmarks: new Set<number>(),
-  reads: new Set<number>(),
+  password: '',
+  bookmarks: new Map<number, string>(),
+  reads: new Map<number, string>(),
+  interestTags: [] as number[],
+  recClicks: [] as { postId: number; recommendationId: string }[],
 };
+
+export const mockState = state;
 
 export function resetMockState() {
   state.loggedIn = false;
   state.me = null;
+  state.password = '';
   state.bookmarks.clear();
   state.reads.clear();
+  state.interestTags = [];
+  state.recClicks = [];
   resetAdminState();
 }
+
+function startSession(me: Me, password: string, status = 200) {
+  state.loggedIn = true;
+  state.me = me;
+  state.password = password;
+  return HttpResponse.json({ accessToken: MOCK_TOKEN, expiresIn: 900, user: me }, { status });
+}
+
+function cursorPage<T>(list: T[], url: URL) {
+  const size = Math.min(Number(url.searchParams.get('size') ?? 20), 50);
+  const cursor = url.searchParams.get('cursor');
+  const offset = cursor ? Number(atob(cursor)) : 0;
+  const next = offset + size;
+  return { items: list.slice(offset, next), nextCursor: next < list.length ? btoa(String(next)) : null };
+}
+
+const postById = (id: number) => mockPosts.find((p) => p.id === id);
+const byDateDesc = (m: Map<number, string>) => [...m.entries()].sort((a, b) => b[1].localeCompare(a[1]));
 
 function adminGuard(request: Request) {
   if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요함');
@@ -124,14 +153,21 @@ export const handlers = [
   http.get('*/api/tags', () => HttpResponse.json({ items: mockTags })),
   http.get('*/api/sources', () => HttpResponse.json({ items: mockSources })),
 
-  http.post('*/api/posts/:id/views', ({ request, params }) => {
-    if (isMember(request)) state.reads.add(Number(params.id));
+  http.post('*/api/posts/:id/views', async ({ request, params }) => {
+    if (isMember(request)) state.reads.set(Number(params.id), new Date().toISOString());
+    const body = (await request.json().catch(() => null)) as { recommendationId?: string } | null;
+    if (body?.recommendationId) state.recClicks.push({ postId: Number(params.id), recommendationId: body.recommendationId });
     return new HttpResponse(null, { status: 204 });
   }),
 
   http.put('*/api/me/bookmarks/:id', ({ request, params }) => {
     if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요함');
-    state.bookmarks.add(Number(params.id));
+    const id = Number(params.id);
+    if (!postById(id)) return error(404, 'NOT_FOUND', '글을 찾을 수 없음');
+    if (!state.bookmarks.has(id) && state.bookmarks.size >= BOOKMARK_LIMIT) {
+      return error(422, 'BOOKMARK_LIMIT_EXCEEDED', '북마크는 최대 5,000개');
+    }
+    if (!state.bookmarks.has(id)) state.bookmarks.set(id, new Date().toISOString());
     return new HttpResponse(null, { status: 204 });
   }),
   http.delete('*/api/me/bookmarks/:id', ({ request, params }) => {
@@ -149,17 +185,18 @@ export const handlers = [
       );
     }
     if (!body.email || body.password === 'wrong') return error(401, 'INVALID_CREDENTIALS', '이메일 또는 비밀번호가 맞지 않음');
-    state.loggedIn = true;
-    state.me = {
-      id: 1,
-      email: body.email,
-      nickname: body.email.split('@')[0],
-      role: body.email.startsWith('admin') ? 'ADMIN' : 'USER',
-      hasInterestTags: false,
-      onboardingCompleted: body.email.startsWith('admin'),
-      createdAt: new Date().toISOString(),
-    };
-    return HttpResponse.json({ accessToken: MOCK_TOKEN, expiresIn: 900, user: state.me });
+    return startSession(
+      {
+        id: 1,
+        email: body.email,
+        nickname: body.email.split('@')[0],
+        role: body.email.startsWith('admin') ? 'ADMIN' : 'USER',
+        hasInterestTags: false,
+        onboardingCompleted: body.email.startsWith('admin'),
+        createdAt: new Date().toISOString(),
+      },
+      body.password,
+    );
   }),
   http.post('*/api/auth/refresh', () =>
     state.loggedIn && state.me
@@ -174,5 +211,102 @@ export const handlers = [
   http.get('*/api/me', ({ request }) =>
     isMember(request) && state.me ? HttpResponse.json(state.me) : error(401, 'UNAUTHENTICATED', '로그인이 필요함'),
   ),
+  http.post('*/api/auth/signup', async ({ request }) => {
+    const body = (await request.json()) as { email: string; password: string; nickname: string };
+    if (body.email === TAKEN_EMAIL) return error(409, 'EMAIL_DUPLICATED', '이미 가입된 이메일임');
+    return startSession(
+      {
+        id: 2,
+        email: body.email,
+        nickname: body.nickname,
+        role: 'USER',
+        hasInterestTags: false,
+        onboardingCompleted: false,
+        createdAt: new Date().toISOString(),
+      },
+      body.password,
+      201,
+    );
+  }),
+  http.patch('*/api/me', async ({ request }) => {
+    if (!isMember(request) || !state.me) return error(401, 'UNAUTHENTICATED', '로그인이 필요함');
+    const { nickname } = (await request.json()) as { nickname: string };
+    state.me = { ...state.me, nickname };
+    return HttpResponse.json(state.me);
+  }),
+  http.post('*/api/me/withdraw', async ({ request }) => {
+    if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요함');
+    const { password } = (await request.json()) as { password: string };
+    if (password !== state.password) return error(403, 'PASSWORD_MISMATCH', '비밀번호가 맞지 않음');
+    resetMockState();
+    return new HttpResponse(null, { status: 204 });
+  }),
+  http.post('*/api/me/onboarding/complete', ({ request }) => {
+    if (!isMember(request) || !state.me) return error(401, 'UNAUTHENTICATED', '로그인이 필요함');
+    state.me = { ...state.me, onboardingCompleted: true };
+    return new HttpResponse(null, { status: 204 });
+  }),
+  http.get('*/api/me/interest-tags', ({ request }) => {
+    if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요함');
+    return HttpResponse.json({ items: state.interestTags.map((id) => ({ id, name: mockTags.find((t) => t.id === id)!.name })) });
+  }),
+  http.put('*/api/me/interest-tags', async ({ request }) => {
+    if (!isMember(request) || !state.me) return error(401, 'UNAUTHENTICATED', '로그인이 필요함');
+    const { tagIds } = (await request.json()) as { tagIds: number[] };
+    if (tagIds.length < 3 || tagIds.length > 10 || tagIds.some((id) => !mockTags.some((t) => t.id === id))) {
+      return HttpResponse.json(
+        { code: 'VALIDATION_FAILED', message: '관심 태그는 3~10개', fieldErrors: [{ field: 'tagIds', message: '3~10개' }] },
+        { status: 400 },
+      );
+    }
+    state.interestTags = tagIds;
+    state.me = { ...state.me, hasInterestTags: true, onboardingCompleted: true };
+    return HttpResponse.json({ items: tagIds.map((id) => ({ id, name: mockTags.find((t) => t.id === id)!.name })) });
+  }),
+  http.get('*/api/me/bookmarks', ({ request }) => {
+    if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요함');
+    const url = new URL(request.url);
+    const tagIds = idList(url.searchParams.get('tagIds'));
+    const list = byDateDesc(state.bookmarks)
+      .map(([id, at]) => ({ ...decorate(postById(id)!, true), bookmarkedAt: at }))
+      .filter((p) => tagIds.length === 0 || p.tags.some((t) => tagIds.includes(t.id)));
+    return HttpResponse.json({ ...cursorPage(list, url), total: state.bookmarks.size });
+  }),
+  http.get('*/api/me/history', ({ request }) => {
+    if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요함');
+    const list = byDateDesc(state.reads).map(([id, at]) => ({ ...decorate(postById(id)!, true), readAt: at }));
+    return HttpResponse.json(cursorPage(list, new URL(request.url)));
+  }),
+  http.delete('*/api/me/history/:id', ({ request, params }) => {
+    if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요함');
+    state.reads.delete(Number(params.id));
+    return new HttpResponse(null, { status: 204 });
+  }),
+  http.delete('*/api/me/history', ({ request }) => {
+    if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요함');
+    state.reads.clear();
+    return new HttpResponse(null, { status: 204 });
+  }),
+  http.get('*/api/recommendations', ({ request }) => {
+    if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요함');
+    const url = new URL(request.url);
+    const cursor = url.searchParams.get('cursor');
+    if (cursor === 'expired') return error(400, 'INVALID_CURSOR', '커서 값이 올바르지 않음');
+    const fallback = state.interestTags.length === 0 && state.bookmarks.size === 0 && state.reads.size === 0;
+    const interestNames = new Map(state.interestTags.map((id) => [id, mockTags.find((t) => t.id === id)!.name]));
+    const candidates = mockPosts
+      .filter((p) => !state.reads.has(p.id))
+      .map((p) => {
+        const matched = p.tags.filter((t) => interestNames.has(t.id));
+        const reasons = fallback || matched.length === 0
+          ? [{ type: 'POPULAR' as const }]
+          : matched.slice(0, 2).map((t) => ({ type: 'INTEREST_TAG' as const, tagName: t.name }));
+        return { post: { ...decorate(p, true), reasons }, score: matched.length };
+      })
+      .filter((c) => fallback || c.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map((c) => c.post);
+    return HttpResponse.json({ ...cursorPage(candidates, url), recommendationId: crypto.randomUUID(), fallback });
+  }),
   ...adminHandlers(adminGuard),
 ];

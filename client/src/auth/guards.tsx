@@ -10,10 +10,11 @@ export function safeRedirect(value: string | null) {
 }
 
 export function RequireAuth({ children }: { children: ReactNode }) {
-  const { status } = useAuth();
+  const { status, signedOutByUser } = useAuth();
   const location = useLocation();
   if (status === 'loading') return <FullPageSpinner />;
   if (status === 'guest') {
+    if (signedOutByUser) return <Navigate to="/" replace />;
     const redirect = encodeURIComponent(location.pathname + location.search);
     return <Navigate to={`/login?redirect=${redirect}`} replace />;
   }
@@ -34,9 +35,10 @@ export function GuestOnly({ children }: { children: ReactNode }) {
   const [params] = useSearchParams();
   if (status === 'loading') return <FullPageSpinner />;
   if (status === 'member') {
-    const target = safeRedirect(params.get('redirect'));
+    const raw = params.get('redirect');
+    const target = safeRedirect(raw);
     if (me && !me.onboardingCompleted) {
-      return <Navigate to={`/onboarding/tags?redirect=${encodeURIComponent(target)}`} replace />;
+      return <Navigate to={raw ? `/onboarding/tags?redirect=${encodeURIComponent(target)}` : '/onboarding/tags'} replace />;
     }
     return <Navigate to={target} replace />;
   }

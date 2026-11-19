@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { AuthProvider } from '@/auth/AuthProvider';
 import { LoginPromptProvider } from '@/auth/LoginPromptProvider';
+import { ToastProvider } from '@/components/common/Toast';
 
 export function createQueryClient() {
   return new QueryClient({
@@ -16,7 +17,9 @@ export function Providers({ children, client }: { children: ReactNode; client?: 
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <LoginPromptProvider>{children}</LoginPromptProvider>
+        <ToastProvider>
+          <LoginPromptProvider>{children}</LoginPromptProvider>
+        </ToastProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

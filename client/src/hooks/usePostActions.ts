@@ -3,6 +3,8 @@ import { deleteBookmark, putBookmark, recordView } from '@/api/posts';
 import type { CursorPage, PostSummary } from '@/api/types';
 import { useAuth } from '@/auth/AuthProvider';
 import { useLoginPrompt } from '@/auth/LoginPromptProvider';
+import { ApiError } from '@/api/http';
+import { useToast } from '@/components/common/Toast';
 
 export const POSTS_KEY = ['posts'] as const;
 
@@ -25,6 +27,7 @@ export function useToggleBookmark() {
   const client = useQueryClient();
   const { status } = useAuth();
   const { openLoginPrompt } = useLoginPrompt();
+  const toast = useToast();
 
   const mutation = useMutation({
     mutationFn: ({ postId, next }: { postId: number; next: boolean }) =>
@@ -33,8 +36,17 @@ export function useToggleBookmark() {
       await client.cancelQueries({ queryKey: POSTS_KEY });
       patchPost(client, postId, { isBookmarked: next });
     },
-    onError: (_error, { postId, next }) => {
+    onError: (error, { postId, next }) => {
       patchPost(client, postId, { isBookmarked: !next });
+      toast(
+        error instanceof ApiError && error.code === 'BOOKMARK_LIMIT_EXCEEDED'
+          ? '북마크는 최대 5,000개까지 저장할 수 있음'
+          : '북마크를 저장하지 못했음',
+        'error',
+      );
+    },
+    onSettled: () => {
+      client.invalidateQueries({ queryKey: [...POSTS_KEY, 'bookmarks'], refetchType: 'inactive' });
     },
   });
 
@@ -52,6 +64,8 @@ export function useOpenPost() {
   const { status } = useAuth();
   return (post: PostSummary, recommendationId?: string) => {
     recordView(post.id, recommendationId);
-    if (status === 'member' && !post.isRead) patchPost(client, post.id, { isRead: true });
+    if (status !== 'member') return;
+    if (!post.isRead) patchPost(client, post.id, { isRead: true });
+    client.invalidateQueries({ queryKey: [...POSTS_KEY, 'history'], refetchType: 'inactive' });
   };
 }

@@ -167,3 +167,37 @@ export interface Job {
   finishedAt: string | null;
   errorMessage: string | null;
 }
+
+export interface BookmarkItem extends PostSummary {
+  bookmarkedAt: string;
+}
+
+export interface BookmarkPage extends CursorPage<BookmarkItem> {
+  total: number;
+}
+
+export interface HistoryItem extends PostSummary {
+  readAt: string;
+}
+
+export interface SignupInput {
+  email: string;
+  password: string;
+  nickname: string;
+}
+
+export type ReasonType = 'INTEREST_TAG' | 'READ_HISTORY' | 'BOOKMARK' | 'POPULAR';
+
+export interface Reason {
+  type: ReasonType;
+  tagName?: string;
+}
+
+export interface RecommendedPost extends PostSummary {
+  reasons: Reason[];
+}
+
+export interface RecommendationPage extends CursorPage<RecommendedPost> {
+  recommendationId: string;
+  fallback: boolean;
+}

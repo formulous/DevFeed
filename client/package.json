@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "tsc -p tsconfig.json && vite build",
+    "build": "tsc -p tsconfig.json && vite build && node scripts/check-build.mjs dist",
     "preview": "vite preview --host 0.0.0.0",
     "test": "vitest run",
-    "build:web": "tsc -p tsconfig.json && VITE_BASE=/portfolio/ VITE_API_MOCK=false vite build --outDir dist-web"
+    "build:web": "tsc -p tsconfig.json && VITE_BASE=/portfolio/ VITE_API_MOCK=false vite build --outDir dist-web && node scripts/check-build.mjs dist-web",
+    "capture": "node scripts/capture.mjs"
   },
   "msw": {
     "workerDirectory": [
@@ -35,6 +36,7 @@
     "autoprefixer": "^10.6.2",
     "happy-dom": "^21.0.4",
     "msw": "^2.15.0",
+    "playwright": "^1.65.1",
     "postcss": "^8.5.33",
     "tailwindcss": "^3.4.19",
     "typescript": "~5.9",

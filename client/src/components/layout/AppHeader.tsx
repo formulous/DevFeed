@@ -64,7 +64,7 @@ function ProfileMenu() {
   }
   return (
     <details className="relative shrink-0">
-      <summary className="cursor-pointer list-none text-sm font-medium">{me?.nickname} ▾</summary>
+      <summary className="max-w-[8rem] cursor-pointer list-none truncate text-sm font-medium">{me?.nickname} ▾</summary>
       <ul className="absolute right-0 z-20 mt-2 w-36 rounded-lg border border-line bg-surface py-1 text-sm shadow-lg">
         <li><Link className="block px-3 py-2 hover:bg-slate-50" to="/me/bookmarks">북마크</Link></li>
         <li><Link className="block px-3 py-2 hover:bg-slate-50" to="/me/history">읽은 기록</Link></li>
@@ -90,7 +90,7 @@ export function AppHeader() {
           DevFeed
         </Link>
         <SearchBox />
-        <div className="ml-auto">
+        <div className="ml-auto shrink-0 whitespace-nowrap">
           <ProfileMenu />
         </div>
       </div>

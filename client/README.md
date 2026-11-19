@@ -1,7 +1,7 @@
 # DevFeed client
 
 - 담당: `client`
-- 상태: M3 진행 중 (2026-11-19). S-01 홈 피드, S-03 인기 글, S-04 검색, S-05 로그인, A-01~A-04 관리자 화면 동작. 나머지 화면은 자리표시 페이지
+- 상태: M6 진행 중 (2026-11-19). S-01 홈 피드, S-03 인기 글, S-04 검색, S-05 로그인, S-06 가입, S-07 온보딩, S-08 북마크, S-09 읽은 기록, S-10 설정·탈퇴, S-02 추천(M5), A-01~A-04 관리자 화면 동작
 - 검증 환경: Node 24.22.3
 - API 타입·mock은 `docs/api/openapi.yaml` v1(004에서 승인)과 `docs/api/conventions.md` 기준. 현재 구현 범위(posts, tags, sources, auth, me, bookmarks, views)만 반영
 - 기준 문서: `docs/spec/02-features.md`, `docs/spec/03-screens.md`
@@ -62,12 +62,13 @@ client/src/
   main.tsx            dev에서 MSW worker 시작 후 렌더링
   App.tsx             라우트 정의 (관리자는 lazy 청크)
   Providers.tsx       QueryClient → AuthProvider → LoginPromptProvider
-  api/                http.ts(fetch 래퍼·TOKEN_EXPIRED 재시도), types.ts, posts.ts, search.ts, auth.ts, admin.ts
+  api/                http.ts(fetch 래퍼·TOKEN_EXPIRED 재시도), types.ts, posts.ts, search.ts, recommend.ts, auth.ts, me.ts, admin.ts
   auth/               AuthProvider.tsx, LoginPromptProvider.tsx, guards.tsx(RequireAuth·RequireAdmin·GuestOnly)
-  components/         layout/(AppHeader·AppLayout·AuthLayout), post/(PostCard·Skeleton), common/(Modal·ConfirmModal·FieldError·Chip·Highlight·Pagination·EmptyState·ErrorState), filters/CheckList(홈·검색 사이드바 공용)
-  features/           feed/(HomePage·FeedSidebar·ActiveFilterChips·queries), popular/PopularPage, search/(SearchPage·SearchSidebar), auth/LoginPage,
+  components/         layout/(AppHeader·AppLayout·AuthLayout), post/(PostCard·Skeleton), common/(Modal·ConfirmModal·Toast·FieldError·Chip·Highlight·Pagination·EmptyState·ErrorState), filters/CheckList(홈·검색 사이드바 공용)
+  features/           feed/(HomePage·FeedSidebar·ActiveFilterChips·queries), popular/PopularPage, recommend/(ForYouPage·reasons), search/(SearchPage·SearchSidebar), auth/(LoginPage·SignupPage),
+                      me/(OnboardingPage·TagPicker·BookmarksPage·HistoryPage·SettingsPage·queries),
                       admin/(AdminRoutes·AdminDashboardPage·SourceDetailPage·SourceFormPage·TagDictionaryPage·TagFormModal·StatusBadge·queries),
-                      common/(Placeholder·NotFound)
+                      common/NotFound
   hooks/              useFeedFilters(URL ↔ 필터), useInfiniteScroll, usePostActions(북마크 낙관적 토글·조회 기록), useSearchState(URL ↔ 검색 상태), useDebouncedValue
   lib/                highlight.ts, time.ts, format.ts, errors.ts(ApiError → 필드 오류 맵), cn.ts
   mocks/              fixtures.ts, handlers.ts, adminFixtures.ts, adminHandlers.ts, browser.ts, node.ts
@@ -108,6 +109,25 @@ App
 - 순위 1~20, 카드 하단에 조회수. 상위 3위는 강조색
 - 조회수 1 이상인 글만 순위에 오름 (`docs/discussions/008` 결정). 결과가 없으면 빈 화면 + 최신 피드(S-01) 링크
 - 북마크·읽음 즉시 반영은 무한 스크롤 캐시(`pages`)와 단일 목록 캐시(`items`) 모두 처리 (`hooks/usePostActions.ts`)
+
+## 추천 피드 (S-02, M5)
+- 상단: "나를 위한 추천" + 관심 태그 + [편집](설정). 관심 태그가 없으면 [관심 태그 고르기] → `/onboarding/tags?redirect=/for-you`
+- `fallback=true`면 안내 배너 + 온보딩 이동 버튼. 후보 부족으로 섞인 `POPULAR` 카드는 카드별 이유로만 구분 (`docs/discussions/013`)
+- 카드 위 "추천 이유" 한 줄. 이유 구조(`Reason`)를 client가 문구로 바꿈 (`features/recommend/reasons.ts`)
+- 무한 스크롤. 카드 클릭 시 그 카드가 실린 페이지의 `recommendationId`를 조회 기록 본문에 전송 (클릭률)
+- 다음 페이지가 `INVALID_CURSOR`(스냅샷 10분 만료·서버 재시작)면 추천 쿼리를 초기화해 첫 페이지부터 다시 받고 토스트 안내
+- 관심 태그를 저장하면(온보딩·설정) 추천 캐시를 지워 새 스냅샷을 받음
+- 결과가 없으면 빈 화면 + 최신 피드 링크
+
+## 회원·개인화 (S-06~S-10, M4)
+- 가입: 이메일·비밀번호(8~64자, 영문·숫자 포함, 공백·한글 불가)·확인·닉네임(2~20자). 클라이언트 검증 + 서버 `fieldErrors`, `EMAIL_DUPLICATED`는 이메일 필드 아래 표시. 가입 즉시 로그인 → 온보딩
+- 온보딩: 분류 탭(카테고리 null은 "기타")·검색·태그 칩, 3~10개. 완료(`PUT /me/interest-tags`) 또는 건너뛰기(`POST /me/onboarding/complete`) 후 `redirect` 또는 `/for-you`
+- 북마크: 총 건수(`total`), 태그 필터(`?tagId=`), 무한 스크롤, 카드 하단 저장일. 다른 화면에서 북마크를 바꾸면 비활성 상태인 북마크 목록 캐시만 무효화 (보고 있는 목록에선 해제한 글이 남아 다시 누를 수 있음)
+- 북마크 실패는 되돌리고 토스트로 안내 (`BOOKMARK_LIMIT_EXCEEDED`는 5,000개 안내)
+- 읽은 기록: 로컬 날짜별 묶음, 개별 삭제, 전체 삭제(확인 모달). 원문을 열면 기록 캐시 무효화
+- 설정: 닉네임 변경(헤더에 즉시 반영), 관심 태그 칩 ✕(3개면 비활성 + "최소 3개 필요")·추가 모달, 로그아웃, 탈퇴(삭제 데이터 안내 + 비밀번호 재입력, `PASSWORD_MISMATCH` 안내)
+- 직접 로그아웃·탈퇴하면 회원 화면에 있어도 `/login`이 아니라 홈으로 이동 (`signedOutByUser`). 토큰 만료로 세션을 잃은 경우는 기존대로 `/login?redirect=`
+- `Modal`은 `onClose`가 바뀌어도 포커스를 다시 옮기지 않음 (입력 중 부모가 다시 렌더링될 때 두 번째 글자부터 입력이 사라지던 문제 수정)
 
 ## 검색 (S-04, M3)
 - 검색어·태그·소스·기간·정렬·페이지가 모두 URL 쿼리. 기본값(`period=ALL`, `sort=RELEVANCE`, `page=1`)은 URL에서 뺌
@@ -156,8 +176,9 @@ App
 ```bash
 npm install
 npm run dev        # http://localhost:5175, MSW mock 사용
-npm run build
+npm run build      # vite build + 빌드 결과 mock 검사(scripts/check-build.mjs)
 npm test
+npm run capture    # 반응형 점검·README용 스크린샷 (Playwright, 최초 1회 npx playwright install chromium)
 ```
 - dev 기본은 MSW mock. 실제 서버에 붙이려면 `VITE_API_MOCK=false npm run dev` (Vite proxy `/api` → 기본 `http://localhost:3000`)
   - proxy 대상은 `VITE_API_TARGET`으로 바꿈. 예: `VITE_API_MOCK=false VITE_API_TARGET=http://localhost:3100 npm run dev` (포트 결정은 `docs/discussions/005` 4번, 사용자 결정 대기)
@@ -208,6 +229,26 @@ npm test
   - 시드 소스 `logoUrl`이 전부 null이라 카드 로고 자리를 빈 칸 대신 생략하도록 바꿈
 - 브라우저 화면 확인은 못 함 (이 세션에서 브라우저 도구 사용 불가)
 
+## 출시 점검 (M6, `docs/discussions/014`)
+- 프로덕션 빌드 mock 차단
+  - mock 시작 코드는 `import.meta.env.DEV`에서만 동적 import → 번들에서 빠짐
+  - `public/mockServiceWorker.js`는 빌드 결과에서 지움 (`vite.config.ts` `drop-mock-worker` 플러그인)
+  - `build`·`build:web` 마지막에 `scripts/check-build.mjs`가 워커 파일·mock 코드 문자열(`setupWorker` 등)이 없는지 검사, 있으면 실패
+- 전역 에러 화면: `AppLayout`·`AuthLayout`의 `Outlet`을 `ErrorBoundary`로 감쌈 (헤더는 유지). 경로가 바뀌면 초기화
+  - 재배포 직후 lazy 청크(관리자) 로드 실패면 1회 자동 새로고침 (`sessionStorage` 플래그로 무한 반복 방지), 그래도 실패하면 "새 버전이 배포됐음" 안내
+- 화면별 `<title>`: `components/layout/RouteTitle.tsx`의 경로 표 한 곳에서 관리 (예: "검색: 카프카 · DevFeed")
+- 반응형 점검: `npm run capture`가 dev 서버(MSW mock)를 띄워 14개 화면 × 360·768·1280px를 찍음
+  - 결과: `screenshots/{폭}/{화면}.png`(전체), `.top.png`(첫 화면), `screenshots/overview-{폭}.png`(폭별 모음). git 제외
+  - 가로 넘침(`scrollWidth > clientWidth`)을 자동 검사해 출력
+  - 외부 이미지 요청은 막아서 결과가 매번 같음
+  - README용 4장(S-01·S-02·S-04·A-01, 1280px 첫 화면)은 `docs/screens/`에 복사 → 커밋
+- 반응형 점검 결과 (2026-11-19): 14개 화면 × 3폭 모두 가로 넘침 없음
+  | 발견 | 폭 | 조치 |
+  |---|---|---|
+  | 헤더 "로그인"이 세로로 한 글자씩 접힘 | 360 | 헤더 오른쪽 영역 `shrink-0 whitespace-nowrap`, 닉네임은 8rem에서 말줄임 |
+  | S-02 제목 옆 "관심 태그:" 라벨이 따로 떨어짐 | 360 | 좁은 폭에서 제목을 한 줄 전체로, 관심 태그는 다음 줄 |
+  - 768px은 사이드바가 "필터" 버튼으로 접힘(의도), 관리자 표·수집 이력·태그 사전 표는 360px에서 표 안에서만 가로 스크롤(의도)
+
 ## 하위 경로 배포 (외부 확인용)
 - `https://formulous.org/portfolio/` 에서 실서버 연동 빌드를 확인함 (`docs/discussions/009-external-preview-formulous.md`)
 - `npm run build:web` → `dist-web/` (`VITE_BASE=/portfolio/`, mock 끔). `dist-web/`는 git 제외
@@ -217,14 +258,54 @@ npm test
   - API: `apiUrl`이 `${BASE_URL}api` 기준 → `/portfolio/api/...` (조회 기록 keepalive 포함)
 - nginx 설정은 pm 담당. `/portfolio/api/` → `127.0.0.1:3000/api/` 프록시, 리프레시 쿠키 경로 변환
 
+## 실서버 확인 (M5 추천)
+- 2026-11-19 `:3000`, 확인용 계정 가입 → 확인 → 탈퇴
+  | 항목 | 결과 |
+  |---|---|
+  | 비로그인 | 401 `UNAUTHENTICATED` → client는 `RequireAuth`로 로그인 이동 |
+  | 콜드 스타트 | `fallback=true`, 이유 `POPULAR` → 안내 배너 표시 조건과 일치 |
+  | 관심 태그 3개 저장 후 | `fallback=false`, 이유 `INTEREST_TAG`(+`tagName`)·`POPULAR`(후보 부족 채움) 혼합, 이유 최대 1~2개 |
+  | 다양성 | 같은 소스 최대 연속 2개 |
+  | 후보 제외 | 응답 카드 모두 `isBookmarked`·`isRead` false |
+  | 페이지네이션 | `size=5`로 4페이지 20건, 중복 없음, 페이지마다 새 `recommendationId`, 마지막 `nextCursor=null` |
+  | 잘못된 커서 | 400 `INVALID_CURSOR` → client는 첫 페이지부터 재요청 |
+  | 클릭 | `POST /posts/{id}/views { recommendationId }` 204, 다음 스냅샷에서 해당 글 제외(읽음) |
+- 화면 동작(배너·이유 문구·재요청 토스트·클릭 시 ID 전송)은 mock 테스트로 확인. 브라우저 확인은 `build:web` 후 formulous
+
+## 실서버 확인 (M4 회원)
+- 2026-11-19 `:3000`, 확인용 계정 가입 → 확인 → 탈퇴 (데이터 미잔존)
+  | 항목 | 결과 |
+  |---|---|
+  | 가입 | 201 `AuthResponse`(`onboardingCompleted=false`), 입력 오류 400 `fieldErrors`(email·password·nickname), 중복 409 `EMAIL_DUPLICATED` |
+  | 관심 태그 | 2개 저장 400 `fieldErrors.tagIds`, 3개 저장 후 `/me`에서 `hasInterestTags`·`onboardingCompleted` true |
+  | 온보딩 완료 | 204 |
+  | 북마크 | PUT 멱등 204, 목록 `total`·`bookmarkedAt`·`isBookmarked`, DELETE 멱등 204 |
+  | 읽은 기록 | 조회 기록 후 목록에 `readAt`, 개별 삭제·전체 삭제 204 |
+  | 닉네임 | 1자 400 `fieldErrors.nickname`, 변경 200 |
+  | 탈퇴 | 틀린 비밀번호 403 `PASSWORD_MISMATCH`, 성공 204 → 기존 토큰 `/me` 401, 같은 계정 로그인 401 |
+- 서버 비밀번호 규칙("공백·한글 불가")을 client 검증에도 맞춤
+
+## 실서버 확인 (M3 검색)
+- 2026-11-19, 개발 서버 `:3000`(글 약 2,400건)과 성능 측정 서버 `:3100`(`devfeed_perf`, 10만 건) 모두 대조
+  | 항목 | `:3000` | `:3100` |
+  |---|---|---|
+  | "개발" 건수 | 412건, `totalCapped=false` | 1,000건, `totalCapped=true` → "1,000건 이상" |
+  | 50페이지 | 0건 (412건이라 정상) | 20건 |
+  | 태그 필터 | 결과 전부 해당 태그 포함 | 동일 |
+  | 소스 필터 | 결과 전부 해당 소스 | 동일 |
+  | 기간 1W | 결과 전부 7일 이내 | 동일 |
+  | 최신순 | 발행일 내림차순 | 동일 |
+  | 하이라이트 | "성능 개선" 결과 19/19건 제목·요약에 토큰 포함 | 20/20건 |
+- 화면 동작은 mock 테스트로 확인 (브라우저 도구 없음). 외부 확인은 `https://formulous.org/portfolio/search?q=...`
+
 ## 진행 현황
 - [x] 스캐폴딩, onyx-ui 연결, 라우트·가드·레이아웃
 - [x] S-01 홈 피드: 카드, 태그·소스·유형 필터(URL 동기화), 무한 스크롤, 스켈레톤·빈 결과·오류 상태, 북마크 낙관적 토글, 조회 기록(keepalive), 게스트 로그인 유도 모달
 - [x] S-05 로그인 (관리자 접근용으로 M1에 앞당김)
-- [ ] S-06 회원가입, S-07 온보딩
+- [x] S-06 회원가입, S-07 온보딩 (M4)
 - [x] S-03 인기, S-01 실서버 API 연동 확인 (M2)
-- [x] S-04 검색 (실서버 `/search` 응답 형태·오류 대조 일치. `totalCapped` 표시 구현 완료, server 반영 후 실서버 확인 예정)
-- [ ] S-02 추천
-- [ ] S-08~S-10 회원 화면
+- [x] S-04 검색 (실서버 `/search` 응답 형태·오류 대조 일치. 실서버 연동 확인 완료)
+- [x] S-02 추천 (M5, 실서버 확인)
+- [x] S-08~S-10 회원 화면 (M4, 실서버 확인)
 - [x] A-01~A-04 관리자 화면 (M1)
 - [x] openapi v1 기준 타입·mock 정렬 (구현 범위 한정, 나머지는 화면 구현 시 추가)
