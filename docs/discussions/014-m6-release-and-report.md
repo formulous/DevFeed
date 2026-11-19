@@ -151,6 +151,19 @@
 - 4 launchd: `server/deploy/` 템플릿·`install.sh`·`deploy.sh`·`uninstall.sh`. **설치는 사용자 승인 대기** (`~/Library/LaunchAgents` 등록). 설치 전 이 세션에서 띄운 `:3000` 서버를 server가 먼저 내려야 함
 - e2e 16건, 단위 112건 통과
 
+### dba (2차) — 진행 결과
+- 백업 (사용자 승인): `db/scripts/backup.sh`로 `~/backups/devfeed/devfeed_20261119T145035Z.sql.gz` 생성 (924KB, 0.7초, 디렉터리 700·파일 600)
+- 복원 검증 (사용자 승인): 임시 DB `devfeed_restore_check`에 `db/scripts/restore.sh`로 복원 (1초) → 비교 후 삭제
+  - 15개 테이블 행 수 전부 일치 (글 2,383, post_search 2,383, post_tags 2,819 등)
+  - 생성 컬럼 `url_hash`·`guid_hash`, `token_hash`·`family_id`, 비밀번호 해시·이메일 불일치 0
+  - FULLTEXT 검색 결과 일치 (`kafka` 12/12, 한글 bigram 277/277), 인덱스 47/47, FK 13/13
+  - `restore.sh`로 `devfeed` 덮어쓰기 시도 시 `--force` 없으면 거부 확인
+- 일일 백업 등록 준비 (사용자 승인, 등록은 env 파일 작성 후)
+  - `db/ops/org.devfeed.backup.plist.template` + `db/ops/install-backup-agent.sh`: 매일 04:30 KST, 로그 `~/backups/devfeed/backup.log`
+  - 사용자가 `~/.config/devfeed/backup.env`(DB_USER, MYSQL_PWD, chmod 600)를 만든 뒤 설치 스크립트 실행 필요
+- 스키마 문서: `tables.md` 컬럼 15개 테이블 전부 실제 DB와 일치, 누락됐던 인덱스 5개 이름 보완. `decisions.md`·`erd.md`·`tables.md` 상태를 확정 v1로 정리 (D-01~D-17)
+- 버퍼 풀: 1차 제안대로 128MB 유지 (pm 결정 대기)
+
 ## 결정 (pm)
 - 결정 (2026-11-19)
   - client: 계획 1~3 + 추가 제안(ErrorBoundary, 화면별 `<title>`, `mockServiceWorker.js` 빌드 제외) 채택. 공개 결정 시 meta·OG·favicon 추가
@@ -161,7 +174,11 @@
 - 근거: 공개 전 최소 보안(속도 제한·실제 IP)과 운영 지속성(자동 시작·백업) 확보가 출시 조건. 버퍼 풀 증설은 실데이터 6MB라 이득 없고 같은 컨테이너 다른 DB에 영향
 - 후속 작업
   - pm - nginx 실제 IP 전달 (완료), `02-features.md` v1.7 비기능 보안·개인정보 (완료), `05-portfolio-summary.md`·`06-acceptance-checklist.md` 작성, 공개 전환(nginx 기본 인증 해제)
-  - 사용자 - launchd 등록 승인 (서버·nginx·백업), `db/conf` 마운트 전환은 선택
+  - 사용자 - launchd 등록 승인 (승인 완료 2026-11-19: 서버·nginx·백업 3건), `db/conf` 마운트 전환은 선택
+- 결정 보충 (pm, 2026-11-19)
+  - nginx 자동 시작: pm이 `brew services`(라벨 `sh.brew.nginx`)로 등록 완료. 전환 중 수동 nginx와 포트가 겹쳐 서비스가 error 상태였고, 정리 과정에서 formulous.org 전체가 약 10초 502였음. 현재 `/`·`/salary-calc/` 200, `/portfolio/` 401(기본 인증) 정상
+  - dba 2차: 버퍼 풀 128MB 유지 확정 (위 결정과 동일). 백업·복원 검증 완료 확인. 일일 백업 launchd 등록은 사용자 승인됨 → 사용자 env 작성 후 dba가 등록
+  - server: launchd 서버 등록 승인됨. 확인 시점에 `:3000` 서버가 꺼져 있어 `/portfolio/api/` 502 → launchd 등록으로 상시 실행 전환 요청
   - server - 성능 리포트 → health·보안 헤더 → trust proxy·속도 제한 → launchd 템플릿
   - dba - 백업·복원 스크립트, 복원 검증 결과 기록, 스키마 문서 정리, 리포트용 핵심 결정 3가지
   - client - Playwright 캡처·반응형 점검, mock 워커 제외, ErrorBoundary, `<title>`
