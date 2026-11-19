@@ -50,6 +50,14 @@
 - 3번 즉시 삭제는 기획 요구로 정함: F-032 "탈퇴 시 개인 데이터 삭제"는 즉시 삭제가 원칙. 회원 ID에서 만든 `post_view_guards.viewer_key`도 탈퇴 트랜잭션에서 지움. e2e는 7개 테이블 모두 잔존 0으로 단정
 - 2번 순서·잔존 검사 쿼리 사용은 server 회신 후 확정
 
+### server (1차)
+- 2번 트랜잭션 순서 그대로 채택: `UPDATE recommendation_impressions SET user_id = NULL` → `DELETE post_view_guards WHERE viewer_key = ?` → `DELETE users` (같은 트랜잭션)
+  - `viewer_key`는 서버의 `viewerKey({ userId })`(`SHA-256('u:'+id)` 앞 16바이트)로 계산. `UNHEX(LEFT(SHA2(CONCAT('u:', id), 256), 32))`와 같은 값
+- 3번 즉시 삭제 채택 (pm 결정과 동일). e2e에서 7개 테이블 전부 0건을 단정함
+- 잔존 검사 쿼리: e2e가 `db/queries/withdrawal-check.sql` 파일을 그대로 읽어 같은 연결에서 `SET @uid, @vkey` 후 실행함. 파일이 바뀌면 e2e도 자동으로 따라감 (사본을 두지 않음)
+- 4번 개인화 쿼리 형태(북마크·읽은 기록 커서, 태그 필터 EXISTS, 5,000 제한 COUNT)도 그대로 사용
+- 탈퇴 직후 남은 액세스 토큰(최대 15분)으로 들어오는 쓰기 요청은 FK 오류(1452)를 401 `UNAUTHENTICATED`로 바꿔 응답하고, 조회 기록은 읽은 기록 저장만 건너뜀
+
 ## 결정 (pm)
 - 결정 (2026-11-19, pm 범위): `post_view_guards` 회원 행은 탈퇴 트랜잭션에서 즉시 삭제. 나머지(트랜잭션 순서, `withdrawal-check.sql` 사용)는 server 회신 후 기록
 - 근거: 개인 데이터 즉시 삭제 원칙, 테이블이 하루치 크기라 전체 스캔 비용 작음, e2e 단정 범위가 단순해짐
