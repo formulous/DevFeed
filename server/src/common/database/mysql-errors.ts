@@ -5,3 +5,9 @@ export function duplicateKeyName(error: unknown): string | null {
   const match = /for key '(?:[^'.]+\.)?([^']+)'/.exec(source.sqlMessage ?? '');
   return match ? match[1] : '';
 }
+
+export function isMissingReference(error: unknown): boolean {
+  const e = error as { code?: string; errno?: number; driverError?: { code?: string; errno?: number } };
+  const source = e?.driverError ?? e;
+  return source?.code === 'ER_NO_REFERENCED_ROW_2' || source?.errno === 1452;
+}

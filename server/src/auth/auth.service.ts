@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import bcrypt from 'bcryptjs';
 import { DataSource } from 'typeorm';
+import { duplicateKeyName } from '../common/database/mysql-errors';
 import { AppException, Errors } from '../common/errors/app.exception';
 import { addDays } from '../common/time/time';
 import { APP_ENV } from '../config/env';
@@ -9,6 +10,7 @@ import type { AppEnv } from '../config/env';
 import type { UserRole } from '../entities/user.entity';
 import { MeResponse, MeService } from '../me/me.service';
 import {
+  BCRYPT_ROUNDS,
   classifyRefreshToken,
   generateRefreshToken,
   hashRefreshToken,
@@ -29,6 +31,7 @@ const invalidCredentials = () =>
   new AppException(401, 'INVALID_CREDENTIALS', '이메일 또는 비밀번호가 올바르지 않음');
 const loginLocked = (retryAfterSec: number) =>
   new AppException(423, 'LOGIN_LOCKED', '로그인 시도가 많아 잠시 후 다시 시도해야 함', { retryAfterSec });
+const emailDuplicated = () => new AppException(409, 'EMAIL_DUPLICATED', '이미 가입된 이메일임');
 const refreshInvalid = () =>
   new AppException(401, 'REFRESH_TOKEN_INVALID', '다시 로그인해야 함');
 
@@ -43,6 +46,22 @@ export class AuthService {
 
   get refreshMaxAgeSec(): number {
     return REFRESH_TOKEN_DAYS * 24 * 60 * 60;
+  }
+
+  async signup(email: string, password: string, nickname: string, now = new Date()): Promise<IssuedTokens> {
+    const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    let userId: number;
+    try {
+      const result = (await this.dataSource.query(
+        'INSERT INTO users (email, password_hash, nickname, role, last_login_at) VALUES (?, ?, ?, ?, ?)',
+        [email, hash, nickname, 'USER', now],
+      )) as { insertId: number };
+      userId = Number(result.insertId);
+    } catch (error) {
+      if (duplicateKeyName(error) !== null) throw emailDuplicated();
+      throw error;
+    }
+    return this.issue(userId, 'USER', newFamilyId(), now);
   }
 
   async login(email: string, password: string, now = new Date()): Promise<IssuedTokens> {

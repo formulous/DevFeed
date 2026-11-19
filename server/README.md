@@ -35,6 +35,13 @@ NestJS 12 + TypeORM(MariaDB, mysql2) API 서버. 명세는 `../docs/api/openapi.
     - 기간·소스 필터·최신순이 없으면 `post_search`만, 있으면 `posts FORCE INDEX (idx_posts_search_filter)` 커버링 인덱스 조인(`0009`)
     - 같은 검색어·필터 결과(글 ID·건수) 1분 캐시, 회원 플래그는 매번 조회. 측정 시 `SEARCH_CACHE_ENABLED=false`
   - 알려진 한계: 영문은 단어 단위 매칭이라 합성어 안의 단어(`ReactNative`의 react)는 찾지 않음
+- M4 회원·개인화 (F-030~F-032, F-040, F-041)
+  - `POST /api/auth/signup`: 비밀번호 8~64자 영문·숫자 포함(공백·한글 불가), 닉네임 2~20자, 가입 즉시 로그인 응답, 이메일 중복 409 `EMAIL_DUPLICATED`
+  - `PATCH /api/me`, `POST /api/me/onboarding/complete`, `GET`/`PUT /api/me/interest-tags`(3~10개, 저장 시 온보딩 완료)
+  - 북마크 `PUT`/`DELETE /api/me/bookmarks/{postId}`(멱등, 5,000건 초과 422), `GET /api/me/bookmarks`(저장 시각 커서, 태그 필터, `total`)
+  - 읽은 기록 `GET /api/me/history`(최근 읽은 순 커서), 개별·전체 삭제
+  - 탈퇴 `POST /api/me/withdraw`: 비밀번호 확인(틀리면 403 `PASSWORD_MISMATCH`) 후 한 트랜잭션에서 추천 로그 `user_id = NULL` → 회원 조회 guard 삭제 → 회원 삭제(북마크·읽은 기록·관심 태그·리프레시 토큰은 FK CASCADE). 리프레시 쿠키 삭제 (012)
+  - 탈퇴 직후 남은 액세스 토큰(최대 15분)의 쓰기 요청은 401 `UNAUTHENTICATED`, 조회 기록은 읽은 기록 저장만 건너뜀
 
 ## 구조
 ```
@@ -129,23 +136,15 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
 - 재태깅 작업 상태는 서버 메모리에 보관함 (재시작 시 소실)
 - Node 24.9 이상 필요 (`engines`). Nest 12가 ESM 전용이라 Jest는 `--experimental-vm-modules`로 실행해 require(esm)을 씀 (npm 스크립트에 포함)
 
-## e2e 테스트 계획 (M4 완료 전 필수, 002 결정: 탈퇴 후 개인 데이터 잔존 검사)
+## e2e 테스트
 
-### 방식: Jest + TypeScript (Node 24.22.3 업그레이드 후 확정, 2026-11-19)
-- `npm run test:e2e` = Jest `--experimental-vm-modules`, 설정 `test/jest-e2e.json`, 대상 `test/e2e/*.e2e-spec.ts`
-- `@nestjs/testing`으로 앱을 띄우고 실제 HTTP 요청으로 검증. 현재는 스모크 테스트 1건(`catalog.e2e-spec.ts`, 서비스 mock)만 있음
-- 단위 테스트(`npm test`)도 같은 플래그로 실행하므로, 앞으로는 Nest 의존 코드(가드·필터·서비스)도 단위 테스트 가능
-- 이전 기본안(`node:test` + 빌드 결과물)은 Node 업그레이드로 필요 없어져 폐기함
-
-### M4 착수 시 추가
-- 전용 DB `devfeed_test`: dba가 `db/migrations` 전체를 적용해 생성. e2e는 이 DB만 사용하고 개발 DB(`devfeed`)·측정 DB(`devfeed_perf`)는 건드리지 않음
-  - 접속 정보는 `server/.env.test` (사용자가 작성, 키는 `.env.example`과 같음). `CRAWL_SCHEDULER_ENABLED=false`
-  - 테스트마다 사용자·글을 직접 만들고 끝나면 지움
-- 첫 대상
-  1. 탈퇴(`POST /me/withdraw`) 후 `bookmarks`·`read_histories`·`user_interest_tags`·`refresh_tokens`에 해당 회원 행 0건, `recommendation_impressions.user_id` NULL, `posts.view_count` 유지
-  2. 인증 흐름: 로그인 → refresh 회전 → 재사용 30초 경과 시 계열 전체 폐기 → 로그아웃 (M1에서 단위 테스트로만 확인한 부분)
-  3. 피드 커서·필터 조합 (M2 검증 스크립트를 테스트로 옮김)
-
-### 필요한 협업
-- dba: `devfeed_test` 생성·마이그레이션 적용 방법 (`db/scripts`) — M4 착수 전 요청 예정
-- 사용자: `server/.env.test` 작성
+- `npm run test:e2e` (Jest `--experimental-vm-modules`, 설정 `test/jest-e2e.json`, 대상 `test/e2e/*.e2e-spec.ts`)
+- 전용 DB `devfeed_test`에서만 실행됨 (011). 시작 전 환경변수와 실제 연결 DB 이름을 모두 확인하고 다르면 중단
+  - `server/.env.test`가 있으면 그것을, 없으면 `.env`를 읽음. `.env`를 쓸 때는 `DB_DATABASE=devfeed_test npm run test:e2e`
+  - 테스트가 실패해 데이터가 남으면 `db/scripts/test-db-reset.sh`(dba)로 초기화
+- 각 테스트가 소스·태그·글·회원을 직접 만들고 끝나면 지움 (실행 후 테스트 DB 0행 확인)
+- 현재 9건
+  - 탈퇴 잔존 (002 필수): `db/queries/withdrawal-check.sql`(dba)을 그대로 읽어 실행. 탈퇴 전 7개 테이블에 데이터가 있음을 확인한 뒤 탈퇴 → 7개 테이블 0건, 추천 로그 `user_id` NULL, 조회수 유지. 비밀번호 틀림 403, 탈퇴 후 로그인·리프레시·남은 토큰 거부
+  - 회원 흐름: 가입 검증·중복 → 관심 태그(개수·없는 태그 검증) → 온보딩 완료 → 북마크(멱등·커서·태그 필터·피드 플래그·해제) → 조회 → 읽은 기록(순서·개별·전체 삭제) → 닉네임 변경, 온보딩 건너뛰기, 북마크 5,000건 제한
+  - 인증: 리프레시 교체, 30초 이내 재사용 401, 30초 지난 재사용 시 계열 전체 폐기, 로그아웃, 5회 실패 잠금
+  - 스모크: `GET /api/sources`

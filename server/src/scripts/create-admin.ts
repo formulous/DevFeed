@@ -1,8 +1,7 @@
 import bcrypt from 'bcryptjs';
+import { BCRYPT_ROUNDS, PASSWORD_RULE } from '../auth/auth-policy';
 import { openScriptContext, parseArgs } from './script-context';
 
-const PASSWORD_RULE = /^(?=.*[A-Za-z])(?=.*\d).{8,64}$/;
-export const BCRYPT_ROUNDS = 12;
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));

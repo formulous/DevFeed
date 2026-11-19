@@ -6,6 +6,8 @@ export const REFRESH_TOKEN_DAYS = 14;
 export const REFRESH_REUSE_GRACE_MS = 30_000;
 export const REFRESH_COOKIE = 'df_rt';
 export const REFRESH_COOKIE_PATH = '/api/auth';
+export const PASSWORD_RULE = /^(?=.*[A-Za-z])(?=.*\d)[\x21-\x7e]{8,64}$/;
+export const BCRYPT_ROUNDS = 12;
 
 export function generateRefreshToken(): string {
   return randomBytes(32).toString('base64url');

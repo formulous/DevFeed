@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { withDeadlockRetry } from '../common/database/deadlock-retry';
+import { isMissingReference } from '../common/database/mysql-errors';
 import { Errors } from '../common/errors/app.exception';
 import { viewerKey } from '../common/visitor/visitor';
 
@@ -27,11 +28,15 @@ export class ViewsService {
     });
 
     if (viewer.userId !== undefined) {
-      await this.dataSource.query(
-        `INSERT INTO read_histories (user_id, post_id, first_read_at, last_read_at) VALUES (?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE last_read_at = VALUES(last_read_at)`,
-        [viewer.userId, postId, now, now],
-      );
+      await this.dataSource
+        .query(
+          `INSERT INTO read_histories (user_id, post_id, first_read_at, last_read_at) VALUES (?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE last_read_at = VALUES(last_read_at)`,
+          [viewer.userId, postId, now, now],
+        )
+        .catch((error: unknown) => {
+          if (!isMissingReference(error)) throw error;
+        });
     }
   }
 }

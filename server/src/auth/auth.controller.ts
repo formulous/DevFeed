@@ -5,6 +5,7 @@ import type { AppEnv } from '../config/env';
 import { readCookie, REFRESH_COOKIE, refreshCookie } from './auth-policy';
 import { AuthService, IssuedTokens } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { SignupDto } from './dto/signup.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -21,6 +22,12 @@ export class AuthController {
 
   private clear(res: Response) {
     res.setHeader('Set-Cookie', refreshCookie(null, this.env.cookieSecure, 0));
+  }
+
+  @Post('signup')
+  @HttpCode(201)
+  async signup(@Body() dto: SignupDto, @Res({ passthrough: true }) res: Response) {
+    return this.send(res, await this.auth.signup(dto.email, dto.password, dto.nickname));
   }
 
   @Post('login')

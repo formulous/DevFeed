@@ -1,4 +1,5 @@
 import {
+  PASSWORD_RULE,
   classifyRefreshToken,
   hashRefreshToken,
   lockRemainingSec,
@@ -58,5 +59,18 @@ describe('cookie', () => {
 
   it('토큰 해시는 32바이트 고정', () => {
     expect(hashRefreshToken('x')).toHaveLength(32);
+  });
+});
+
+describe('PASSWORD_RULE', () => {
+  it('8~64자, 영문·숫자 포함, 공백 없는 출력 가능 ASCII', () => {
+    expect(PASSWORD_RULE.test('abcd1234')).toBe(true);
+    expect(PASSWORD_RULE.test('Ab1!@#xyz')).toBe(true);
+    expect(PASSWORD_RULE.test('abcdefgh')).toBe(false);
+    expect(PASSWORD_RULE.test('12345678')).toBe(false);
+    expect(PASSWORD_RULE.test('abc123')).toBe(false);
+    expect(PASSWORD_RULE.test('abcd 1234')).toBe(false);
+    expect(PASSWORD_RULE.test('비밀번호abc123')).toBe(false);
+    expect(PASSWORD_RULE.test(`a1${'x'.repeat(63)}`)).toBe(false);
   });
 });
