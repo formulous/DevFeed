@@ -96,6 +96,39 @@ SELECT id, published_at FROM ((SELECT pt.post_id AS id, pt.published_at AS publi
   - API 응답 p50 1.1ms, p95 2.5ms (293요청)
 - dba에게 위 쿼리 `ANALYZE` 재확인 요청함
 
+### dba (2차) — 서버 실제 쿼리 10만 건 측정
+- 환경: 측정 전용 DB `devfeed_perf` (사용자 승인), MariaDB 12.1.2, 로컬 Docker
+  - 글 100,000 / post_tags 205,383 / 회원 10,000 / 북마크 498,409 / 읽은 기록 1,911,925 (`db/scripts/perf-seed.sh`)
+  - 글 제목·요약은 실제 수집 글 단어를 재조합하고, 토큰은 `server/src/ingest/tokenizer.ts`와 같은 규칙(실제 글 300건 비교 불일치 0)
+  - 분포: 태그·소스는 멱법칙(인기 태그 28 = 25,752건, 희소 태그 84 = 297건), 개인 블로그 5%
+- 방법: `server (2차)`의 생성 SQL을 그대로 쓰고 값만 바꿔 `ANALYZE FORMAT=JSON` 20회 (앞 2회 워밍업 제외). 시간은 DB 실행 시간(`r_total_time_ms`)이고 네트워크·ORM 미포함 (`db/perf/measure_feed.py`)
+
+| 쿼리 | p50 ms | p95 ms | 읽은 행 | 인덱스 | 비고 |
+|---|---|---|---|---|---|
+| 최신 피드 다음 페이지 | 0.01 | 0.02 | 21 | idx_posts_published |  |
+| 최신 피드, 1년 전 커서 | 0.01 | 0.01 | 21 | idx_posts_published |  |
+| sourceType PERSONAL (5%) | 0.01 | 0.01 | 21 | idx_posts_type_published |  |
+| sourceIds 3개 큰 소스 (12,8,21) | 0.03 | 0.04 | 126 | idx_posts_source_published | filesort |
+| sourceIds 2개 작은 소스 (19,7) | 0.02 | 0.02 | 84 | idx_posts_source_published | filesort |
+| tagIds 1개 인기 (28) | 0.01 | 0.01 | 21 | idx_post_tags_tag_published |  |
+| tagIds 1개 희소 (84) | 0.00 | 0.01 | 21 | idx_post_tags_tag_published |  |
+| tagIds 3개 + COMPANY | 0.06 | 0.07 | 194 | PRIMARY, idx_post_tags_tag_published | filesort |
+| tagIds 3개 + PERSONAL (최악: 유형 희소) | 5.94 | 6.23 | 19244 | PRIMARY, idx_posts_type_published | filesort, temporary_table |
+| tagIds 2개 + 작은 소스 3개 (최악) | 3.83 | 3.89 | 11813 | PRIMARY, idx_posts_source_published | filesort, temporary_table |
+| 카드: posts JOIN sources | 0.02 | 0.03 | 40 | PRIMARY |  |
+| 카드: post_tags JOIN tags | 0.03 | 0.04 | 90 | PRIMARY | filesort |
+| 플래그: bookmarks | 0.00 | 0.00 | 21 | idx_bookmarks_user_created |  |
+| 플래그: read_histories | 0.01 | 0.01 | 71 | idx_read_histories_user_last_read |  |
+| 인기 글 MONTH | 3.59 | 3.68 | 5477 | idx_posts_published | filesort |
+
+- 판정: **전 쿼리 통과**. 가장 느린 경우도 DB p95 6.2ms로 목표(API p95 300ms)에 여유 큼
+  - 커서 깊이와 무관하게 21행만 읽음 (1년 전 커서도 0.01ms)
+  - `UNION` 분해 효과 확인: 소스·태그 여러 개도 각 21행 × N
+  - 최악 조합(인기 태그 × 희소 유형·소스)은 옵티마이저가 `posts` 쪽 인덱스(`idx_posts_type_published`, `idx_posts_source_published`)로 바꿔 탐색함. 1~2만 행 읽고 4~6ms. 인덱스 추가 불필요
+  - 인기 글 MONTH: 30일 범위 5,477행 정렬 3.7ms. 10분 캐시 전제로 충분
+- 참고 (확인 요청): 커서 시각을 `'2026-11-10T00:00:00.000Z'` 같은 ISO 문자열로 바인딩하면 결과는 맞지만 쿼리마다 `Warning 1292 Truncated incorrect datetime value`가 생김. mysql2에 `Date` 객체를 넘기는 중이면 문제없음. 문자열이면 `YYYY-MM-DD HH:MM:SS.fff`로 바꾸길 권장
+- 결론: M2 피드 쿼리에 dba 쪽 추가 요청 없음. M3 검색 측정도 같은 `devfeed_perf`로 진행 예정
+
 ## 결정 (pm)
 - 결정 (2026-11-19): dba 제안 1~5 채택, server 구현 방식 승인
   - `sourceIds` 2개 이상은 소스별 `UNION ALL`, `tagIds` 2개 이상은 태그별 `UNION`
@@ -107,3 +140,7 @@ SELECT id, published_at FROM ((SELECT pt.post_id AS id, pt.published_at AS publi
   - server - 구현 후 실제 쿼리를 이 문서에 첨부
   - dba - 서버 쿼리 `ANALYZE` 재확인, M3 대량 시드(10만 건)로 재측정해 D-07에 기록
   - pm - M3 측정에서 태그 + 소스/유형 조합이 p95 300ms 초과 시 새 discussion으로 대안 검토
+- 결정 보충 (pm, 2026-11-19, dba 2차 반영)
+  - dba 10만 건 측정(`devfeed_perf`)에서 서버 실제 쿼리 전부 통과. 최악 조합(인기 태그 × 희소 유형·소스)도 DB p95 6.2ms → 위 pm 후속 작업(조합 대안 검토)은 불필요로 종결
+  - 인덱스 추가 없음
+  - server - 커서 시각 바인딩이 ISO 문자열이면 `Date` 객체 또는 `YYYY-MM-DD HH:MM:SS.fff`로 변경 (Warning 1292 제거)
