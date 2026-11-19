@@ -48,6 +48,12 @@ NestJS 12 + TypeORM(MariaDB, mysql2) API 서버. 명세는 `../docs/api/openapi.
   - 응답마다 `recommendationId` 발급, 카드당 노출 1행(`TAG_V1`/`COLD_POPULAR`). 클릭은 `POST /posts/{id}/views`의 `recommendationId`로 첫 클릭만 기록
   - 일일 정리(04:00 KST)에 추천 일별 집계(UTC 최근 7일 재집계) → 성공 시 90일 지난 노출 원본 삭제
   - 성능: 회원 1만 기준 첫 페이지 c=1 p95 18.6ms, 다음 페이지 5.9ms
+- M6 운영 (014)
+  - `GET /api/health`: DB까지 확인, 정상 200 `{ status: OK, db: OK }`, 실패 503. 속도 제한 제외
+  - 보안 헤더: `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY`
+  - 실제 클라이언트 IP: `trust proxy loopback` + nginx `X-Forwarded-For`(Cloudflare 실제 IP 복원 후 전달)
+  - 속도 제한(`@nestjs/throttler`, IP 기준): 기본 1분 120회, 가입 10분 5회, 로그인 1분 10회, 리프레시 1분 30회, 검색·조회 기록 1분 60회. 초과 시 429 `RATE_LIMITED` + `Retry-After` (`docs/api/conventions.md` 6-1)
+  - 한계: 한도 카운터는 서버 메모리라 재시작하면 초기화됨 (단일 인스턴스 전제)
 
 ## 구조
 ```
@@ -72,6 +78,7 @@ src/
   - `COOKIE_SECURE`: dev Safari 확인 시에만 `false`
   - `CRAWL_SCHEDULER_ENABLED`: `false`면 주기 수집 중지 (즉시 수집 API는 동작)
   - `SEARCH_CACHE_ENABLED`: 검색 결과 1분 캐시 (성능 측정 시 `false`)
+  - `RATE_LIMIT_ENABLED`: IP 기준 속도 제한 (기본 `true`, e2e는 기본 `false`)
 - DB 스키마는 `../db/migrations`(dba)로만 반영함. 서버는 DDL을 실행하지 않음
 
 ## 실행
@@ -188,9 +195,10 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - `server/.env.test`가 있으면 그것을, 없으면 `.env`를 읽음. `.env`를 쓸 때는 `DB_DATABASE=devfeed_test npm run test:e2e`
   - 테스트가 실패해 데이터가 남으면 `db/scripts/test-db-reset.sh`(dba)로 초기화
 - 각 테스트가 소스·태그·글·회원을 직접 만들고 끝나면 지움 (실행 후 테스트 DB 0행 확인)
-- 현재 12건
+- 현재 16건
   - 탈퇴 잔존 (002 필수): `db/queries/withdrawal-check.sql`(dba)을 그대로 읽어 실행. 탈퇴 전 7개 테이블에 데이터가 있음을 확인한 뒤 탈퇴 → 7개 테이블 0건, 추천 로그 `user_id` NULL, 조회수 유지. 비밀번호 틀림 403, 탈퇴 후 로그인·리프레시·남은 토큰 거부
   - 회원 흐름: 가입 검증·중복 → 관심 태그(개수·없는 태그 검증) → 온보딩 완료 → 북마크(멱등·커서·태그 필터·피드 플래그·해제) → 조회 → 읽은 기록(순서·개별·전체 삭제) → 닉네임 변경, 온보딩 건너뛰기, 북마크 5,000건 제한
   - 인증: 리프레시 교체, 30초 이내 재사용 401, 30초 지난 재사용 시 계열 전체 폐기, 로그아웃, 5회 실패 잠금
   - 추천: 콜드 스타트, 개인화(이유·제외·채움·다양성·커서), 다른 회원 커서 거부, 클릭 1회 기록·타인 클릭 무시, 일별 집계
+  - 운영: 헬스 체크·보안 헤더, 가입 IP 한도·다른 IP 분리, 헬스 체크 제외, 기본 한도 121번째 429
   - 스모크: `GET /api/sources`

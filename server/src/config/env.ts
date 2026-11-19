@@ -5,6 +5,7 @@ export interface AppEnv {
   cookieSecure: boolean;
   crawl: { schedulerEnabled: boolean; concurrency: number };
   searchCacheEnabled: boolean;
+  rateLimitEnabled: boolean;
 }
 
 function required(env: NodeJS.ProcessEnv, key: string): string {
@@ -48,6 +49,7 @@ export function loadEnv(env: NodeJS.ProcessEnv = process.env): AppEnv {
       concurrency: Math.max(1, int(env, 'CRAWL_CONCURRENCY', 5)),
     },
     searchCacheEnabled: bool(env, 'SEARCH_CACHE_ENABLED', true),
+    rateLimitEnabled: bool(env, 'RATE_LIMIT_ENABLED', true),
   };
 }
 

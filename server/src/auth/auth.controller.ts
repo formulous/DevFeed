@@ -1,3 +1,5 @@
+import { Throttle } from '@nestjs/throttler';
+import { throttle } from '../common/http/rate-limit';
 import { Body, Controller, HttpCode, Inject, Post, Req, Res } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { APP_ENV } from '../config/env';
@@ -24,18 +26,21 @@ export class AuthController {
     res.setHeader('Set-Cookie', refreshCookie(null, this.env.cookieSecure, 0));
   }
 
+  @Throttle(throttle('signup'))
   @Post('signup')
   @HttpCode(201)
   async signup(@Body() dto: SignupDto, @Res({ passthrough: true }) res: Response) {
     return this.send(res, await this.auth.signup(dto.email, dto.password, dto.nickname));
   }
 
+  @Throttle(throttle('login'))
   @Post('login')
   @HttpCode(200)
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
     return this.send(res, await this.auth.login(dto.email, dto.password));
   }
 
+  @Throttle(throttle('refresh'))
   @Post('refresh')
   @HttpCode(200)
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {

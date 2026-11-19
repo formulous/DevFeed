@@ -1,3 +1,5 @@
+import { Throttle } from '@nestjs/throttler';
+import { throttle } from '../common/http/rate-limit';
 import { Body, Controller, Get, HttpCode, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import type { AuthUser } from '../auth/auth.types';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -26,6 +28,7 @@ export class PostsController {
     return this.posts.popular(query.period, user?.id);
   }
 
+  @Throttle(throttle('views'))
   @Post(':postId/views')
   @HttpCode(204)
   async view(

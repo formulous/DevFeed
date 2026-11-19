@@ -119,6 +119,20 @@
 - CORS: 개발 환경은 Vite dev server 프록시로 same-origin 처리. 서버는 CORS를 열지 않음
 - 요청 본문이 필요한 삭제성 동작은 `DELETE` 대신 `POST`를 씀 (예: 탈퇴 `POST /me/withdraw`). DELETE 본문은 프록시·라이브러리별로 버려질 수 있음
 
+## 6-1. 운영 (M6, 014)
+- 모든 응답에 `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY`
+- 속도 제한: IP 기준. 초과 시 429 `RATE_LIMITED` + `Retry-After`(초). IP는 nginx가 넘긴 `X-Forwarded-For`(서버는 loopback 프록시만 신뢰)
+  | 대상 | 한도 |
+  |---|---|
+  | 기본 (모든 API) | 1분 120회 |
+  | `POST /auth/signup` | 10분 5회 |
+  | `POST /auth/login` | 1분 10회 (계정별 5회 실패 잠금과 별개) |
+  | `POST /auth/refresh` | 1분 30회 |
+  | `GET /search` | 1분 60회 |
+  | `POST /posts/{id}/views` | 1분 60회 |
+  | `GET /health` | 제한 없음 |
+- 헬스 체크 `GET /health`: 정상 200 `{ status: OK, db: OK }`, DB 실패 503
+
 ## 7. 버전·변경
 - 호환이 깨지는 변경은 discussion 합의 후 `openapi.yaml`을 먼저 고치고 구현함
 - 필드 추가는 호환 변경으로 간주함. client는 모르는 필드를 무시해야 함
