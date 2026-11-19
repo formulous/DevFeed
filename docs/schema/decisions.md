@@ -189,4 +189,11 @@
 - 한계: 선두 컬럼이 PK와 같은 인덱스라 옵티마이저가 자동 선택하지 않음 (힌트 없이 PRIMARY, 215ms). 쿼리 힌트 의존. 인덱스명 변경 시 서버 쿼리도 함께 바꿔야 함
 - 필터 없는 관련도 검색은 조인 없이 `post_search`만으로 상위 20건을 고른 뒤 카드 조회
 - 상태: 채택 (010, 2026-11-19). `devfeed`·`devfeed_perf` 적용 완료. 버퍼 풀(128MB) 증설은 M6에서 재검토
+- 결과 (server API 측정, 글 10만 건, 캐시 끔): c=1 전체 p95 923ms → 건수 상한 301ms → 건수 상한 + 0009 **94ms**. c=10 p95 497ms(참고). 남은 느린 질의는 결과 많은 다중 bigram 관련도 계산 80~100ms
+
+## D-16. 탈퇴 처리와 잔존 검사 (012)
+- 탈퇴 트랜잭션 순서: `recommendation_impressions.user_id = NULL` → `post_view_guards`의 회원 `viewer_key` 행 삭제 → `users` 삭제 (나머지 4개 테이블 CASCADE)
+- `post_view_guards`는 24시간 소멸을 기다리지 않고 즉시 삭제 (D-08 보완). `viewer_key` 단독 인덱스는 없지만 하루치 크기라 전체 스캔 허용
+- 실측 (`devfeed_perf`, 롤백): 읽은 기록 400건 회원 탈퇴 78ms, 7개 테이블 잔존 0
+- `db/queries/withdrawal-check.sql`은 server e2e가 그대로 읽는 계약 파일임. 회원 연결 테이블을 추가·변경하면 이 파일에 같은 커밋으로 반영하고 server에 알림
 
