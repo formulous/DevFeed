@@ -338,7 +338,8 @@ paths:
       tags: [posts]
       summary: 인기 글 (F-013). 상위 20건 고정, 최대 10분 지연
       description: |
-        기간은 요청 시각 기준 롤링 윈도우. DAY=최근 24시간, WEEK=최근 7일, MONTH=최근 30일 발행 글 중 viewCount 내림차순
+        기간은 요청 시각 기준 롤링 윈도우. DAY=최근 24시간, WEEK=최근 7일, MONTH=최근 30일 발행 글 중 viewCount 내림차순.
+        viewCount 1 이상인 글만 포함 (008). 조회수가 같으면 최신 발행순. 최대 20건이며 0건이면 items 빈 배열
       security:
         - {}
         - bearerAuth: []

@@ -65,7 +65,7 @@ export class PostsService {
 
   private async loadPopular(period: PopularPeriod, now: Date): Promise<PopularCard[]> {
     const rows = (await this.dataSource.query(
-      `SELECT id FROM posts WHERE published_at >= ?
+      `SELECT id FROM posts WHERE published_at >= ? AND view_count > 0
         ORDER BY view_count DESC, published_at DESC, id DESC LIMIT ?`,
       [popularSince(period, now), POPULAR_LIMIT],
     )) as { id: number | string }[];

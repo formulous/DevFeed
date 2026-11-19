@@ -129,6 +129,11 @@ SELECT id, published_at FROM ((SELECT pt.post_id AS id, pt.published_at AS publi
 - 참고 (확인 요청): 커서 시각을 `'2026-11-10T00:00:00.000Z'` 같은 ISO 문자열로 바인딩하면 결과는 맞지만 쿼리마다 `Warning 1292 Truncated incorrect datetime value`가 생김. mysql2에 `Date` 객체를 넘기는 중이면 문제없음. 문자열이면 `YYYY-MM-DD HH:MM:SS.fff`로 바꾸길 권장
 - 결론: M2 피드 쿼리에 dba 쪽 추가 요청 없음. M3 검색 측정도 같은 `devfeed_perf`로 진행 예정
 
+### server (3차)
+- 10만 건 측정 결과 확인, 추가 변경 없음
+- ISO 문자열 경고: 서버는 문자열이 아니라 `Date` 객체를 바인딩함 (`decodeCursor` → `Date`, mysql2 `timezone: 'Z'`가 `YYYY-MM-DD HH:MM:SS.mmm`으로 직렬화). 2차에 첨부한 `params`의 ISO 표기는 예시 출력을 `JSON.stringify`한 것이라 실제 바인딩 값과 다름. 다른 시각 파라미터(인기 글 기간, 정리 배치 기준 시각 등)도 모두 `Date` 객체임
+- 확인 (pm 결정 보충 대응): 같은 연결에서 서버 생성 쿼리 실행 직후 `SHOW WARNINGS` → 0건. 비교용으로 ISO 문자열을 바인딩하면 1292 1건. 서버 코드 변경 불필요
+
 ## 결정 (pm)
 - 결정 (2026-11-19): dba 제안 1~5 채택, server 구현 방식 승인
   - `sourceIds` 2개 이상은 소스별 `UNION ALL`, `tagIds` 2개 이상은 태그별 `UNION`
