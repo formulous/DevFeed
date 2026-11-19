@@ -91,6 +91,8 @@
   - 비정규화 이유: `post_tags` → `posts` 조인 후 정렬하면 태그가 인기일수록 정렬 비용 증가. 비정규화하면 인덱스 순서대로 20건만 읽고 끝남
   - 비용: 글 `published_at` 변경 시 `post_tags`도 같은 트랜잭션에서 갱신해야 함 (수집 시 발행일 변경은 드묾)
   - 태그 복수(OR) 필터: 태그별 `LIMIT 20` 서브쿼리를 `UNION`한 뒤 상위 20건 (태그 최대 개수는 API에서 제한 권장, 예: 10개)
+  - 소스 복수 필터: `IN`은 `idx_posts_published` 순회 계획이 선택돼 위험함. 소스별 서브쿼리 `UNION ALL` 사용
+  - 실측 (discussion 007): 글 10만 건에서 서버 피드 쿼리 15종 DB p95 최대 6.2ms (최악 조합 인기 태그 × 희소 유형). 단일 필터·커서는 깊이와 무관하게 21행. 인덱스 추가 불필요
 
 ## D-08. 조회수와 24시간 중복 제외 (F-012, F-013)
 - 조회 로그를 행 단위로 쌓지 않음. 24시간 중복 판단용 `post_view_guards (post_id, viewer_key)` 한 행만 유지
@@ -163,3 +165,28 @@
 | crawl_runs | ~80,000 | 35곳 × 24회 × 90일 |
 | recommendation_impressions | ~5,000,000 | 일 60,000 노출 × 90일 (가정) |
 | recommendation_daily_stats | ~1,000/년 | 일 × 알고리즘 수 |
+
+## D-13. 초기 데이터 (시드)
+- 소스·태그 사전 시드는 개발용이자 운영 초기 데이터 (F-001 소스 30곳+, F-005 태그 100개+)
+- 소스 시드는 F-001 등록 검증을 거치지 않으므로 dba가 사전 검증함 (응답 200, RSS/Atom, 글 1건 이상). 결과는 `db/README.md`
+- 시드는 유니크 키 기준 upsert로 작성해 재실행 안전하게 유지
+- 글 10만 건·회원 1만 명 대량 시드(성능 측정용)는 M3 전에 별도 생성기로 작성 예정
+
+## D-14. 피드 카테고리 보관 위치와 FULLTEXT 테이블 변경 비용
+- `post_search.feed_categories VARCHAR(500) NULL` (`0008`, 005 결정). 재태깅이 수집 때와 같은 입력(제목·카테고리·요약)을 쓰기 위함. 백필 없음
+- `posts`가 아닌 `post_search`에 둔 이유: D-04와 같음. 피드 목록 조회에 안 쓰는 컬럼이라 `posts` 행 크기 유지
+- 적용 중 확인한 제약: FULLTEXT 인덱스가 있는 InnoDB 테이블은 `ADD/DROP COLUMN`에 `INSTANT`, `INPLACE` 모두 불가 → `ALGORITHM=COPY`만 가능
+  - COPY는 테이블과 FULLTEXT 인덱스 2개를 다시 만들고, 그동안 쓰기가 막힘
+  - 실측: 2,383행 0.36초, **10만 행 277초** (`devfeed_perf` 복사 테이블, 2026-11-19). 운영 규모에서는 수 분간 수집 중단
+- 운영 규칙: `post_search` 스키마 변경은 최소화하고 수집이 적은 시간에 실행. 앞으로 검색과 무관한 컬럼은 `post_search`에 추가하지 않고 `posts`(INSTANT 가능)나 별도 테이블에 둠
+
+## D-15. 검색 필터·정렬: `posts` 커버링 인덱스 (`0009`, discussion 010)
+- 문제: FULLTEXT 매칭이 수만 건인 흔한 검색어에서 매칭 행마다 `posts` 클러스터드 행(약 800B)을 조회해 p95 200~475ms
+- 결정: `posts.idx_posts_search_filter (id, published_at, source_id, source_type)` 추가, 검색 조인은 `FORCE INDEX`로 이 인덱스만 읽음
+  - 10만 건 약 3MB라 항상 버퍼 풀에 상주. 필터·최신순 포함 p95 29~86ms
+  - 온라인 생성(`INPLACE, LOCK=NONE`) 10만 행 56ms. 쓰기 경로·동기화 변경 없음
+- 기각: `post_search`에 `published_at`, `source_id` 비정규화 (server B안). FULLTEXT 테이블 COPY 변경 277초 + 쓰기 잠금(D-14), 측정상 개선 미미(p95 180~343ms)
+- 한계: 선두 컬럼이 PK와 같은 인덱스라 옵티마이저가 자동 선택하지 않음 (힌트 없이 PRIMARY, 215ms). 쿼리 힌트 의존. 인덱스명 변경 시 서버 쿼리도 함께 바꿔야 함
+- 필터 없는 관련도 검색은 조인 없이 `post_search`만으로 상위 20건을 고른 뒤 카드 조회
+- 상태: 채택 (010, 2026-11-19). `devfeed`·`devfeed_perf` 적용 완료. 버퍼 풀(128MB) 증설은 M6에서 재검토
+

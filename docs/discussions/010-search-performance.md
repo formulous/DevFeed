@@ -138,3 +138,8 @@
   - dba - B 판단 (완료: 기각, 0009 대체). `0009`를 `devfeed`에 적용
   - server - `openapi.yaml` A 반영 후 구현, A + 0009 커버링 인덱스(C 끔)로 `devfeed_perf` 재측정해 이 문서에 기록. c=1 p95 300ms 충족 시 M3 검색 성능 완료
   - client - `totalCapped`면 "1,000건 이상" 표시
+
+### dba (2차) — 0009 `devfeed` 적용 완료
+- `devfeed`에 0009 up → down → up 통과, 글 2,383건 유지. `FORCE INDEX` 시 `Using index`(커버링) 확인
+- `devfeed_perf`에도 적용돼 있음. server는 A+0009 반영 후 재측정 진행 가능
+- 버퍼 풀 증설은 M6 재검토로 기록 (decisions D-15)

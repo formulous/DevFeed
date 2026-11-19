@@ -89,6 +89,7 @@
 - `idx_posts_published (published_at, id)`: 최신 피드 커서, 인기 글 기간 범위
 - `idx_posts_source_published (source_id, published_at, id)`: 소스 필터 커서. FK 인덱스 겸용
 - `idx_posts_type_published (source_type, published_at, id)`: 소스 유형 필터 커서
+- `idx_posts_search_filter (id, published_at, source_id, source_type)`: `0009`. 검색 FULLTEXT 결과 조인 시 커버링 인덱스로 필터·최신순 처리. `FORCE INDEX` 필요 (D-15)
 
 ## post_tags — `0003`
 | 컬럼 | 타입 | 제약 | 설명·이유 |
@@ -108,6 +109,7 @@
 | post_id | BIGINT UNSIGNED | PK, FK → posts CASCADE | 1:1 |
 | title_tokens | TEXT | NOT NULL | 제목 토큰 (D-03 규칙) |
 | body_tokens | TEXT | NOT NULL | 요약 + 태그명·동의어 + 소스 이름 토큰 |
+| feed_categories | VARCHAR(500) | NULL | `0008`. 피드 카테고리 원문, `\n` 구분, 카테고리 단위로 500자 이내. 재태깅 입력용, FULLTEXT 대상 아님 (005) |
 | updated_at | DATETIME(3) | NOT NULL | |
 
 인덱스

@@ -3,7 +3,7 @@
 - 작성: dba
 - 상태: 초안 v1 (2026-11-19), `server` DDL 검토 대기
 - DB: `devfeed` (MariaDB 12.1, InnoDB, utf8mb4_unicode_ci)
-- DDL: `db/migrations/0001~0007`, 컬럼 상세: `tables.md`, 결정 근거: `decisions.md`
+- DDL: `db/migrations/0001~0009`, 컬럼 상세: `tables.md`, 결정 근거: `decisions.md`
 
 ```mermaid
 erDiagram
@@ -59,6 +59,7 @@ erDiagram
         bigint post_id PK, FK
         text title_tokens "FULLTEXT"
         text body_tokens "FULLTEXT"
+        varchar feed_categories "재태깅용"
     }
     post_tags {
         bigint post_id PK, FK
