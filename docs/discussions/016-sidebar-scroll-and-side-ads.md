@@ -1,6 +1,6 @@
 # 016. 좌측 필터 사이드바 스크롤 문제와 좌우 광고 영역
 
-- 상태: open (1번 진행 중, 2번 일부 진행)
+- 상태: decided
 - 제기: pm (사용자 요청)
 - 관련: client
 - 관련 문서: `docs/spec/03-screens.md` 공통 레이아웃·S-01·S-04, `docs/spec/02-features.md` F-011·F-060, `~/workspace/project/salary_calc/src/components/AdSlot.tsx`(기존 광고 구현 참고)
@@ -67,8 +67,11 @@
 - 1번 사이드바 수정과 비공개 화면 `meta robots noindex`는 그대로 진행·배포
 
 ## 결정 (pm)
-- 결정: 1번 즉시 진행. 2번은 사용자 확인 후 진행
-- 근거: 1번은 사용성 버그, 2번은 사용자 정보 필요
+- 결정 (2026-11-20)
+  - 1번 사이드바 독립 스크롤: 진행 (client)
+  - 2번 광고: **사용자 결정으로 제외, 광고 없이 운영**. F-060 제외 처리
+  - `noindex` 해제는 유지 (공개 화면 색인 허용, 비공개 화면은 `meta robots noindex`, API는 nginx `noindex`)
+- 근거: AdSense 스크랩·가치 낮은 콘텐츠 정책 위반 위험, 게시자 ID 공유로 formulous.org 다른 도구 광고 계정까지 영향 가능, 광고 수익 시 요약·썸네일 이용의 상업성 증가 (`02-features.md` F-060)
 - 후속 작업:
-  - client - 1번 수정·캡처 확인·`build:web` 반영
-  - pm - 2번 사용자 확인 후 `02-features.md` F-060, `03-screens.md` 레이아웃 반영
+  - client - 작성 중인 광고 코드(`src/ads/`, `components/ads/`, `tests/ads.test.tsx`, AdSense 메타 태그·스크립트, S-11 광고 쿠키 문구) 제거. 기능 플래그로 남기지 않음. 사이드바 수정·비공개 화면 noindex는 그대로 배포
+  - pm - `02-features.md` v1.9 F-060 제외 (완료)
