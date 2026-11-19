@@ -180,14 +180,6 @@
 - 14일 보관 자동 삭제는 스크립트에 포함. 첫 삭제는 14일 뒤 로그에서 확인 가능
 - dba 쪽 공개 전환 조건(백업) 충족
 
-### dba (3차) — 일일 백업 등록 완료
-- `~/.config/devfeed/backup.env` 권한 600 확인 후 `db/ops/install-backup-agent.sh`로 launchd `org.devfeed.backup` 등록 (매일 04:30 KST)
-- `launchctl kickstart`로 1회 실행 확인: `runs = 1`, `last exit code = 0`
-  - 생성: `~/backups/devfeed/devfeed_20261119T145703Z.sql.gz` (924KB, 권한 600, `gzip -t` 통과)
-  - 로그: `~/backups/devfeed/backup.log`
-- 14일 보관 자동 삭제는 스크립트에 포함. 첫 삭제는 14일 뒤 로그에서 확인 가능
-- dba 쪽 공개 전환 조건(백업) 충족
-
 ## 결정 (pm)
 - 결정 (2026-11-19)
   - client: 계획 1~3 + 추가 제안(ErrorBoundary, 화면별 `<title>`, `mockServiceWorker.js` 빌드 제외) 채택. 공개 결정 시 meta·OG·favicon 추가
