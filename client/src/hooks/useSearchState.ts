@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router';
 import { MAX_SOURCE_FILTER, MAX_TAG_FILTER } from '@/api/posts';
 import { SEARCH_MAX_PAGE, type SearchPeriod, type SearchQuery, type SearchSort } from '@/api/search';
 import { SEARCH_MAX, SEARCH_MIN } from '@/components/layout/AppHeader';
+import type { FilterBindings, SegmentOption } from '@/components/filters/types';
 
 const PERIODS: SearchPeriod[] = ['1W', '1M', '1Y', 'ALL'];
 const SORTS: SearchSort[] = ['RELEVANCE', 'LATEST'];
@@ -67,9 +68,37 @@ export function useSearchState() {
     state,
     toggleTag: (id: number) => update({ tagIds: toggle(state.tagIds, id) }),
     toggleSource: (id: number) => update({ sourceIds: toggle(state.sourceIds, id) }),
+    setTags: (tagIds: number[]) => update({ tagIds }),
+    setSources: (sourceIds: number[]) => update({ sourceIds }),
     setPeriod: (period: SearchPeriod) => update({ period }),
     setSort: (sort: SearchSort) => update({ sort }),
     setPage: (page: number) => update({ page }, true),
     resetFilters: () => update({ tagIds: [], sourceIds: [], period: 'ALL' }),
+  };
+}
+
+export const SEARCH_PERIODS: SegmentOption[] = [
+  { value: 'ALL', label: '전체' },
+  { value: '1W', label: '1주' },
+  { value: '1M', label: '1개월' },
+  { value: '1Y', label: '1년' },
+];
+
+export function useSearchFilterBindings(): FilterBindings {
+  const s = useSearchState();
+  return {
+    tagIds: s.state.tagIds,
+    sourceIds: s.state.sourceIds,
+    setTags: s.setTags,
+    setSources: s.setSources,
+    toggleTag: s.toggleTag,
+    toggleSource: s.toggleSource,
+    segment: {
+      legend: '기간',
+      options: SEARCH_PERIODS,
+      value: s.state.period,
+      onChange: (v) => s.setPeriod((v ?? 'ALL') as SearchPeriod),
+    },
+    reset: s.resetFilters,
   };
 }

@@ -8,6 +8,11 @@ export interface SourceRef {
   type: SourceType;
 }
 
+export interface SourceListItem extends SourceRef {
+  postCount?: number;
+  recentPostCount?: number;
+}
+
 export interface TagRef {
   id: number;
   name: string;

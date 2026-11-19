@@ -240,13 +240,15 @@ npm run capture    # 반응형 점검·README용 스크린샷 (Playwright, 최�
   - 진입: 공통 푸터(`AppFooter`, `AppLayout`·`AuthLayout` 하단), 회원가입 화면 하단 링크
   - onyx `SiteFooter`는 formulous 링크(소개·문의 등)가 고정돼 있어 쓰지 않음
 - 공개 전환(2026-11-19, `https://formulous.org/portfolio/`, nginx `noindex` 유지)에 맞춰 `index.html`에 meta description·OG·Twitter 카드, `public/favicon.svg`, `public/og.png`(S-01 1280px 캡처) 추가. OG URL은 공개 주소 절대 경로로 고정
-- 필터 사이드바 스크롤 (`docs/discussions/016` 1번, 2026-11-20)
-  - 홈·검색이 `components/filters/FilterLayout.tsx`를 공유
-  - 데스크톱(`lg` 이상): 사이드바가 `sticky` + 화면 높이 안에서 독립 스크롤(`max-h: calc(100dvh - 8.5rem)`, `overscroll-contain`)
-  - 모바일: 왼쪽 드로어. 본문만 스크롤, 하단 [초기화][결과 보기] 고정. 필터는 고르는 즉시 적용, 버튼에 적용 개수 표시
-  - `CheckList`: 더보기로 펼친 목록은 `max-h-72`(약 12줄) 안에서 스크롤. 선택한 항목은 접힘·펼침과 관계없이 맨 위
-  - 캡처에서 1280×720 사이드바 끝·360 드로어 끝 항목 도달 여부를 자동 확인 (`S-01-sidebar-expanded.png`, `S-01-drawer*.png`)
-  - mock 태그·소스를 늘림(태그 45, 공개 소스 36). 글·관리자 mock에는 영향 없음
+- 필터 요약 패널 + 선택 창 (`docs/discussions/017`, 018·019, 2026-11-20). 016의 체크박스 목록·섹션 내부 스크롤·모바일 드로어는 폐지
+  - 홈·검색이 `components/filters/`를 공유: `FilterLayout`(배치·창 상태), `FilterPanel`(사이드바), `ChipPickerModal`(S-12 선택 창), `Segment`, `ActiveFilterChips`, `useFilterCatalog`(태그·소스 목록 가공)
+  - 화면별 차이는 `FilterBindings`(태그·소스·세그먼트·초기화)로 넘김: 홈 `useFeedFilterBindings`(소스 유형), 검색 `useSearchFilterBindings`(기간)
+  - 사이드바: 인기 태그 12개 칩(글 수순) + 상위 12개 밖에서 고른 태그 3개까지 앞에(나머지 "+N개" → 선택 창), 유형·기간 세그먼트, 빠른 선택 밖에서 고른 소스 2개까지 + "+N개", 빠른 선택 소스 5개, "선택 n개 · 초기화". 칩은 누르면 바로 적용
+  - 빠른 선택 소스: `recentPostCount`(최근 30일) 내림차순 → `postCount` → 이름순, 0은 제외 (019). 필드가 없으면 `postCount` 기준, 둘 다 없으면 숨김 (`pickQuickSources`)
+  - 선택 창(S-12): 검색 + 분류 탭(태그 `category`, 없으면 "기타") / 유형 탭(기업·개인) + 칩 목록. 창 안 칩 목록만 스크롤. [적용]해야 URL에 반영, Esc·바깥 클릭은 버림. 열리면 검색창에 포커스, Tab 포커스 가둠. 데스크톱 가운데 창(최대 640px·80vh), 모바일 하단 전체 시트
+  - 모바일: 피드 위 `[태그 ▾][유형/기간 ▾][소스 ▾]` 버튼 줄(선택 개수 표시) → 선택 창, 유형·기간은 세그먼트 시트. 고른 필터는 칩 줄(검색 화면에도 추가)
+  - 사이드바 `sticky` 독립 스크롤은 낮은 화면용 안전장치로 유지, 스크롤바는 `scrollbar-thin`
+  - 수용 기준 측정 (`npm run capture` + 실서버 데이터 임시 측정): 1280×720·1440×900에서 기본·최대 선택(태그 10, 소스 20) 모두 사이드바 `scrollHeight ≤ clientHeight`. 실데이터 최대 선택 처음 613/584px 넘침 → 소스 추가 표시 2개·칩 간격 4px로 줄여 567/567
 - 광고(F-060)는 사용자 결정으로 제외 (`docs/discussions/016` decided). 관련 코드 없음
 - 비공개 화면 `meta robots noindex` (016, 사용자가 nginx `noindex` 해제): S-05~S-10, A-01~A-04 진입 시 `RouteTitle`이 `<meta name="robots" content="noindex">`를 붙이고, 공개 화면(S-01~S-04, S-11)으로 오면 뗌
 - 화면별 `<title>`: `components/layout/RouteTitle.tsx`의 경로 표 한 곳에서 관리 (예: "검색: 카프카 · DevFeed")

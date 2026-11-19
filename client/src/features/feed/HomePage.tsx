@@ -6,16 +6,15 @@ import { ErrorState } from '@/components/common/ErrorState';
 import { PostCard } from '@/components/post/PostCard';
 import { PostCardSkeleton } from '@/components/post/PostCardSkeleton';
 import { FilterLayout } from '@/components/filters/FilterLayout';
-import { useFeedFilters } from '@/hooks/useFeedFilters';
+import { useFeedFilterBindings, useFeedFilters } from '@/hooks/useFeedFilters';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useOpenPost, useToggleBookmark } from '@/hooks/usePostActions';
-import { ActiveFilterChips } from './ActiveFilterChips';
-import { FeedSidebar } from './FeedSidebar';
 import { feedQuery } from './queries';
 
 export function HomePage() {
   const { status } = useAuth();
   const { filters, reset } = useFeedFilters();
+  const bindings = useFeedFilterBindings();
   const feed = useInfiniteQuery({ ...feedQuery(filters, status), enabled: status !== 'loading' });
   const openPost = useOpenPost();
   const toggleBookmark = useToggleBookmark();
@@ -27,14 +26,9 @@ export function HomePage() {
   const posts = feed.data?.pages.flatMap((p) => p.items) ?? [];
 
   return (
-    <FilterLayout
-      sidebar={<FeedSidebar />}
-      activeCount={filters.tagIds.length + filters.sourceIds.length + (filters.sourceType ? 1 : 0)}
-      onReset={reset}
-    >
+    <FilterLayout b={bindings}>
       <section className="min-w-0 flex-1" aria-label="최신 피드">
         <h1 className="sr-only">최신 피드</h1>
-        <ActiveFilterChips />
 
         {feed.isPending ? (
           <div className="space-y-3">

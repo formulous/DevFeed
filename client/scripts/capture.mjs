@@ -95,41 +95,48 @@ async function main() {
       await page.close();
     }
     const sidebarChecks = [];
-    {
-      const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, locale: 'ko-KR' });
+    const maxTags = [1, 2, 3, 4, 5, 6, 100, 101, 102, 103].join(',');
+    const maxSources = [1, 2, 3, 4, 5, 6, 7, 8, ...Array.from({ length: 12 }, (_, i) => 100 + i)].join(',');
+    for (const [w, h] of [[1280, 720], [1440, 900]]) {
+      const context = await browser.newContext({ viewport: { width: w, height: h }, locale: 'ko-KR' });
       await context.route(/^https?:\/\/(?!localhost)/, (route) => route.abort());
       const page = await context.newPage();
-      await page.goto(base);
-      const aside = page.getByTestId('filter-sidebar');
-      await aside.getByRole('button', { name: /^더보기/ }).nth(1).waitFor();
-      while ((await aside.getByRole('button', { name: /^더보기/ }).count()) > 0) await aside.getByRole('button', { name: /^더보기/ }).first().click();
-      await page.mouse.move(1279, 719);
-      await aside.evaluate((el) => (el.scrollTop = el.scrollHeight));
-      await page.screenshot({ path: `${OUT}/1280/S-01-sidebar-expanded.png` });
-      const sourceList = aside.getByRole('list', { name: '소스 목록' });
-      await sourceList.evaluate((el) => (el.scrollTop = el.scrollHeight));
-      const last = sourceList.getByRole('checkbox').last();
-      sidebarChecks.push(`1280x720 last source visible: ${await last.isVisible()} inViewport: ${await last.evaluate((el) => { const r = el.getBoundingClientRect(); return r.bottom <= window.innerHeight && r.top >= 0; })}`);
+      for (const [label, path] of [['default', '/'], ['max', `/?tagIds=${maxTags}&sourceIds=${maxSources}&sourceType=COMPANY`]]) {
+        await page.goto(`${base}${path}`);
+        const aside = page.getByTestId('filter-sidebar');
+        await aside.getByRole('region', { name: '소스 필터' }).getByRole('button', { pressed: false }).first().waitFor();
+        await page.mouse.move(w - 1, h - 1);
+        const fits = await aside.evaluate((el) => el.scrollHeight <= el.clientHeight);
+        sidebarChecks.push(`${w}x${h} sidebar ${label}: no scroll=${fits}`);
+        await page.screenshot({ path: `${OUT}/1280/S-01-sidebar-${w}x${h}-${label}.png` });
+      }
+      if (w === 1280) {
+        await page.goto(base);
+        const aside = page.getByTestId('filter-sidebar');
+        await aside.getByRole('button', { name: '태그 전체 보기' }).click();
+        await page.getByRole('dialog', { name: '태그 선택' }).getByRole('button', { name: /^Kafka/ }).click();
+        await page.waitForTimeout(300);
+        await page.screenshot({ path: `${OUT}/1280/S-12-tags.png` });
+        await page.keyboard.press('Escape');
+        await aside.getByRole('button', { name: '소스 전체 보기' }).click();
+        await page.screenshot({ path: `${OUT}/1280/S-12-sources.png` });
+      }
       await context.close();
     }
     {
       const context = await browser.newContext({ viewport: { width: 360, height: 740 }, locale: 'ko-KR' });
       await context.route(/^https?:\/\/(?!localhost)/, (route) => route.abort());
       const page = await context.newPage();
-      await page.goto(base);
-      await page.getByRole('button', { name: /^필터/ }).click();
-      const drawer = page.getByRole('dialog', { name: '필터' });
-      await drawer.getByRole('button', { name: /^더보기/ }).nth(1).waitFor();
-      while ((await drawer.getByRole('button', { name: /^더보기/ }).count()) > 0) await drawer.getByRole('button', { name: /^더보기/ }).first().click();
-      await page.screenshot({ path: `${OUT}/360/S-01-drawer.png` });
-      const body = drawer.getByTestId('filter-drawer-body');
-      await body.evaluate((el) => (el.scrollTop = el.scrollHeight));
-      const sourceList = drawer.getByRole('list', { name: '소스 목록' });
-      await sourceList.evaluate((el) => (el.scrollTop = el.scrollHeight));
-      await page.screenshot({ path: `${OUT}/360/S-01-drawer-bottom.png` });
-      const last = sourceList.getByRole('checkbox').last();
-      const footerTop = await drawer.getByRole('button', { name: '결과 보기' }).evaluate((el) => el.getBoundingClientRect().top);
-      sidebarChecks.push(`360 drawer last source above footer: ${await last.evaluate((el, top) => el.getBoundingClientRect().bottom <= top, footerTop)}`);
+      await page.goto(`${base}/?tagIds=1,5&sourceType=PERSONAL`);
+      await page.getByLabel('필터 열기').waitFor();
+      await page.locator('article').first().waitFor();
+      await page.screenshot({ path: `${OUT}/360/S-01-filterbar.png` });
+      await page.getByLabel('필터 열기').getByRole('button', { name: /^태그/ }).click();
+      const sheet = page.getByRole('dialog', { name: '태그 선택' });
+      await sheet.getByRole('button', { name: /^Kafka/ }).waitFor();
+      await page.screenshot({ path: `${OUT}/360/S-12-sheet.png` });
+      const box = await sheet.boundingBox();
+      sidebarChecks.push(`360 tag sheet full height: ${box && Math.round(box.height) === 740}`);
       await context.close();
     }
     console.log(sidebarChecks.join('\n'));

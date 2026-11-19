@@ -12,10 +12,9 @@ import { PostCardSkeleton } from '@/components/post/PostCardSkeleton';
 import { SEARCH_MIN } from '@/components/layout/AppHeader';
 import { tagsQuery } from '@/features/feed/queries';
 import { POSTS_KEY, useOpenPost, useToggleBookmark } from '@/hooks/usePostActions';
-import { isValidQuery, useSearchState } from '@/hooks/useSearchState';
+import { isValidQuery, useSearchFilterBindings, useSearchState } from '@/hooks/useSearchState';
 import { cn } from '@/lib/cn';
 import { formatNumber } from '@/lib/format';
-import { SearchSidebar } from './SearchSidebar';
 
 const SORT_OPTIONS: { value: SearchSort; label: string }[] = [
   { value: 'RELEVANCE', label: '관련도순' },
@@ -45,6 +44,7 @@ function PopularTags() {
 export function SearchPage() {
   const { status } = useAuth();
   const { state, setSort, setPage, resetFilters } = useSearchState();
+  const bindings = useSearchFilterBindings();
   const valid = isValidQuery(state.q);
   const search = useQuery({
     queryKey: [...POSTS_KEY, 'search', status, state],
@@ -63,11 +63,7 @@ export function SearchPage() {
   const totalPages = search.data ? Math.min(Math.ceil(search.data.total / search.data.size), SEARCH_MAX_PAGE) : 0;
 
   return (
-    <FilterLayout
-      sidebar={<SearchSidebar />}
-      activeCount={state.tagIds.length + state.sourceIds.length + (state.period !== 'ALL' ? 1 : 0)}
-      onReset={resetFilters}
-    >
+    <FilterLayout b={bindings}>
       <section className="min-w-0 flex-1" aria-label="검색 결과">
         {!valid ? (
           <EmptyState

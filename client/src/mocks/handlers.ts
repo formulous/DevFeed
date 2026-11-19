@@ -151,7 +151,15 @@ export const handlers = [
   }),
 
   http.get('*/api/tags', () => HttpResponse.json({ items: mockTags })),
-  http.get('*/api/sources', () => HttpResponse.json({ items: [...mockSources, ...mockExtraSources] })),
+  http.get('*/api/sources', () =>
+    HttpResponse.json({
+      items: [...mockSources, ...mockExtraSources].map((s) => ({
+        ...s,
+        postCount: mockPosts.filter((p) => p.source.id === s.id).length,
+        recentPostCount: Math.max(0, mockPosts.filter((p) => p.source.id === s.id).length - (s.id % 4)),
+      })),
+    }),
+  ),
 
   http.post('*/api/posts/:id/views', async ({ request, params }) => {
     if (isMember(request)) state.reads.set(Number(params.id), new Date().toISOString());

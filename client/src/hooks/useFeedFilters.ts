@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router';
 import { MAX_SOURCE_FILTER, MAX_TAG_FILTER, type FeedQuery } from '@/api/posts';
 import type { SourceType } from '@/api/types';
+import type { FilterBindings, SegmentOption } from '@/components/filters/types';
 
 function parseIds(value: string | null, max: number) {
   if (!value) return [];
@@ -53,7 +54,34 @@ export function useFeedFilters() {
     isEmpty: filters.tagIds.length === 0 && filters.sourceIds.length === 0 && filters.sourceType === null,
     toggleTag: (id: number) => update((f) => ({ ...f, tagIds: toggle(f.tagIds, id) })),
     toggleSource: (id: number) => update((f) => ({ ...f, sourceIds: toggle(f.sourceIds, id) })),
+    setTags: (tagIds: number[]) => update((f) => ({ ...f, tagIds })),
+    setSources: (sourceIds: number[]) => update((f) => ({ ...f, sourceIds })),
     setSourceType: (sourceType: SourceType | null) => update((f) => ({ ...f, sourceType })),
     reset: () => update(() => ({ tagIds: [], sourceIds: [], sourceType: null })),
+  };
+}
+
+const SOURCE_TYPE_OPTIONS: SegmentOption[] = [
+  { value: null, label: '전체' },
+  { value: 'COMPANY', label: '기업' },
+  { value: 'PERSONAL', label: '개인' },
+];
+
+export function useFeedFilterBindings(): FilterBindings {
+  const f = useFeedFilters();
+  return {
+    tagIds: f.filters.tagIds,
+    sourceIds: f.filters.sourceIds,
+    setTags: f.setTags,
+    setSources: f.setSources,
+    toggleTag: f.toggleTag,
+    toggleSource: f.toggleSource,
+    segment: {
+      legend: '소스 유형',
+      options: SOURCE_TYPE_OPTIONS,
+      value: f.filters.sourceType,
+      onChange: (v) => f.setSourceType(v as SourceType | null),
+    },
+    reset: f.reset,
   };
 }
