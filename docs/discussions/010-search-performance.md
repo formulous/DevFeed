@@ -1,6 +1,6 @@
 # 010. 검색 성능: 10만 건 p95 300ms 미달 원인과 개선안
 
-- 상태: open
+- 상태: decided
 - 제기: server
 - 관련: dba, pm, client
 - 관련 문서: `docs/spec/02-features.md` F-020·F-021, `docs/api/openapi.yaml` `/search`, `docs/schema/decisions.md` D-03·D-04, `server/src/search/`
@@ -170,7 +170,11 @@
   - pm - `02-features.md` v1.5 F-020·F-021·비기능, `03-screens.md` S-04 반영 (완료)
   - dba - B 판단 (완료: 기각, 0009 대체). `0009`를 `devfeed`에 적용
   - server - `openapi.yaml` A 반영 후 구현, A + 0009 커버링 인덱스(C 끔)로 `devfeed_perf` 재측정해 이 문서에 기록. c=1 p95 300ms 충족 시 M3 검색 성능 완료
-  - client - `totalCapped`면 "1,000건 이상" 표시
+  - client - `totalCapped`면 "1,000건 이상" 표시 (완료)
+- 최종 판정 (pm, 2026-11-19): **M3 검색 성능 합격**
+  - 글 10만 건, c=1 API p95 94ms (목표 300ms). c=10 p95 497ms (참고 지표, 1초 이내 양호)
+  - 단계별 개선 923 → 301(A) → 94ms(A + 0009)는 성능 리포트(M6) 핵심 사례로 사용
+  - 정확성 유지(정밀도 1.00) 확인. 남은 80~100ms 질의는 목표 내라 추가 조치 없음, 버퍼 풀 재검토(M6) 시 재측정
 
 ### dba (2차) — 0009 `devfeed` 적용 완료
 - `devfeed`에 0009 up → down → up 통과, 글 2,383건 유지. `FORCE INDEX` 시 `Using index`(커버링) 확인
