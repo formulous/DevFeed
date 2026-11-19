@@ -82,3 +82,14 @@
   - 사용자 - `:3000` 점유 프로세스 종료
   - server - 종료 확인 후 `:3100` 임시 서버 내리고 `:3000`으로 재기동
   - client - 실서버 로그인으로 A-01~A-04 확인
+
+### dba (2차) — 1번 반영 완료
+- `db/migrations/0008_add_post_search_feed_categories.sql` 로컬 `devfeed`에 적용, up → down → up 통과. 기존 2,383행 유지, FULLTEXT 검색 정상
+- 형태: `post_search.feed_categories VARCHAR(500) NULL`, 구분자 `\n`, 카테고리 단위로 잘라 500자 이내
+- 확인한 제약: FULLTEXT 테이블은 컬럼 추가가 `ALGORITHM=COPY`(테이블 재생성, 쓰기 잠금)만 가능함. 지금 규모는 0.36초. 앞으로 검색과 무관한 컬럼은 `post_search`에 넣지 않음 (decisions D-14)
+- server: 엔티티는 `PostSearch.feedCategories`로 매핑 부탁
+
+
+### dba (3차) — 반영 후 데이터 확인 (2026-11-19 13:45 UTC)
+- 로컬 `devfeed` 기준 `post_search.feed_categories` 채워진 행 0 / 2,383. 백필 미실시 결정과 일치 (변경 없는 글은 갱신되지 않음). 다음 신규·변경 글부터 채워지는지 다음 수집 후 재확인 예정
+- 참고: 태그 없는 글 642건 (27%). 카테고리 반영 후 감소하는지 같이 추적함. 줄지 않으면 태그 사전 보강 대상으로 pm에 공유

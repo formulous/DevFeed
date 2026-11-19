@@ -1,0 +1,1397 @@
+openapi: 3.0.3
+info:
+  title: DevFeed API
+  version: 0.1.0
+  description: |
+    기술 블로그 통합 피드 DevFeed API 명세 (초안 v1, 2026-11-19, server)
+    공통 규칙(응답·에러·커서·인증)은 docs/api/conventions.md 를 따름
+servers:
+  - url: /api
+tags:
+  - name: auth
+  - name: me
+  - name: posts
+  - name: search
+  - name: catalog
+  - name: recommendations
+  - name: admin
+
+paths:
+  /auth/signup:
+    post:
+      tags: [auth]
+      summary: 회원가입 후 즉시 로그인 (F-030)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SignupRequest' }
+      responses:
+        '201':
+          description: 가입 성공. 리프레시 토큰 쿠키 설정
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SetRefreshCookie' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '409':
+          description: EMAIL_DUPLICATED
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: 로그인 (F-030)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: 로그인 성공
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SetRefreshCookie' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401':
+          description: INVALID_CREDENTIALS
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '423':
+          description: LOGIN_LOCKED (5회 연속 실패, 10분 제한)
+          headers:
+            Retry-After:
+              schema: { type: integer }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LoginLockedError' }
+
+  /auth/refresh:
+    post:
+      tags: [auth]
+      summary: 액세스 토큰 재발급 (리프레시 토큰 rotation)
+      description: 요청 본문 없음. 리프레시 토큰 쿠키만으로 동작. 앱 시작 시 로그인 복원에도 사용
+      security:
+        - refreshCookie: []
+      responses:
+        '200':
+          description: 재발급 성공. 새 리프레시 토큰 쿠키 설정
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SetRefreshCookie' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '401':
+          description: REFRESH_TOKEN_INVALID (없음·만료·폐기·재사용 감지)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: 로그아웃. 리프레시 토큰 폐기 후 쿠키 삭제
+      description: 쿠키가 없거나 이미 폐기된 토큰이어도 204 (멱등)
+      security:
+        - refreshCookie: []
+      responses:
+        '204':
+          description: 로그아웃 완료
+
+  /me:
+    get:
+      tags: [me]
+      summary: 내 정보
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+    patch:
+      tags: [me]
+      summary: 닉네임 변경 (S-10)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateMeRequest' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /me/withdraw:
+    post:
+      tags: [me]
+      summary: 회원 탈퇴 (F-032)
+      description: |
+        비밀번호 재확인 후 하드 삭제. 북마크·읽은 기록·관심 태그·리프레시 토큰 삭제,
+        추천 노출 로그는 익명화. 조회수 집계는 유지. 리프레시 쿠키 삭제
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password: { type: string }
+      responses:
+        '204':
+          description: 탈퇴 완료
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403':
+          description: PASSWORD_MISMATCH
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /me/onboarding/complete:
+    post:
+      tags: [me]
+      summary: 온보딩 완료 처리 (S-07 건너뛰기)
+      description: 관심 태그 저장(PUT /me/interest-tags)도 온보딩 완료로 처리하므로, 이 API는 건너뛰기에만 호출함. 멱등
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: OK
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /me/interest-tags:
+    get:
+      tags: [me]
+      summary: 관심 태그 조회 (F-031)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TagBriefList' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+    put:
+      tags: [me]
+      summary: 관심 태그 전체 교체 (F-031)
+      description: 3~10개. 존재하지 않는 태그 ID가 있으면 VALIDATION_FAILED. 저장 시 온보딩 완료 처리
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tagIds]
+              properties:
+                tagIds:
+                  type: array
+                  minItems: 3
+                  maxItems: 10
+                  uniqueItems: true
+                  items: { $ref: '#/components/schemas/Id' }
+      responses:
+        '200':
+          description: 저장된 관심 태그
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TagBriefList' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /me/bookmarks:
+    get:
+      tags: [me]
+      summary: 북마크 목록 (F-040, S-08). 저장한 순 내림차순
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/CursorSize'
+        - $ref: '#/components/parameters/TagIds'
+      responses:
+        '200':
+          description: OK. total은 태그 필터와 무관한 전체 북마크 수
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BookmarkPage' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /me/bookmarks/{postId}:
+    parameters:
+      - $ref: '#/components/parameters/PostId'
+    put:
+      tags: [me]
+      summary: 북마크 추가 (멱등)
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: 추가됨 또는 이미 존재
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: BOOKMARK_LIMIT_EXCEEDED (5,000건)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    delete:
+      tags: [me]
+      summary: 북마크 해제 (멱등)
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: 해제됨 또는 원래 없음
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /me/history:
+    get:
+      tags: [me]
+      summary: 읽은 기록 목록 (F-041, S-09). 최근 읽은 순
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/CursorSize'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HistoryPage' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+    delete:
+      tags: [me]
+      summary: 읽은 기록 전체 삭제
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: 삭제 완료
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /me/history/{postId}:
+    parameters:
+      - $ref: '#/components/parameters/PostId'
+    delete:
+      tags: [me]
+      summary: 읽은 기록 개별 삭제 (멱등)
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: 삭제됨 또는 원래 없음
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /posts:
+    get:
+      tags: [posts]
+      summary: 최신 피드 (F-010, F-011)
+      description: |
+        정렬 (publishedAt DESC, id DESC). 필터 간 AND, tagIds 안은 OR.
+        토큰이 있으면 isBookmarked·isRead 포함
+      security:
+        - {}
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/CursorSize'
+        - $ref: '#/components/parameters/TagIds'
+        - $ref: '#/components/parameters/SourceIds'
+        - name: sourceType
+          in: query
+          schema: { $ref: '#/components/schemas/SourceType' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PostPage' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/TokenExpired' }
+
+  /posts/popular:
+    get:
+      tags: [posts]
+      summary: 인기 글 (F-013). 상위 20건 고정, 최대 10분 지연
+      description: |
+        기간은 요청 시각 기준 롤링 윈도우. DAY=최근 24시간, WEEK=최근 7일, MONTH=최근 30일 발행 글 중 viewCount 내림차순
+      security:
+        - {}
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [DAY, WEEK, MONTH]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    maxItems: 20
+                    items: { $ref: '#/components/schemas/PopularPost' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/TokenExpired' }
+
+  /posts/{postId}/views:
+    parameters:
+      - $ref: '#/components/parameters/PostId'
+    post:
+      tags: [posts]
+      summary: 원문 이동 기록 (F-012, F-041, F-042)
+      description: |
+        client는 원문을 직접 새 탭으로 열고 이 API를 fetch keepalive로 비동기 호출함.
+        같은 viewer(회원 ID 또는 df_vid 쿠키)의 같은 글은 24시간 내 1회만 조회수 반영.
+        회원이면 읽은 기록 저장(마지막 읽은 시각 갱신). recommendationId가 있으면 추천 클릭 기록.
+        조회수 반영 여부와 관계없이 204
+      security:
+        - {}
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                recommendationId:
+                  type: string
+                  format: uuid
+                  description: 추천 피드에서 클릭한 경우 해당 응답의 recommendationId
+      responses:
+        '204':
+          description: 기록 완료
+        '401': { $ref: '#/components/responses/TokenExpired' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /search:
+    get:
+      tags: [search]
+      summary: 키워드 검색 (F-020~F-022)
+      description: |
+        검색 대상: 제목·요약·태그(동의어 포함)·소스 이름. 한글은 2글자 단위(bigram) 부분 일치.
+        관련도는 제목 일치 가중. 하이라이트는 client가 검색어로 처리 (서버는 HTML·구간 정보 미제공).
+        page는 최대 50 (상위 1,000건)
+      security:
+        - {}
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: 앞뒤 공백 제거 후 2~50자
+          schema: { type: string, minLength: 2, maxLength: 50 }
+        - $ref: '#/components/parameters/TagIds'
+        - $ref: '#/components/parameters/SourceIds'
+        - name: period
+          in: query
+          description: 발행일 기준 롤링 기간 (1W=7일, 1M=30일, 1Y=365일)
+          schema:
+            type: string
+            enum: [1W, 1M, 1Y, ALL]
+            default: ALL
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [RELEVANCE, LATEST]
+            default: RELEVANCE
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: OK. 결과 0건이면 items 빈 배열, total 0
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SearchPage' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/TokenExpired' }
+
+  /tags:
+    get:
+      tags: [catalog]
+      summary: 태그 목록 (사이드바, 온보딩, 결과 없음 화면 인기 태그)
+      description: 페이지네이션 없음. postCount는 최대 10분 지연. 인기 태그는 sort=POST_COUNT&size=10
+      parameters:
+        - name: q
+          in: query
+          description: 태그명·동의어 부분 일치 (1~30자)
+          schema: { type: string, maxLength: 30 }
+        - name: category
+          in: query
+          schema: { type: string }
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [NAME, POST_COUNT]
+            default: NAME
+        - name: size
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 500, default: 500 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Tag' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+
+  /sources:
+    get:
+      tags: [catalog]
+      summary: 공개 소스 목록 (사이드바 소스 필터)
+      description: 비활성 소스도 기존 글이 남아 있으므로 포함. 이름순
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/SourceBrief' }
+
+  /recommendations:
+    get:
+      tags: [recommendations]
+      summary: 태그 기반 추천 피드 (F-042, M5)
+      description: |
+        첫 요청 시 추천 목록을 계산해 서버에 10분 보관하고, cursor는 그 목록의 위치를 가리킴.
+        cursor 만료 시 INVALID_CURSOR → client는 첫 페이지부터 다시 요청.
+        응답마다 recommendationId(노출 기록 단위)를 새로 발급하고 응답 시점에 노출을 기록함.
+        선호 데이터가 없으면 fallback=true, 인기 글로 대체
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/CursorSize'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecommendationPage' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /admin/stats:
+    get:
+      tags: [admin]
+      summary: 수집 현황 요약 (F-006, A-01)
+      description: 오늘 = Asia/Seoul 자정 기준
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminStats' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/sources:
+    get:
+      tags: [admin]
+      summary: 소스 목록 (F-006, A-01). 페이지네이션 없음 (소스 ~100곳)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/SourceStatus' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/AdminSourceListItem' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [admin]
+      summary: 소스 등록 (F-001)
+      description: 저장 전 피드 URL을 1회 가져와 검증. 실패 시 등록 거부. 등록 직후 수집 예약(next_crawl_at = 현재)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateSourceRequest' }
+      responses:
+        '201':
+          description: 등록됨
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminSource' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: SOURCE_FEED_DUPLICATED
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: SOURCE_FEED_INVALID
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /admin/sources/validate:
+    post:
+      tags: [admin]
+      summary: 피드 URL 단독 검증 (A-03 [검증] 버튼)
+      description: 검증 결과는 valid 필드로 전달 (유효하지 않아도 200). 요청 타임아웃 10초
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [feedUrl]
+              properties:
+                feedUrl: { type: string, format: uri, maxLength: 2048 }
+      responses:
+        '200':
+          description: 검증 결과
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FeedValidationResult' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/sources/{sourceId}:
+    parameters:
+      - $ref: '#/components/parameters/SourceId'
+    get:
+      tags: [admin]
+      summary: 소스 상세 (A-02)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminSource' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [admin]
+      summary: 소스 수정·비활성화·재활성화 (F-001)
+      description: |
+        보낸 필드만 수정. feedUrl 변경 시 재검증.
+        status는 ACTIVE·INACTIVE만 지정 가능 (ERROR 해제는 /resume). 소스 이름 변경 시 해당 소스 글 검색 토큰 재생성
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateSourceRequest' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminSource' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: SOURCE_FEED_DUPLICATED
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: SOURCE_FEED_INVALID
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /admin/sources/{sourceId}/runs:
+    parameters:
+      - $ref: '#/components/parameters/SourceId'
+    get:
+      tags: [admin]
+      summary: 최근 수집 실행 이력 (F-006, A-02). 최신순 최대 50건
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: size
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 50 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/CrawlRun' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /admin/sources/{sourceId}/crawl:
+    parameters:
+      - $ref: '#/components/parameters/SourceId'
+    post:
+      tags: [admin]
+      summary: 즉시 수집 (F-002)
+      description: 선점 성공 시 수집을 백그라운드로 시작하고 202. 진행 상황은 runs 목록의 result=RUNNING으로 확인
+      security:
+        - bearerAuth: []
+      responses:
+        '202':
+          description: 수집 시작
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [crawlRunId]
+                properties:
+                  crawlRunId: { $ref: '#/components/schemas/Id' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: CRAWL_ALREADY_RUNNING 또는 SOURCE_INACTIVE
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /admin/sources/{sourceId}/resume:
+    parameters:
+      - $ref: '#/components/parameters/SourceId'
+    post:
+      tags: [admin]
+      summary: 오류 상태 소스 재개 (F-002). ERROR → ACTIVE, 연속 실패 0, 즉시 수집 예약
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminSource' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: SOURCE_NOT_IN_ERROR
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /admin/tags:
+    get:
+      tags: [admin]
+      summary: 태그 사전 목록 (F-005, A-04). 페이지네이션 없음
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          description: 태그명·동의어 부분 일치
+          schema: { type: string, maxLength: 30 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/AdminTag' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [admin]
+      summary: 태그 추가
+      description: 기존 글에는 재태깅 실행 전까지 반영되지 않음
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTagRequest' }
+      responses:
+        '201':
+          description: 추가됨
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminTag' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: TAG_DUPLICATED (이름·slug) 또는 SYNONYM_DUPLICATED
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /admin/tags/{tagId}:
+    parameters:
+      - name: tagId
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/Id' }
+    patch:
+      tags: [admin]
+      summary: 태그 수정. synonyms는 보내면 전체 교체
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateTagRequest' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminTag' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: TAG_DUPLICATED 또는 SYNONYM_DUPLICATED
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /admin/tags/retag:
+    post:
+      tags: [admin]
+      summary: 전체 글 재태깅 실행 (F-005)
+      description: 백그라운드 작업. 동시에 1개만 실행. 작업 상태는 서버 메모리 보관 (재시작 시 소실)
+      security:
+        - bearerAuth: []
+      responses:
+        '202':
+          description: 작업 시작
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [jobId]
+                properties:
+                  jobId: { type: string, format: uuid }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: JOB_ALREADY_RUNNING
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /admin/jobs/{jobId}:
+    parameters:
+      - name: jobId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [admin]
+      summary: 백그라운드 작업 상태 조회
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Job' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: df_rt
+
+  headers:
+    SetRefreshCookie:
+      description: 'df_rt=<token>; HttpOnly; Secure; SameSite=Strict; Path=/api/auth; Max-Age=1209600'
+      schema: { type: string }
+
+  parameters:
+    Cursor:
+      name: cursor
+      in: query
+      description: 이전 응답의 nextCursor. 첫 페이지는 생략
+      schema: { type: string, maxLength: 200 }
+    CursorSize:
+      name: size
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 50, default: 1 }
+    PageSize:
+      name: size
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+    TagIds:
+      name: tagIds
+      in: query
+      description: 쉼표 구분, 최대 10개, OR 조건
+      style: form
+      explode: false
+      schema:
+        type: array
+        maxItems: 10
+        items: { $ref: '#/components/schemas/Id' }
+    SourceIds:
+      name: sourceIds
+      in: query
+      description: 쉼표 구분, 최대 20개, OR 조건
+      style: form
+      explode: false
+      schema:
+        type: array
+        maxItems: 20
+        items: { $ref: '#/components/schemas/Id' }
+    PostId:
+      name: postId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Id' }
+    SourceId:
+      name: sourceId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Id' }
+
+  responses:
+    ValidationFailed:
+      description: VALIDATION_FAILED 또는 INVALID_CURSOR
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthenticated:
+      description: UNAUTHENTICATED 또는 TOKEN_EXPIRED
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    TokenExpired:
+      description: TOKEN_EXPIRED (토큰을 보냈는데 만료·위조된 경우. 토큰이 없으면 게스트로 처리)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: FORBIDDEN (관리자 아님)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: NOT_FOUND
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+    Id:
+      type: integer
+      format: int64
+      minimum: 1
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: VALIDATION_FAILED
+        message:
+          type: string
+          example: 검색어는 2자 이상이어야 함
+        fieldErrors:
+          type: array
+          items:
+            type: object
+            required: [field, message]
+            properties:
+              field: { type: string }
+              message: { type: string }
+
+    LoginLockedError:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          required: [retryAfterSec]
+          properties:
+            retryAfterSec: { type: integer, minimum: 1 }
+
+    SignupRequest:
+      type: object
+      required: [email, password, nickname]
+      properties:
+        email: { type: string, format: email, maxLength: 255 }
+        password:
+          type: string
+          minLength: 8
+          maxLength: 64
+          description: 영문·숫자 각 1자 이상 포함
+        nickname: { type: string, minLength: 2, maxLength: 20 }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+
+    AuthResponse:
+      type: object
+      required: [accessToken, expiresIn, user]
+      properties:
+        accessToken: { type: string }
+        expiresIn:
+          type: integer
+          description: 액세스 토큰 유효 시간(초). 900
+        user: { $ref: '#/components/schemas/Me' }
+
+    Me:
+      type: object
+      required: [id, email, nickname, role, hasInterestTags, onboardingCompleted, createdAt]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        email: { type: string }
+        nickname: { type: string }
+        role:
+          type: string
+          enum: [USER, ADMIN]
+        hasInterestTags:
+          type: boolean
+          description: S-02 헤더에서 관심 태그 칩 대신 설정 버튼을 보일지 판단용. 콜드 스타트 판단은 RecommendationPage.fallback 사용
+        onboardingCompleted:
+          type: boolean
+          description: false면 로그인 후 S-07로 보냄. 관심 태그 저장 또는 건너뛰기 시 true
+        createdAt: { type: string, format: date-time }
+
+    UpdateMeRequest:
+      type: object
+      required: [nickname]
+      properties:
+        nickname: { type: string, minLength: 2, maxLength: 20 }
+
+    SourceType:
+      type: string
+      enum: [COMPANY, PERSONAL]
+
+    SourceStatus:
+      type: string
+      enum: [ACTIVE, ERROR, INACTIVE]
+
+    SourceBrief:
+      type: object
+      required: [id, name, logoUrl, type]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        name: { type: string }
+        logoUrl: { type: string, nullable: true }
+        type: { $ref: '#/components/schemas/SourceType' }
+
+    TagBrief:
+      type: object
+      required: [id, name]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        name: { type: string }
+
+    TagBriefList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/TagBrief' }
+
+    Tag:
+      type: object
+      required: [id, name, slug, category, postCount]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        name: { type: string }
+        slug: { type: string }
+        category: { type: string, nullable: true }
+        postCount: { type: integer }
+
+    PostSummary:
+      type: object
+      required: [id, title, summary, url, thumbnailUrl, publishedAt, source, tags]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        title: { type: string }
+        summary:
+          type: string
+          nullable: true
+          maxLength: 300
+          description: 순수 텍스트. HTML로 렌더링하지 않음
+        url:
+          type: string
+          description: 원문 URL (정규화됨)
+        thumbnailUrl: { type: string, nullable: true }
+        publishedAt:
+          type: string
+          format: date-time
+          description: 발행일. 없거나 미래였으면 수집 시각
+        source: { $ref: '#/components/schemas/SourceBrief' }
+        tags:
+          type: array
+          maxItems: 5
+          description: 제목 등장 우선 순서
+          items: { $ref: '#/components/schemas/TagBrief' }
+        isBookmarked:
+          type: boolean
+          description: 회원 요청일 때만 포함
+        isRead:
+          type: boolean
+          description: 회원 요청일 때만 포함
+
+    PostPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/PostSummary' }
+        nextCursor: { type: string, nullable: true }
+
+    PopularPost:
+      allOf:
+        - $ref: '#/components/schemas/PostSummary'
+        - type: object
+          required: [viewCount]
+          properties:
+            viewCount: { type: integer }
+
+    SearchPage:
+      type: object
+      required: [items, total, page, size]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/PostSummary' }
+        total: { type: integer }
+        page: { type: integer }
+        size: { type: integer }
+
+    BookmarkItem:
+      allOf:
+        - $ref: '#/components/schemas/PostSummary'
+        - type: object
+          required: [bookmarkedAt]
+          properties:
+            bookmarkedAt: { type: string, format: date-time }
+
+    BookmarkPage:
+      type: object
+      required: [items, nextCursor, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/BookmarkItem' }
+        nextCursor: { type: string, nullable: true }
+        total: { type: integer }
+
+    HistoryItem:
+      allOf:
+        - $ref: '#/components/schemas/PostSummary'
+        - type: object
+          required: [readAt]
+          properties:
+            readAt:
+              type: string
+              format: date-time
+              description: 마지막으로 읽은 시각
+
+    HistoryPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/HistoryItem' }
+        nextCursor: { type: string, nullable: true }
+
+    Reason:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [INTEREST_TAG, READ_HISTORY, BOOKMARK, POPULAR]
+        tagName:
+          type: string
+          description: INTEREST_TAG·READ_HISTORY·BOOKMARK일 때 근거 태그
+
+    RecommendedPost:
+      allOf:
+        - $ref: '#/components/schemas/PostSummary'
+        - type: object
+          required: [reasons]
+          properties:
+            reasons:
+              type: array
+              minItems: 1
+              items: { $ref: '#/components/schemas/Reason' }
+
+    RecommendationPage:
+      type: object
+      required: [items, nextCursor, recommendationId, fallback]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/RecommendedPost' }
+        nextCursor: { type: string, nullable: true }
+        recommendationId:
+          type: string
+          format: uuid
+          description: 이 응답의 노출 기록 ID. 카드 클릭 시 POST /posts/{postId}/views 본문에 전달
+        fallback:
+          type: boolean
+          description: true면 선호 데이터(관심 태그·최근 30일 읽은 글·북마크) 없음(콜드 스타트) → 인기 글 대체, S-02 안내 배너 표시
+
+    AdminStats:
+      type: object
+      required: [todayNewPostCount, failingSourceCount, activeSourceCount]
+      properties:
+        todayNewPostCount: { type: integer }
+        failingSourceCount:
+          type: integer
+          description: status=ERROR 소스 수
+        activeSourceCount:
+          type: integer
+          description: status=ACTIVE 소스 수
+
+    AdminSourceListItem:
+      type: object
+      required: [id, name, logoUrl, type, status, lastSuccessAt, newPostCount7d, consecutiveFailures]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        name: { type: string }
+        logoUrl: { type: string, nullable: true }
+        type: { $ref: '#/components/schemas/SourceType' }
+        status: { $ref: '#/components/schemas/SourceStatus' }
+        lastSuccessAt: { type: string, format: date-time, nullable: true }
+        newPostCount7d: { type: integer }
+        consecutiveFailures: { type: integer }
+
+    AdminSource:
+      allOf:
+        - $ref: '#/components/schemas/AdminSourceListItem'
+        - type: object
+          required: [siteUrl, feedUrl, crawlIntervalMin, nextCrawlAt, lastCrawledAt, createdAt, updatedAt]
+          properties:
+            siteUrl: { type: string }
+            feedUrl: { type: string }
+            crawlIntervalMin: { type: integer }
+            nextCrawlAt: { type: string, format: date-time }
+            lastCrawledAt: { type: string, format: date-time, nullable: true }
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
+
+    CreateSourceRequest:
+      type: object
+      required: [name, siteUrl, feedUrl, type]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        siteUrl: { type: string, format: uri, maxLength: 2048 }
+        feedUrl: { type: string, format: uri, maxLength: 2048 }
+        type: { $ref: '#/components/schemas/SourceType' }
+        logoUrl: { type: string, format: uri, maxLength: 2048, nullable: true }
+        crawlIntervalMin: { type: integer, minimum: 30, maximum: 1440, default: 60 }
+
+    UpdateSourceRequest:
+      type: object
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        siteUrl: { type: string, format: uri, maxLength: 2048 }
+        feedUrl: { type: string, format: uri, maxLength: 2048 }
+        type: { $ref: '#/components/schemas/SourceType' }
+        logoUrl: { type: string, format: uri, maxLength: 2048, nullable: true }
+        crawlIntervalMin: { type: integer, minimum: 30, maximum: 1440 }
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+
+    FeedValidationResult:
+      type: object
+      required: [valid]
+      properties:
+        valid: { type: boolean }
+        format:
+          type: string
+          enum: [RSS, ATOM]
+        feedTitle: { type: string }
+        itemCount: { type: integer }
+        sampleTitles:
+          type: array
+          maxItems: 5
+          items: { type: string }
+        duplicated:
+          type: boolean
+          description: 같은 피드 URL 소스가 이미 있음
+        reason:
+          type: string
+          description: valid=false일 때 사유 (예 timeout, HTTP 404, RSS/Atom 아님)
+
+    CrawlRun:
+      type: object
+      required: [id, triggerType, result, startedAt, finishedAt, durationMs, attemptCount, httpStatus, fetchedCount, newPostCount, updatedPostCount, errorMessage]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        triggerType:
+          type: string
+          enum: [SCHEDULED, MANUAL]
+        result:
+          type: string
+          enum: [RUNNING, SUCCESS, NOT_MODIFIED, FAILURE]
+        startedAt: { type: string, format: date-time }
+        finishedAt: { type: string, format: date-time, nullable: true }
+        durationMs: { type: integer, nullable: true }
+        attemptCount: { type: integer }
+        httpStatus: { type: integer, nullable: true }
+        fetchedCount: { type: integer }
+        newPostCount: { type: integer }
+        updatedPostCount: { type: integer }
+        errorMessage: { type: string, nullable: true }
+
+    AdminTag:
+      type: object
+      required: [id, name, slug, category, synonyms, postCount]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        name: { type: string }
+        slug: { type: string }
+        category: { type: string, nullable: true }
+        synonyms:
+          type: array
+          items: { type: string }
+        postCount: { type: integer }
+
+    CreateTagRequest:
+      type: object
+      required: [name, slug]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 50 }
+        slug:
+          type: string
+          pattern: '^[a-z0-9]+(-[a-z0-9]+)*$'
+          maxLength: 60
+        category: { type: string, maxLength: 30, nullable: true }
+        synonyms:
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items: { type: string, minLength: 1, maxLength: 100 }
+
+    UpdateTagRequest:
+      type: object
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1, maxLength: 50 }
+        slug:
+          type: string
+          pattern: '^[a-z0-9]+(-[a-z0-9]+)*$'
+          maxLength: 60
+        category: { type: string, maxLength: 30, nullable: true }
+        synonyms:
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items: { type: string, minLength: 1, maxLength: 100 }
+
+    Job:
+      type: object
+      required: [id, type, status, processed, total, startedAt, finishedAt, errorMessage]
+      properties:
+        id: { type: string, format: uuid }
+        type:
+          type: string
+          enum: [RETAG]
+        status:
+          type: string
+          enum: [RUNNING, SUCCEEDED, FAILED]
+        processed: { type: integer }
+        total: { type: integer }
+        startedAt: { type: string, format: date-time }
+        finishedAt: { type: string, format: date-time, nullable: true }
+        errorMessage: { type: string, nullable: true }
