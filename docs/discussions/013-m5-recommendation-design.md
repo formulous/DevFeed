@@ -188,4 +188,4 @@
 - 후속 작업:
   - pm - `02-features.md` F-042 후보·부족 시 채움·이유 개수 반영 (완료)
   - server - 구현 계획 사용자 승인 후 착수, 단위·e2e·`devfeed_perf` 측정 결과를 이 문서에 기록 (완료: e2e 12건 통과, c=1 p95 18.6ms, c=10 p95 52ms, 일별 집계·클릭률 산출 확인)
-  - client - S-02 실서버 연동 (mock 완료)
+  - client - S-02 실서버 연동 (완료: fallback·이유·INVALID_CURSOR·클릭 recommendationId·페이지네이션)
