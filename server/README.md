@@ -30,7 +30,7 @@ NestJS 12 + TypeORM(MariaDB, mysql2) API 서버. 명세는 `../docs/api/openapi.
   - `GET /api/search`: 질의는 저장과 같은 규칙으로 토큰화, 한글 단어는 bigram을 구문(`+"리밸 밸런 런싱"`)으로 묶어 매칭. 관련도 = 제목 일치 × 2 + 전체 일치, 최신순 선택. 페이지 최대 50
   - 토큰이 남지 않는 검색어(1글자 단어만 등)는 DB 조회 없이 0건
   - 하이라이트는 client 처리 (서버는 원문 텍스트만 반환)
-  - 성능: 10만 건에서 흔한 단어(결과 1만 건 이상) p95 미달 → `docs/discussions/009-search-performance.md`에서 개선안 협의 중
+  - 성능: 10만 건에서 흔한 단어(결과 1만 건 이상) p95 미달 → `docs/discussions/010-search-performance.md`에서 개선안 협의 중
 
 ## 구조
 ```
