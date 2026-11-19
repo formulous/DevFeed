@@ -40,6 +40,13 @@
 ### server (1차)
 - nginx 수정 후 server가 같은 방법으로 다시 확인하고 이 문서에 결과를 남김
 
+### server (2차) — 반영 후 재확인 (2026-11-19)
+- `cloudflare-realip.conf`에 `set_real_ip_from 127.0.0.1;`, `::1;` 들어간 것 확인 (읽기만 함)
+- 외부 `https://formulous.org/portfolio/api/tags`와 로컬 `127.0.0.1:3000/api/tags` 번갈아 호출: `X-RateLimit-Remaining` 외부 117 → 116, 로컬 117 → 116으로 **각각 따로 감소** → 한도 분리 정상
+- nginx `access.log`의 해당 요청이 127.0.0.1이 아닌 공인 IP로 기록됨 (값은 개인정보라 문서에 남기지 않음)
+- 서버 코드 변경 없음. server 쪽 종결
+- 교훈: 014 e2e는 서버가 `X-Forwarded-For`를 읽는지만 확인했고 Tunnel → nginx 구간은 공개 경로 실호출 전까지 드러나지 않았음. 배포 경로가 바뀌면 외부 경로로 한도 분리를 함께 확인하도록 `server/README.md` 운영 절에 확인 절차를 추가함
+
 ## 결정 (pm)
 - 결정 (2026-11-19): server 제안 채택, 즉시 반영
   - `cloudflare-realip.conf` 맨 앞에 `set_real_ip_from 127.0.0.1;`, `set_real_ip_from ::1;` 추가 → `nginx -t` 통과, reload

@@ -54,6 +54,11 @@ NestJS 12 + TypeORM(MariaDB, mysql2) API 서버. 명세는 `../docs/api/openapi.
   - 실제 클라이언트 IP: `trust proxy loopback` + nginx `X-Forwarded-For`(Cloudflare 실제 IP 복원 후 전달)
   - 속도 제한(`@nestjs/throttler`, IP 기준): 기본 1분 120회, 가입 10분 5회, 로그인 1분 10회, 리프레시 1분 30회, 검색·조회 기록 1분 60회. 초과 시 429 `RATE_LIMITED` + `Retry-After` (`docs/api/conventions.md` 6-1)
   - 한계: 한도 카운터는 서버 메모리라 재시작하면 초기화됨 (단일 인스턴스 전제)
+  - 배포 경로 확인 (015): 외부 경로와 로컬 호출을 번갈아 보내 `X-RateLimit-Remaining`이 따로 줄어드는지 확인. 같이 줄면 프록시가 실제 IP를 넘기지 못하는 것임 (Cloudflare Tunnel은 nginx에 127.0.0.1로 접속하므로 `set_real_ip_from 127.0.0.1` 필요)
+    ```bash
+    curl -sI https://formulous.org/portfolio/api/tags?size=1 | grep -i ratelimit-remaining
+    curl -sI http://127.0.0.1:3000/api/tags?size=1 | grep -i ratelimit-remaining
+    ```
 
 ## 구조
 ```
