@@ -8,10 +8,10 @@ export const interestTagsQuery = queryOptions({
   select: (data) => data.items,
 });
 
-export const bookmarksQuery = (tagId: number | null) =>
+export const bookmarksQuery = (tagIds: number[]) =>
   infiniteQueryOptions({
-    queryKey: [...POSTS_KEY, 'bookmarks', tagId],
-    queryFn: ({ pageParam, signal }) => fetchBookmarks(tagId, pageParam, signal),
+    queryKey: [...POSTS_KEY, 'bookmarks', tagIds],
+    queryFn: ({ pageParam, signal }) => fetchBookmarks(tagIds, pageParam, signal),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
   });

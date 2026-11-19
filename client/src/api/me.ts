@@ -18,8 +18,8 @@ export const fetchInterestTags = () => request<{ items: TagRef[] }>('/me/interes
 export const saveInterestTags = (tagIds: number[]) =>
   request<{ items: TagRef[] }>('/me/interest-tags', { method: 'PUT', json: { tagIds } });
 
-export const fetchBookmarks = (tagId: number | null, cursor?: string, signal?: AbortSignal) =>
-  request<BookmarkPage>('/me/bookmarks', { signal, query: { cursor, size: ME_PAGE_SIZE, tagIds: tagId ? [tagId] : [] } });
+export const fetchBookmarks = (tagIds: number[], cursor?: string, signal?: AbortSignal) =>
+  request<BookmarkPage>('/me/bookmarks', { signal, query: { cursor, size: ME_PAGE_SIZE, tagIds } });
 
 export const fetchHistory = (cursor?: string, signal?: AbortSignal) =>
   request<CursorPage<HistoryItem>>('/me/history', { signal, query: { cursor, size: ME_PAGE_SIZE } });

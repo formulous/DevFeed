@@ -108,11 +108,37 @@ describe('S-08 북마크', () => {
     expect(await screen.findByText('(3)')).toBeInTheDocument();
     expect(screen.getAllByRole('article')).toHaveLength(3);
     expect(screen.getAllByText(/^저장 /)).toHaveLength(3);
-    await user.selectOptions(screen.getByRole('combobox', { name: '태그' }), String(a.tags[0].id));
-    await waitFor(() => expect(currentLocation).toBe(`/me/bookmarks?tagId=${a.tags[0].id}`));
+    await user.click(screen.getByRole('button', { name: /^태그/ }));
+    const dialog = screen.getByRole('dialog', { name: '태그 선택' });
+    await user.type(within(dialog).getByLabelText('태그 검색'), a.tags[0].name);
+    await user.click(within(dialog).getByRole('button', { name: new RegExp(`^${a.tags[0].name}`) }));
+    expect(currentLocation).toBe('/me/bookmarks');
+    await user.click(within(dialog).getByRole('button', { name: '적용' }));
+    await waitFor(() => expect(currentLocation).toBe(`/me/bookmarks?tagIds=${a.tags[0].id}`));
     await waitFor(() =>
       screen.getAllByRole('article').forEach((el) => expect(el).toHaveTextContent(`#${a.tags[0].name}`)),
     );
+    expect(within(screen.getByLabelText('적용된 필터')).getByText(a.tags[0].name)).toBeInTheDocument();
+    await user.click(within(screen.getByLabelText('적용된 필터')).getByRole('button', { name: '초기화' }));
+    await waitFor(() => expect(currentLocation).toBe('/me/bookmarks'));
+    expect(await screen.findAllByRole('article')).toHaveLength(3);
+  });
+
+  it('태그 여러 개는 OR로 거르고, 예전 tagId 링크도 읽음', async () => {
+    const { parseBookmarkTagIds } = await import('@/features/me/BookmarksPage');
+    expect(parseBookmarkTagIds(new URLSearchParams('tagId=7'))).toEqual([7]);
+    expect(parseBookmarkTagIds(new URLSearchParams('tagIds=3,x,3,5'))).toEqual([3, 5]);
+    await seedLogin('user@devfeed.dev');
+    const [a, b, c] = mockPosts;
+    mockState.bookmarks.set(a.id, iso(0)).set(b.id, iso(1)).set(c.id, iso(2));
+    const ids = [a.tags[0].id, b.tags[0].id];
+    renderWithApp(<App />, `/me/bookmarks?tagIds=${ids.join(',')}`);
+    await waitFor(() =>
+      screen
+        .getAllByRole('article')
+        .forEach((el) => expect(el.textContent).toMatch(new RegExp(`#(${a.tags[0].name}|${b.tags[0].name})`))),
+    );
+    expect(screen.getByRole('button', { name: /^태그\s*2/ })).toBeInTheDocument();
   });
 
   it('북마크 한도 초과면 되돌리고 안내함', async () => {

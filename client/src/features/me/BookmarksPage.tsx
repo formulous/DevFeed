@@ -1,22 +1,37 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
+import { FiChevronDown } from 'react-icons/fi';
 import { useSearchParams } from 'react-router';
+import { MAX_TAG_FILTER } from '@/api/posts';
 import type { BookmarkItem } from '@/api/types';
+import { Chip } from '@/components/common/Chip';
 import { EmptyState } from '@/components/common/EmptyState';
 import { ErrorState } from '@/components/common/ErrorState';
 import { PostCard } from '@/components/post/PostCard';
 import { PostCardSkeleton } from '@/components/post/PostCardSkeleton';
-import { tagsQuery } from '@/features/feed/queries';
+import { ChipPickerModal } from '@/components/filters/ChipPickerModal';
+import { useFilterCatalog } from '@/components/filters/useFilterCatalog';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useOpenPost, useToggleBookmark } from '@/hooks/usePostActions';
 import { formatDateTime, formatNumber } from '@/lib/format';
 import { bookmarksQuery } from './queries';
 
+export function parseBookmarkTagIds(params: URLSearchParams) {
+  const raw = params.get('tagIds') ?? params.get('tagId') ?? '';
+  const ids = raw
+    .split(',')
+    .map(Number)
+    .filter((n) => Number.isInteger(n) && n > 0);
+  return Array.from(new Set(ids)).slice(0, MAX_TAG_FILTER);
+}
+
 export function BookmarksPage() {
   const [params, setParams] = useSearchParams();
-  const tagParam = Number(params.get('tagId'));
-  const tagId = Number.isInteger(tagParam) && tagParam > 0 ? tagParam : null;
-  const tags = useQuery(tagsQuery);
-  const list = useInfiniteQuery(bookmarksQuery(tagId));
+  const tagIds = useMemo(() => parseBookmarkTagIds(params), [params]);
+  const catalog = useFilterCatalog();
+  const [picking, setPicking] = useState(false);
+  const list = useInfiniteQuery(bookmarksQuery(tagIds));
+  const setTags = (ids: number[]) => setParams(ids.length ? { tagIds: ids.join(',') } : {}, { replace: true });
   const openPost = useOpenPost();
   const toggleBookmark = useToggleBookmark();
   const sentinel = useInfiniteScroll(() => {
@@ -32,20 +47,28 @@ export function BookmarksPage() {
         <h1 className="text-xl font-bold">
           북마크 {total !== undefined && <span className="text-fg-secondary">({formatNumber(total)})</span>}
         </h1>
-        <select
-          aria-label="태그"
-          value={tagId ?? ''}
-          onChange={(e) => setParams(e.target.value ? { tagId: e.target.value } : {}, { replace: true })}
-          className="h-8 max-w-[180px] rounded-lg border border-line bg-white px-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-200/40"
+        <button
+          type="button"
+          onClick={() => setPicking(true)}
+          aria-haspopup="dialog"
+          className="flex h-8 items-center gap-1 rounded-full border border-line bg-surface px-3 text-xs font-medium text-fg-secondary"
         >
-          <option value="">태그 전체</option>
-          {(tags.data ?? []).map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </select>
+          태그
+          {tagIds.length > 0 && <span className="text-brand">{tagIds.length}</span>}
+          <FiChevronDown size={12} aria-hidden />
+        </button>
       </div>
+
+      {tagIds.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-2" aria-label="적용된 필터">
+          {tagIds.map((id) => (
+            <Chip key={id} label={catalog.tagName(id)} onRemove={() => setTags(tagIds.filter((v) => v !== id))} />
+          ))}
+          <button type="button" onClick={() => setTags([])} className="ml-auto text-xs text-fg-secondary hover:text-brand">
+            초기화
+          </button>
+        </div>
+      )}
 
       {list.isPending ? (
         <div className="space-y-3">
@@ -57,7 +80,7 @@ export function BookmarksPage() {
         <ErrorState message={list.error.message} onRetry={() => list.refetch()} />
       ) : items.length === 0 ? (
         <EmptyState
-          title={tagId ? '이 태그로 저장한 글이 없음' : '아직 북마크한 글이 없음'}
+          title={tagIds.length ? '이 태그로 저장한 글이 없음' : '아직 북마크한 글이 없음'}
           description="글 카드의 ☆를 누르면 여기에 모임"
         />
       ) : (
@@ -80,6 +103,21 @@ export function BookmarksPage() {
           <PostCardSkeleton />
         </div>
       )}
+      <ChipPickerModal
+        open={picking}
+        title="태그 선택"
+        noun="태그"
+        items={catalog.tagItems}
+        groups={catalog.tagGroups}
+        groupLabel="분류"
+        initial={tagIds}
+        max={MAX_TAG_FILTER}
+        onApply={(ids) => {
+          setTags(ids);
+          setPicking(false);
+        }}
+        onClose={() => setPicking(false)}
+      />
     </section>
   );
 }
