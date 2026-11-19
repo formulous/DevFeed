@@ -8,10 +8,11 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main",
-    "test": "jest",
-    "test:watch": "jest --watch",
+    "test": "node --experimental-vm-modules --no-warnings=ExperimentalWarning node_modules/jest/bin/jest.js",
+    "test:watch": "node --experimental-vm-modules --no-warnings=ExperimentalWarning node_modules/jest/bin/jest.js --watch",
     "admin:create": "node dist/scripts/create-admin.js",
-    "admin:token": "node dist/scripts/issue-admin-token.js"
+    "admin:token": "node dist/scripts/issue-admin-token.js",
+    "test:e2e": "node --experimental-vm-modules --no-warnings=ExperimentalWarning node_modules/jest/bin/jest.js --config test/jest-e2e.json --runInBand"
   },
   "dependencies": {
     "@nestjs/common": "^12.5.1",
@@ -56,5 +57,8 @@
       "^.+\\.ts$": "ts-jest"
     },
     "testEnvironment": "node"
+  },
+  "engines": {
+    "node": ">=24.9"
   }
 }
