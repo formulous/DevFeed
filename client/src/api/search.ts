@@ -7,6 +7,10 @@ export type SearchSort = 'RELEVANCE' | 'LATEST';
 export const SEARCH_PAGE_SIZE = 20;
 export const SEARCH_MAX_PAGE = 50;
 
+export const SEARCH_TOTAL_CAP = 1000;
+
+export type SearchResult = PagedList<PostSummary> & { totalCapped?: boolean };
+
 export interface SearchQuery {
   q: string;
   tagIds: number[];
@@ -17,7 +21,7 @@ export interface SearchQuery {
 }
 
 export function fetchSearch(query: SearchQuery, signal?: AbortSignal) {
-  return request<PagedList<PostSummary>>('/search', {
+  return request<SearchResult>('/search', {
     signal,
     query: {
       q: query.q,

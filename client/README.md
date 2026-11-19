@@ -112,7 +112,7 @@ App
 ## 검색 (S-04, M3)
 - 검색어·태그·소스·기간·정렬·페이지가 모두 URL 쿼리. 기본값(`period=ALL`, `sort=RELEVANCE`, `page=1`)은 URL에서 뺌
 - 필터·정렬이 바뀌면 page를 1로 되돌림. 페이지 이동 중에는 이전 결과를 흐리게 유지(`keepPreviousData`)
-- 페이지 번호는 최대 50 (명세 상한, 상위 1,000건). 마지막 페이지에서 상한 안내
+- 페이지 번호는 최대 50 (명세 상한, 상위 1,000건). `totalCapped=true`면 "1,000건 이상" 표시 + 마지막 페이지에서 상한 안내 (`docs/discussions/010` 결정). 필드가 없으면 false 취급
 - 검색어 2~50자. 1자면 헤더 검색 버튼 비활성, URL로 들어와도 요청하지 않고 안내
 - 하이라이트: 검색어를 공백으로 나눈 토큰을 텍스트 노드 `<mark>`로 표시 (`lib/highlight.ts`)
 - 결과 없음: 철자 안내 + 인기 태그 10개 칩(누르면 태그명으로 검색), 필터가 있으면 [필터 초기화]
@@ -208,13 +208,22 @@ npm test
   - 시드 소스 `logoUrl`이 전부 null이라 카드 로고 자리를 빈 칸 대신 생략하도록 바꿈
 - 브라우저 화면 확인은 못 함 (이 세션에서 브라우저 도구 사용 불가)
 
+## 하위 경로 배포 (외부 확인용)
+- `https://formulous.org/portfolio/` 에서 실서버 연동 빌드를 확인함 (`docs/discussions/009-external-preview-formulous.md`)
+- `npm run build:web` → `dist-web/` (`VITE_BASE=/portfolio/`, mock 끔). `dist-web/`는 git 제외
+- 하위 경로 처리
+  - Vite `base`: `VITE_BASE` 환경변수 (기본 `/`)
+  - 라우터: `BrowserRouter basename` = `BASE_URL`에서 끝 슬래시 제거
+  - API: `apiUrl`이 `${BASE_URL}api` 기준 → `/portfolio/api/...` (조회 기록 keepalive 포함)
+- nginx 설정은 pm 담당. `/portfolio/api/` → `127.0.0.1:3000/api/` 프록시, 리프레시 쿠키 경로 변환
+
 ## 진행 현황
 - [x] 스캐폴딩, onyx-ui 연결, 라우트·가드·레이아웃
 - [x] S-01 홈 피드: 카드, 태그·소스·유형 필터(URL 동기화), 무한 스크롤, 스켈레톤·빈 결과·오류 상태, 북마크 낙관적 토글, 조회 기록(keepalive), 게스트 로그인 유도 모달
 - [x] S-05 로그인 (관리자 접근용으로 M1에 앞당김)
 - [ ] S-06 회원가입, S-07 온보딩
 - [x] S-03 인기, S-01 실서버 API 연동 확인 (M2)
-- [x] S-04 검색 (mock 기준, 실서버 `/search` 구현 대기)
+- [x] S-04 검색 (실서버 `/search` 응답 형태·오류 대조 일치. `totalCapped` 표시 구현 완료, server 반영 후 실서버 확인 예정)
 - [ ] S-02 추천
 - [ ] S-08~S-10 회원 화면
 - [x] A-01~A-04 관리자 화면 (M1)

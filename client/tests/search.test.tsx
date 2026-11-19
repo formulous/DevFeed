@@ -1,6 +1,9 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
+import { mockPosts } from '@/mocks/fixtures';
+import { server } from '@/mocks/node';
 import { App } from '@/App';
 import { pageWindow } from '@/components/common/Pagination';
 import { parseSearch, toSearchParams } from '@/hooks/useSearchState';
@@ -66,6 +69,28 @@ describe('S-04 검색 결과', () => {
     await user.click(await screen.findByRole('button', { name: '다음 페이지' }));
     await waitFor(() => expect(currentLocation).toBe('/search?q=%EC%A0%95%EB%A6%AC&page=2'));
     expect(await screen.findByRole('button', { name: '2' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('totalCapped면 1,000건 이상으로 표시하고 마지막 페이지에서 상한 안내', async () => {
+    const items = mockPosts.slice(0, 20);
+    server.use(
+      http.get('*/api/search', ({ request }) => {
+        const page = Number(new URL(request.url).searchParams.get('page') ?? 1);
+        return HttpResponse.json({ items, total: 1000, totalCapped: true, page, size: 20 });
+      }),
+    );
+    renderWithApp(<App />, '/search?q=%EA%B0%9C%EB%B0%9C&page=50');
+    expect(await screen.findByText('1,000건 이상')).toBeInTheDocument();
+    expect(screen.getByText(/상위 1,000건까지만 볼 수 있음/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '50' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('totalCapped가 없으면 정확한 건수로 표시함', async () => {
+    server.use(
+      http.get('*/api/search', () => HttpResponse.json({ items: mockPosts.slice(0, 3), total: 3, page: 1, size: 20 })),
+    );
+    renderWithApp(<App />, '/search?q=%EA%B0%9C%EB%B0%9C');
+    expect(await screen.findByText('3건')).toBeInTheDocument();
   });
 
   it('결과가 없으면 안내와 인기 태그를, 필터가 있으면 초기화 버튼도 보여줌', async () => {

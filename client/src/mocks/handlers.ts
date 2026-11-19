@@ -112,7 +112,13 @@ export const handlers = [
       );
     if (url.searchParams.get('sort') !== 'LATEST') scored.sort((a, b) => b.score - a.score);
     const items = scored.slice((page - 1) * size, page * size).map(({ p }) => decorate(p, member));
-    return HttpResponse.json({ items, total: scored.length, page, size });
+    return HttpResponse.json({
+      items,
+      total: Math.min(scored.length, 1000),
+      totalCapped: scored.length > 1000,
+      page,
+      size,
+    });
   }),
 
   http.get('*/api/tags', () => HttpResponse.json({ items: mockTags })),

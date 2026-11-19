@@ -7,7 +7,8 @@
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -p tsconfig.json && vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build:web": "tsc -p tsconfig.json && VITE_BASE=/portfolio/ VITE_API_MOCK=false vite build --outDir dist-web"
   },
   "msw": {
     "workerDirectory": [

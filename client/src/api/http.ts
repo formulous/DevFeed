@@ -44,7 +44,7 @@ export function onAuthLost(listener: (() => void) | null) {
 }
 
 export function apiUrl(path: string, query?: Record<string, QueryValue>) {
-  const url = new URL(`/api${path}`, window.location.origin);
+  const url = new URL(`${import.meta.env.BASE_URL}api${path}`, window.location.origin);
   if (query) {
     for (const [key, value] of Object.entries(query)) {
       if (value === undefined || value === null || value === '') continue;

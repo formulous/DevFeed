@@ -2,7 +2,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { FiFilter } from 'react-icons/fi';
 import { Link } from 'react-router';
-import { fetchSearch, SEARCH_MAX_PAGE, type SearchSort } from '@/api/search';
+import { fetchSearch, SEARCH_MAX_PAGE, SEARCH_TOTAL_CAP, type SearchSort } from '@/api/search';
 import { useAuth } from '@/auth/AuthProvider';
 import { EmptyState } from '@/components/common/EmptyState';
 import { ErrorState } from '@/components/common/ErrorState';
@@ -91,7 +91,13 @@ export function SearchPage() {
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <h1 className="min-w-0 text-base">
                 <strong className="break-all">"{state.q}"</strong> 검색 결과{' '}
-                {search.data && <span className="text-fg-secondary">{formatNumber(search.data.total)}건</span>}
+                {search.data && (
+                  <span className="text-fg-secondary">
+                    {search.data.totalCapped
+                      ? `${formatNumber(SEARCH_TOTAL_CAP)}건 이상`
+                      : `${formatNumber(search.data.total)}건`}
+                  </span>
+                )}
               </h1>
               <select
                 aria-label="정렬"
@@ -142,7 +148,7 @@ export function SearchPage() {
                   ))}
                 </ul>
                 <Pagination page={state.page} totalPages={totalPages} onChange={setPage} />
-                {search.data.total > SEARCH_MAX_PAGE * search.data.size && state.page === totalPages && (
+                {search.data.totalCapped && state.page === totalPages && (
                   <p className="mt-2 text-center text-xs text-fg-muted">상위 1,000건까지만 볼 수 있음. 검색어나 필터를 좁혀보셈</p>
                 )}
               </>
