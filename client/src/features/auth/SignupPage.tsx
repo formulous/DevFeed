@@ -108,7 +108,13 @@ export function SignupPage() {
           content={pending ? '가입 중' : '가입하기'}
         />
       </form>
-      <p className="mt-4 text-center text-sm text-fg-secondary">
+      <p className="mt-4 text-center text-xs text-fg-muted">
+        가입하면 이메일·닉네임을 보관함.{' '}
+        <Link to="/privacy" className="font-medium text-fg-secondary underline hover:text-brand">
+          개인정보 안내
+        </Link>
+      </p>
+      <p className="mt-2 text-center text-sm text-fg-secondary">
         이미 계정이 있음?{' '}
         <Link to={loginHref} className="font-medium text-brand">
           로그인

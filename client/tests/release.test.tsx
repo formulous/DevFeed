@@ -24,6 +24,27 @@ describe('화면별 title', () => {
   });
 });
 
+describe('S-11 개인정보 안내', () => {
+  it('푸터 링크로 들어가 백업 보관 안내를 보여줌', async () => {
+    const { default: userEvent } = await import('@testing-library/user-event');
+    const user = userEvent.setup();
+    renderWithApp(<App />, '/');
+    await user.click(screen.getByRole('link', { name: '개인정보 안내' }));
+    expect(await screen.findByRole('heading', { level: 1, name: '개인정보 안내' })).toBeInTheDocument();
+    expect(screen.getByText(/최대 14일 남고/)).toBeInTheDocument();
+    expect(screen.getByText(/df_vid/)).toBeInTheDocument();
+    await waitFor(() => expect(document.title).toBe('개인정보 안내 · DevFeed'));
+  });
+
+  it('회원가입 화면에도 링크가 있음', async () => {
+    renderWithApp(<App />, '/signup');
+    await screen.findByRole('button', { name: '가입하기' });
+    const links = screen.getAllByRole('link', { name: '개인정보 안내' });
+    expect(links.length).toBe(2);
+    links.forEach((l) => expect(l).toHaveAttribute('href', '/privacy'));
+  });
+});
+
 describe('ErrorBoundary', () => {
   it('청크 로드 오류를 구분함', () => {
     expect(isChunkLoadError(new TypeError('Failed to fetch dynamically imported module: /assets/A.js'))).toBe(true);

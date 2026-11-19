@@ -16,6 +16,7 @@ import { HomePage } from '@/features/feed/HomePage';
 import { PopularPage } from '@/features/popular/PopularPage';
 import { ForYouPage } from '@/features/recommend/ForYouPage';
 import { SearchPage } from '@/features/search/SearchPage';
+import { PrivacyPage } from '@/features/info/PrivacyPage';
 
 const AdminRoutes = lazy(() => import('@/features/admin/AdminRoutes'));
 
@@ -29,6 +30,7 @@ export function App() {
           <Route path="for-you" element={<RequireAuth><ForYouPage /></RequireAuth>} />
           <Route path="popular" element={<PopularPage />} />
           <Route path="search" element={<SearchPage />} />
+          <Route path="privacy" element={<PrivacyPage />} />
           <Route path="me/bookmarks" element={<RequireAuth><BookmarksPage /></RequireAuth>} />
           <Route path="me/history" element={<RequireAuth><HistoryPage /></RequireAuth>} />
           <Route path="me/settings" element={<RequireAuth><SettingsPage /></RequireAuth>} />

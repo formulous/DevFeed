@@ -15,6 +15,7 @@ const SCREENS = [
   { id: 'S-04', path: '/search?q=%EC%A0%95%EB%A6%AC', auth: false, ready: 'article' },
   { id: 'S-05', path: '/login', auth: false, ready: 'form' },
   { id: 'S-06', path: '/signup', auth: false, ready: 'form' },
+  { id: 'S-11', path: '/privacy', auth: false, ready: 'article' },
   { id: 'S-07', path: '/onboarding/tags', auth: true, ready: '[aria-label="태그 목록"]' },
   { id: 'S-02', path: '/for-you', auth: true, ready: 'article' },
   { id: 'S-08', path: '/me/bookmarks', auth: true, ready: 'article' },

@@ -1,5 +1,6 @@
 import { Outlet, useLocation } from 'react-router';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+import { AppFooter } from './AppFooter';
 import { AppHeader } from './AppHeader';
 
 export function AppLayout() {
@@ -12,6 +13,7 @@ export function AppLayout() {
           <Outlet />
         </ErrorBoundary>
       </main>
+      <AppFooter />
     </div>
   );
 }

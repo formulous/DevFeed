@@ -1,7 +1,7 @@
 # DevFeed client
 
 - 담당: `client`
-- 상태: M6 진행 중 (2026-11-19). S-01 홈 피드, S-03 인기 글, S-04 검색, S-05 로그인, S-06 가입, S-07 온보딩, S-08 북마크, S-09 읽은 기록, S-10 설정·탈퇴, S-02 추천(M5), A-01~A-04 관리자 화면 동작
+- 상태: MVP 완료 (M0~M6, 2026-11-19). 공개 주소 https://formulous.org/portfolio/ . S-01 홈 피드, S-03 인기 글, S-04 검색, S-05 로그인, S-06 가입, S-07 온보딩, S-08 북마크, S-09 읽은 기록, S-10 설정·탈퇴, S-02 추천(M5), A-01~A-04 관리자 화면 동작
 - 검증 환경: Node 24.22.3
 - API 타입·mock은 `docs/api/openapi.yaml` v1(004에서 승인)과 `docs/api/conventions.md` 기준. 현재 구현 범위(posts, tags, sources, auth, me, bookmarks, views)만 반영
 - 기준 문서: `docs/spec/02-features.md`, `docs/spec/03-screens.md`
@@ -66,7 +66,7 @@ client/src/
   auth/               AuthProvider.tsx, LoginPromptProvider.tsx, guards.tsx(RequireAuth·RequireAdmin·GuestOnly)
   components/         layout/(AppHeader·AppLayout·AuthLayout), post/(PostCard·Skeleton), common/(Modal·ConfirmModal·Toast·FieldError·Chip·Highlight·Pagination·EmptyState·ErrorState), filters/CheckList(홈·검색 사이드바 공용)
   features/           feed/(HomePage·FeedSidebar·ActiveFilterChips·queries), popular/PopularPage, recommend/(ForYouPage·reasons), search/(SearchPage·SearchSidebar), auth/(LoginPage·SignupPage),
-                      me/(OnboardingPage·TagPicker·BookmarksPage·HistoryPage·SettingsPage·queries),
+                      me/(OnboardingPage·TagPicker·BookmarksPage·HistoryPage·SettingsPage·queries), info/PrivacyPage,
                       admin/(AdminRoutes·AdminDashboardPage·SourceDetailPage·SourceFormPage·TagDictionaryPage·TagFormModal·StatusBadge·queries),
                       common/NotFound
   hooks/              useFeedFilters(URL ↔ 필터), useInfiniteScroll, usePostActions(북마크 낙관적 토글·조회 기록), useSearchState(URL ↔ 검색 상태), useDebouncedValue
@@ -236,13 +236,17 @@ npm run capture    # 반응형 점검·README용 스크린샷 (Playwright, 최�
   - `build`·`build:web` 마지막에 `scripts/check-build.mjs`가 워커 파일·mock 코드 문자열(`setupWorker` 등)이 없는지 검사, 있으면 실패
 - 전역 에러 화면: `AppLayout`·`AuthLayout`의 `Outlet`을 `ErrorBoundary`로 감쌈 (헤더는 유지). 경로가 바뀌면 초기화
   - 재배포 직후 lazy 청크(관리자) 로드 실패면 1회 자동 새로고침 (`sessionStorage` 플래그로 무한 반복 방지), 그래도 실패하면 "새 버전이 배포됐음" 안내
+- S-11 개인정보 안내(`/privacy`): 기획서 03 S-11 문구 기준 (수집 항목, 이용 목적, `df_vid` 쿠키, 탈퇴 즉시 삭제 + 백업 최대 14일, 추천 기록 익명화, 원문 저작권)
+  - 진입: 공통 푸터(`AppFooter`, `AppLayout`·`AuthLayout` 하단), 회원가입 화면 하단 링크
+  - onyx `SiteFooter`는 formulous 링크(소개·문의 등)가 고정돼 있어 쓰지 않음
+- 공개 전환(2026-11-19, `https://formulous.org/portfolio/`, nginx `noindex` 유지)에 맞춰 `index.html`에 meta description·OG·Twitter 카드, `public/favicon.svg`, `public/og.png`(S-01 1280px 캡처) 추가. OG URL은 공개 주소 절대 경로로 고정
 - 화면별 `<title>`: `components/layout/RouteTitle.tsx`의 경로 표 한 곳에서 관리 (예: "검색: 카프카 · DevFeed")
-- 반응형 점검: `npm run capture`가 dev 서버(MSW mock)를 띄워 14개 화면 × 360·768·1280px를 찍음
+- 반응형 점검: `npm run capture`가 dev 서버(MSW mock)를 띄워 15개 화면 × 360·768·1280px를 찍음
   - 결과: `screenshots/{폭}/{화면}.png`(전체), `.top.png`(첫 화면), `screenshots/overview-{폭}.png`(폭별 모음). git 제외
   - 가로 넘침(`scrollWidth > clientWidth`)을 자동 검사해 출력
   - 외부 이미지 요청은 막아서 결과가 매번 같음
   - README용 4장(S-01·S-02·S-04·A-01, 1280px 첫 화면)은 `docs/screens/`에 복사 → 커밋
-- 반응형 점검 결과 (2026-11-19): 14개 화면 × 3폭 모두 가로 넘침 없음
+- 반응형 점검 결과 (2026-11-19): 15개 화면(S-11 포함) × 3폭 모두 가로 넘침 없음
   | 발견 | 폭 | 조치 |
   |---|---|---|
   | 헤더 "로그인"이 세로로 한 글자씩 접힘 | 360 | 헤더 오른쪽 영역 `shrink-0 whitespace-nowrap`, 닉네임은 8rem에서 말줄임 |

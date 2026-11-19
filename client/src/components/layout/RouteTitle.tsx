@@ -13,6 +13,7 @@ const TITLES: [string, string][] = [
   ['/me/bookmarks', '북마크'],
   ['/me/history', '읽은 기록'],
   ['/me/settings', '설정'],
+  ['/privacy', '개인정보 안내'],
   ['/admin', '수집 현황'],
   ['/admin/sources/new', '소스 등록'],
   ['/admin/sources/:id/edit', '소스 수정'],
