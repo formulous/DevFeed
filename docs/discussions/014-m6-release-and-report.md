@@ -1,6 +1,6 @@
 # 014. M6 출시·성능 리포트 계획
 
-- 상태: open
+- 상태: decided
 - 제기: pm
 - 관련: server, client, dba
 - 관련 문서: `docs/spec/04-roadmap.md` M6, `docs/spec/02-features.md` 비기능 요구사항, `docs/discussions/009`, `010`, `013`
@@ -143,6 +143,7 @@
 - ErrorBoundary(재배포 직후 청크 로드 실패 시 1회 자동 새로고침), 화면별 `<title>` 추가
 - `build:web` 갱신함. 상세: `client/README.md` "출시 점검 (M6)"
 - 공개 결정 시 남은 client 작업: meta description·OG 태그·favicon
+- S-11 개인정보 안내(`/privacy`) 추가: 03 문구 기준, 공통 푸터·회원가입 화면 링크. 360·768·1280 캡처 확인, `build:web` 갱신 (11-19)
 
 ### server (2차) — 작업 1~4 완료
 - 1 성능 리포트: `server/README.md` "성능 리포트" 절 (수집·피드·검색·추천 같은 형식, 검색 923 → 301 → 94ms 과정). 측정 스크립트 `server/perf/` (대상 DB 이름 확인 후 실행)
@@ -171,6 +172,14 @@
 - 설치 직전 이 세션에서 띄운 수동 서버를 내렸기 때문에 등록 전 잠깐 502가 났던 것임. 이제 세션과 무관하게 실행됨
 - 이후 코드 반영은 `server/deploy/deploy.sh` (빌드 → 재시작 → 헬스 체크)
 
+### dba (3차) — 일일 백업 등록 완료
+- `~/.config/devfeed/backup.env` 권한 600 확인 후 `db/ops/install-backup-agent.sh`로 launchd `org.devfeed.backup` 등록 (매일 04:30 KST)
+- `launchctl kickstart`로 1회 실행 확인: `runs = 1`, `last exit code = 0`
+  - 생성: `~/backups/devfeed/devfeed_20261119T145703Z.sql.gz` (924KB, 권한 600, `gzip -t` 통과)
+  - 로그: `~/backups/devfeed/backup.log`
+- 14일 보관 자동 삭제는 스크립트에 포함. 첫 삭제는 14일 뒤 로그에서 확인 가능
+- dba 쪽 공개 전환 조건(백업) 충족
+
 ## 결정 (pm)
 - 결정 (2026-11-19)
   - client: 계획 1~3 + 추가 제안(ErrorBoundary, 화면별 `<title>`, `mockServiceWorker.js` 빌드 제외) 채택. 공개 결정 시 meta·OG·favicon 추가
@@ -192,3 +201,9 @@
 - 사용자 승인 (2026-11-19)
   - `docs/spec/05-portfolio-summary.md` 초안 승인 → 공개 전환 시 루트 `README.md` 상단에 반영
   - 공개 전환 위임: `06-acceptance-checklist.md` 공개 전환 조건 1~4 충족 시 pm이 nginx 기본 인증 해제·README 반영 진행
+- 공개 전환 (pm, 2026-11-19)
+  - 조건 1~4 충족 확인: 속도 제한(server e2e), 반응형(client 캡처), 일일 백업(launchd `org.devfeed.backup`, 1회 실행 성공), S-11 개인정보 안내(외부 200)
+  - nginx `/portfolio/` 기본 인증 해제 (`nginx.conf`, `nginx.https.conf`), `noindex` 유지 (사용자 별도 지시 없음)
+  - 외부 확인: `/portfolio/`·`/privacy`·`/api/health` 200, `/api/admin/stats` 비로그인 401, 다른 도구(`/`, `/salary-calc/`) 200
+  - 루트 `README.md` 상단에 포트폴리오 요약(05) + 화면 캡처 4장 반영, M6 완료 체크
+  - 남은 선택 작업: client meta description·OG 태그·favicon (공개 후 품질 개선)
