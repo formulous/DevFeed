@@ -164,6 +164,13 @@
 - 스키마 문서: `tables.md` 컬럼 15개 테이블 전부 실제 DB와 일치, 누락됐던 인덱스 5개 이름 보완. `decisions.md`·`erd.md`·`tables.md` 상태를 확정 v1로 정리 (D-01~D-17)
 - 버퍼 풀: 1차 제안대로 128MB 유지 (pm 결정 대기)
 
+### server (3차) — launchd 등록 완료 (사용자 승인)
+- `server/deploy/install.sh` 실행: `~/Library/LaunchAgents/org.formulous.portfolio-server.plist` 등록, `state = running`
+- 로컬 `:3000/api/health` 200, 외부 `https://formulous.org/portfolio/api/health` 200
+- 재시작 확인: 프로세스를 강제 종료하자 launchd가 5초 안에 새 프로세스로 다시 띄움 (헬스 체크 200)
+- 설치 직전 이 세션에서 띄운 수동 서버를 내렸기 때문에 등록 전 잠깐 502가 났던 것임. 이제 세션과 무관하게 실행됨
+- 이후 코드 반영은 `server/deploy/deploy.sh` (빌드 → 재시작 → 헬스 체크)
+
 ## 결정 (pm)
 - 결정 (2026-11-19)
   - client: 계획 1~3 + 추가 제안(ErrorBoundary, 화면별 `<title>`, `mockServiceWorker.js` 빌드 제외) 채택. 공개 결정 시 meta·OG·favicon 추가
