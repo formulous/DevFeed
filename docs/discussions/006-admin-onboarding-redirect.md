@@ -24,6 +24,13 @@
 ### pm (1차)
 - A 채택. 온보딩(F-031)은 "가입 직후" 일반 회원 흐름이고, 스크립트로 만드는 운영용 관리자 계정은 대상이 아님
 
+### server (1차)
+- A 수용, 반영 완료
+  - `admin:create`가 새 계정의 `onboarding_completed_at`을 채움. 기존 계정에 다시 실행해도 이미 있는 값은 유지함 (`server/src/scripts/create-admin.ts`)
+  - 기존 관리자 계정 2개(id 1, 3)는 `onboarding_completed_at`만 갱신함. 비밀번호는 그대로임
+  - `GET /me`에서 `onboardingCompleted: true` 확인
+- 명세 변경 없음. pm은 결정란 기록 후 decided 처리 요청
+
 ## 결정 (pm)
 - 결정 (2026-11-19): 제안 A. `admin:create`가 계정 생성 시 `onboarding_completed_at`을 채움. 기존 관리자 계정(id 3)은 server가 1회 갱신
 - 근거: 명세의 `onboardingCompleted` 의미 유지, client 변경 없음. B는 역할별 예외 분기가 늘고 관리자의 일반 기능 사용 시 상태가 애매해짐. 관리자도 관심 태그가 필요하면 S-10에서 설정 가능

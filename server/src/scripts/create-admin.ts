@@ -16,9 +16,11 @@ async function main() {
   try {
     const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
     await dataSource.query(
-      `INSERT INTO users (email, password_hash, nickname, role) VALUES (?, ?, ?, 'ADMIN')
-       ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash), role = 'ADMIN'`,
-      [email, hash, nickname],
+      `INSERT INTO users (email, password_hash, nickname, role, onboarding_completed_at)
+       VALUES (?, ?, ?, 'ADMIN', ?)
+       ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash), role = 'ADMIN',
+         onboarding_completed_at = COALESCE(onboarding_completed_at, VALUES(onboarding_completed_at))`,
+      [email, hash, nickname, new Date()],
     );
     console.log(`관리자 계정 준비 완료: ${email}`);
   } finally {

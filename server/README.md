@@ -53,6 +53,7 @@ npm test                   # Jest 단위 테스트
 ```bash
 npm run build
 ADMIN_PASSWORD='<8~64자 영문+숫자>' npm run admin:create -- --email admin@example.com
+# 관리자 계정은 온보딩 완료 상태로 생성됨 (006). 이미 있는 계정이면 비밀번호만 재설정됨
 # 로그인은 POST /api/auth/login, 스크립트로 토큰만 받을 때는 아래 사용
 npm run admin:token -- --email admin@example.com    # 액세스 토큰 출력 (유효 JWT_ACCESS_TTL_SEC)
 curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
