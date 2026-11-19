@@ -92,6 +92,45 @@ npm run admin:token -- --email admin@example.com    # 액세스 토큰 출력 (�
 curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
 ```
 
+## 성능 리포트 (M6 정리, 2026-11-19)
+
+측정 환경: 맥미니 로컬, MariaDB 12.1.2 Docker(버퍼 풀 128MB 기본값), Node 24.22.3, 단일 서버 프로세스. 응답 시간은 API 왕복(로컬 HTTP) 기준이고 DB 시간과 구분해 적음.
+목표 판정은 동시 요청 1(c=1) 기준이고, c=10은 참고 지표 (010 결정).
+
+| 영역 | 데이터 규모 | 목표 | 결과 | 근거 |
+|---|---|---|---|---|
+| 수집 (M1) | 시드 소스 36곳 → 글 2,383건 | 실패 격리·중복 0 | 36곳 첫 수집 약 20초, 중복 0건, 재수집 신규 0 | 아래 M1 절 |
+| 피드 (M2) | 글 2,383건 (API) / 10만 건 (DB) | p95 300ms | API p95 2.5ms, 10만 건 DB p95 최대 6.2ms(최악 필터 조합) | 007 |
+| 검색 (M3) | 글 10만 건 | c=1 p95 300ms | c=1 p95 94ms, c=10 p95 497ms | 010 |
+| 추천 (M5) | 회원 1만, 읽은 기록 191만 | c=1 p95 300ms | 첫 페이지 p95 18.6ms, 다음 페이지 5.9ms, c=10 p95 52ms | 013 |
+
+### 검색 개선 과정 (010)
+| 단계 | 조치 | c=1 p95 | c=10 p95 |
+|---|---|---|---|
+| 최초 | bigram FULLTEXT + `posts` 조인 + 정확한 COUNT | 923ms | 3,057ms |
+| A | 건수 COUNT를 1,001건에서 중단 (`total ≤ 1000` + `totalCapped`) | 301ms | 965ms |
+| A + 0009 | 필터·최신순 없으면 `post_search`만, 있으면 커버링 인덱스(`idx_posts_search_filter`) 강제 조인 | **94ms** | **497ms** |
+- 원인 분해("개발", 결과 2.4만 건): 정확한 COUNT 140ms, 관련도 정렬의 `posts` 조인 549ms(조인 없이 134ms)
+- 기각한 안: `post_search` 비정규화 — FULLTEXT 테이블 컬럼 추가가 10만 행 277초 쓰기 잠금이고 실측 이득이 거의 없음 (dba 실험)
+- 비교 기준 `LIKE '%검색어%'`: 결과 수와 무관하게 160~320ms. FULLTEXT는 드문 단어에서 100배 이상 빠름
+- 정확성: 개발 DB 13개 질의 정밀도 1.00, 재현율은 영문 합성어 3건 외 1.00
+
+### 검증 중 발견해 고친 성능·안정성 문제
+- 동시 수집 데드락(M1): gap lock 충돌 → READ COMMITTED, `FOR UPDATE` 제거, 데드락 재시도. 이후 36곳 동시 수집 재발 0
+- 인기 글 조회수 0 노출(008): `view_count > 0` 조건
+- 검색 흔한 단어 지연(010): 위 표
+
+### 측정 재현
+- 측정 DB `devfeed_perf`(dba 시드, `db/scripts/perf-seed.sh`)에 측정 서버를 따로 띄움
+  ```bash
+  DB_DATABASE=devfeed_perf CRAWL_SCHEDULER_ENABLED=false SEARCH_CACHE_ENABLED=false PORT=3100 node dist/main
+  node perf/search-latency.js           # 검색 API (ITER=반복 수)
+  node perf/recommendation-latency.js   # 추천 API (devfeed_perf에 노출 행 추가됨)
+  node perf/search-profile.js           # 검색 쿼리 단계별 DB 시간
+  node perf/search-accuracy.js          # 검색 정확성 (개발 서버 :3000 + devfeed, 읽기 전용)
+  ```
+- 각 스크립트는 연결된 DB 이름을 확인하고 다르면 중단함 (`perf/_db.js`)
+
 ## M1 DB 연동 검증 결과 (2026-11-19, 로컬 MariaDB 12.1, 시드 소스 36곳)
 
 | 항목 | 결과 |
