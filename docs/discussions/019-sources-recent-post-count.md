@@ -22,3 +22,11 @@
 - server - `openapi.yaml` `SourceListItem.recentPostCount` 추가 → 구현(`idx_posts_source_published` 30일 범위 집계) → 배포
 - client - 017 빠른 선택 정렬 기준 변경
 - pm - `03-screens.md` S-01 사이드바 문구 "많이 쓰는 소스" → "최근 활발한 소스 5개" (완료)
+
+### server — 반영 완료
+- 명세: `SourceListItem.recentPostCount`(필수) 추가
+- 구현: 기존 집계 쿼리에 `SUM(published_at >= 현재-30일)`를 더해 한 번에 계산 (`idx_posts_source_published` 인덱스만 읽음, `Using index`). 캐시 10분 그대로
+- 비용: `devfeed_perf` 글 10만 건 p50 10.1ms / p95 25.3ms
+- e2e: 2일·29일 전 글 포함, 31일 전 글 제외 확인 (`recentPostCount` 3). e2e 17건·단위 112건 통과
+- 배포 후 공개 경로 확인: 36곳 중 최근 30일 글이 있는 소스 14곳. 결정한 정렬(최근 → 전체 → 이름) 기준 상위 5곳: Dale Seo 17, 뱅크샐러드 10, 카카오 8, 토스 7, 우아한형제들 7
+

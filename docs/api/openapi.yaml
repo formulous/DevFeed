@@ -499,7 +499,7 @@ paths:
     get:
       tags: [catalog]
       summary: 공개 소스 목록 (사이드바 소스 필터)
-      description: 비활성 소스도 기존 글이 남아 있으므로 포함. 이름순. postCount는 최대 10분 지연 (018)
+      description: 비활성 소스도 기존 글이 남아 있으므로 포함. 이름순. postCount·recentPostCount는 최대 10분 지연 (018, 019)
       responses:
         '200':
           description: OK
@@ -1102,11 +1102,14 @@ components:
       allOf:
         - $ref: '#/components/schemas/SourceBrief'
         - type: object
-          required: [postCount]
+          required: [postCount, recentPostCount]
           properties:
             postCount:
               type: integer
               description: 그 소스의 전체 글 수 (비활성 소스 포함, 최대 10분 지연)
+            recentPostCount:
+              type: integer
+              description: 최근 30일(요청 시각 기준 롤링, 발행일 기준) 발행 글 수. 최대 10분 지연 (019)
 
     TagBrief:
       type: object

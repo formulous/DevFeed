@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { addDays } from '../common/time/time';
 import { PublicTagsQuery } from './catalog.dto';
 import { TagCountsService } from './tag-counts.service';
 
 const SOURCES_TTL_MS = 10 * 60 * 1000;
+export const RECENT_POST_DAYS = 30;
 
 @Injectable()
 export class CatalogService {
@@ -59,18 +61,22 @@ export class CatalogService {
       this.dataSource.query('SELECT id, name, logo_url, source_type FROM sources ORDER BY name, id') as Promise<
         { id: number | string; name: string; logo_url: string | null; source_type: string }[]
       >,
-      this.dataSource.query('SELECT source_id, COUNT(*) AS cnt FROM posts GROUP BY source_id') as Promise<
-        { source_id: number | string; cnt: number | string }[]
-      >,
+      this.dataSource.query(
+        'SELECT source_id, COUNT(*) AS cnt, SUM(published_at >= ?) AS recent FROM posts GROUP BY source_id',
+        [addDays(new Date(), -RECENT_POST_DAYS)],
+      ) as Promise<{ source_id: number | string; cnt: number | string; recent: number | string | null }[]>,
     ]);
-    const countBySource = new Map(counts.map((c) => [Number(c.source_id), Number(c.cnt)]));
+    const countBySource = new Map(
+      counts.map((c) => [Number(c.source_id), { total: Number(c.cnt), recent: Number(c.recent ?? 0) }]),
+    );
     return {
       items: rows.map((r) => ({
         id: Number(r.id),
         name: r.name,
         logoUrl: r.logo_url,
         type: r.source_type,
-        postCount: countBySource.get(Number(r.id)) ?? 0,
+        postCount: countBySource.get(Number(r.id))?.total ?? 0,
+        recentPostCount: countBySource.get(Number(r.id))?.recent ?? 0,
       })),
     };
   }

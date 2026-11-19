@@ -23,7 +23,7 @@ NestJS 12 + TypeORM(MariaDB, mysql2) API 서버. 명세는 `../docs/api/openapi.
   - `GET /api/posts`: 커서 `(published_at, id)`, 태그(OR, 최대 10)·소스(최대 20)·유형 필터, 복수 필터는 서브쿼리 `UNION`/`UNION ALL` 분해 (007)
   - `GET /api/posts/popular?period=DAY|WEEK|MONTH`: 최근 24시간·7일·30일 조회수 상위 20건(조회수 1 이상만, 동점은 최신순, 008), 10분 캐시
   - `POST /api/posts/{id}/views`: 같은 viewer(회원 ID 또는 `df_vid` 쿠키) 24시간 1회 집계, 회원은 읽은 기록 저장. `recommendationId`는 형식만 검증 (추천 클릭 기록은 M5)
-  - `GET /api/tags`, `GET /api/sources` (소스별 `postCount` 포함, 10분 캐시, 018)
+  - `GET /api/tags`, `GET /api/sources` (소스별 `postCount`·최근 30일 `recentPostCount` 포함, 10분 캐시, 018·019)
   - 로그인 선택 API: 토큰 없으면 게스트, 만료·위조면 401 `TOKEN_EXPIRED`. 회원이면 `isBookmarked`·`isRead` 포함
   - 정리 배치: `post_view_guards` 24시간(매시 5분), `read_histories` 1년(매일 04:00 KST)
 - M3 검색 (F-020~F-022)
