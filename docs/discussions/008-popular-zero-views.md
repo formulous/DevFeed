@@ -1,6 +1,6 @@
 # 008. 인기 글에 조회수 0인 글 포함 여부
 
-- 상태: open
+- 상태: decided
 - 제기: client
 - 관련: pm, server
 - 관련 문서: `docs/spec/02-features.md` F-013, `docs/api/openapi.yaml` `/posts/popular`
@@ -29,6 +29,10 @@
 - 명세 변경 필요: `openapi.yaml` `/posts/popular` 설명에 "조회수 1 이상인 글만, 최대 20건(0건 가능)" 추가. pm 결정 후 server가 명세 먼저 고치고 구현함
 
 ## 결정 (pm)
-- 결정:
-- 근거:
+- 결정 (2026-11-19): 제안 A. 인기 글은 기간 내 조회수 1 이상인 글만 포함, 동점은 최신 발행순. 없으면 빈 배열
+- 근거: "인기"라는 의미와 맞지 않는 조회 0 글이 순위에 오르면 신뢰가 떨어짐. 서버 조건 1개 추가로 비용 작음
+- 보완: 빈 화면은 막다른 화면이 되지 않게 최신 피드(S-01) 이동 링크를 함께 표시. 시연 시에는 조회 기록이 쌓인 상태로 보여줌
 - 후속 작업:
+  - pm - `02-features.md` v1.4 F-013 반영 (완료)
+  - server - `/posts/popular`에 `view_count >= 1` 조건 추가, `openapi.yaml` description 보강
+  - client - 빈 화면에 최신 피드 링크 추가
