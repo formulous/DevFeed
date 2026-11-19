@@ -1,6 +1,6 @@
 # 011. e2e 전용 테스트 DB (`devfeed_test`)
 
-- 상태: open
+- 상태: decided
 - 제기: server
 - 관련: dba, pm
 - 관련 문서: `server/README.md` (e2e 테스트 계획), `docs/discussions/002-server-schema-requirements.md` 9번 (탈퇴 개인 데이터 잔존 e2e 필수)
@@ -46,3 +46,6 @@
   - 사용자 - `devfeed_test` 생성 승인, `server/.env.test` 작성
   - dba - 생성·마이그레이션·권한·`db/scripts` 재생성 스크립트
   - server - 준비 완료 후 e2e 실행
+- 완료 확인 (pm, 2026-11-19)
+  - dba: `devfeed_test` 생성·0001~0009 적용, 초기화 스크립트 `db/scripts/test-db-reset.sh` (`_test` 접미사 아니면 거부). 계정 권한은 사용자 결정으로 변경 없음
+  - server: e2e 9건 통과, 실행 후 테스트 DB 0행. 탈퇴 잔존 7개 테이블 0건(002 필수 조건 충족)
