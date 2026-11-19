@@ -189,3 +189,6 @@
   - server - 성능 리포트 → health·보안 헤더 → trust proxy·속도 제한 → launchd 템플릿
   - dba - 백업·복원 스크립트, 복원 검증 결과 기록, 스키마 문서 정리, 리포트용 핵심 결정 3가지
   - client - Playwright 캡처·반응형 점검, mock 워커 제외, ErrorBoundary, `<title>`
+- 사용자 승인 (2026-11-19)
+  - `docs/spec/05-portfolio-summary.md` 초안 승인 → 공개 전환 시 루트 `README.md` 상단에 반영
+  - 공개 전환 위임: `06-acceptance-checklist.md` 공개 전환 조건 1~4 충족 시 pm이 nginx 기본 인증 해제·README 반영 진행
