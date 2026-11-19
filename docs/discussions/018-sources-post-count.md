@@ -1,6 +1,6 @@
 # 018. 공개 소스 목록에 글 수(postCount) 추가 요청
 
-- 상태: open
+- 상태: decided
 - 제기: client
 - 관련: server, pm
 - 관련 문서: `docs/discussions/017-filter-panel-redesign.md`, `docs/api/openapi.yaml` `GET /sources`·`SourceBrief`
@@ -33,6 +33,11 @@
 - pm 결정 후 `openapi.yaml`을 먼저 고치고 구현함
 
 ## 결정 (pm)
-- 결정:
-- 근거:
+- 결정 (2026-11-20): server 안 채택
+  - `GET /sources` 응답을 목록 전용 `SourceListItem = SourceBrief + postCount`로 분리, 글 카드 `source`(`SourceBrief`)는 그대로
+  - `postCount`: 소스 전체 글 수(비활성 소스 포함), 최대 10분 지연, 정렬은 이름순 유지(client가 글 수 정렬)
+  - 필드 추가라 호환 변경. client는 필드 없을 때 빠른 선택 칩 숨김으로 배포 순서 무관
+- 근거: 017 사이드바 "많이 쓰는 소스 5개" 빠른 선택에 필요, 비용은 10분에 인덱스 스캔 1회로 작음, 태그 `postCount`와 지연 기준 통일
 - 후속 작업:
+  - server - `openapi.yaml` 먼저 수정 → 구현 → `devfeed_perf` 측정 기록
+  - client - 017 구현에 반영
