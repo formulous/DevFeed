@@ -60,7 +60,7 @@ function buildPosts(count: number): PostSummary[] {
       summary: i % 11 === 10 ? null : `${title}에 대한 정리임. 실무에서 겪은 문제와 해결 과정을 단계별로 설명하고, 측정 수치와 함께 개선 효과를 공유함.`,
       url: `https://example.com/posts/${id}`,
       thumbnailUrl: i % 3 === 0 ? null : `https://picsum.photos/seed/devfeed${id}/224/160`,
-      publishedAt: new Date(BASE_TIME - i * 47 * 60_000).toISOString(),
+      publishedAt: new Date(BASE_TIME - i * 180 * 60_000).toISOString(),
       source,
       tags,
     };

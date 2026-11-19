@@ -1,5 +1,6 @@
 import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query';
-import { fetchFeed, fetchSources, fetchTags, type FeedQuery } from '@/api/posts';
+import { fetchFeed, fetchPopular, fetchSources, fetchTags, type FeedQuery } from '@/api/posts';
+import type { PopularPeriod } from '@/api/types';
 import { POSTS_KEY } from '@/hooks/usePostActions';
 
 export const feedQuery = (filters: FeedQuery, authKey: string) =>
@@ -8,6 +9,13 @@ export const feedQuery = (filters: FeedQuery, authKey: string) =>
     queryFn: ({ pageParam, signal }) => fetchFeed(filters, pageParam, signal),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
+  });
+
+export const popularQuery = (period: PopularPeriod, authKey: string) =>
+  queryOptions({
+    queryKey: [...POSTS_KEY, 'popular', authKey, period],
+    queryFn: ({ signal }) => fetchPopular(period, signal),
+    staleTime: 5 * 60_000,
   });
 
 export const tagsQuery = queryOptions({

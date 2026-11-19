@@ -1,7 +1,10 @@
 import { NavLink, Outlet, Route, Routes } from 'react-router';
 import { cn } from '@/lib/cn';
-import { PlaceholderPage } from '@/features/common/PlaceholderPage';
 import { NotFoundPage } from '@/features/common/NotFoundPage';
+import { AdminDashboardPage } from './AdminDashboardPage';
+import { SourceDetailPage } from './SourceDetailPage';
+import { SourceFormPage } from './SourceFormPage';
+import { TagDictionaryPage } from './TagDictionaryPage';
 
 function AdminLayout() {
   const link = ({ isActive }: { isActive: boolean }) =>
@@ -22,11 +25,11 @@ export default function AdminRoutes() {
   return (
     <Routes>
       <Route element={<AdminLayout />}>
-        <Route index element={<PlaceholderPage screenId="A-01" title="수집 현황" />} />
-        <Route path="sources/new" element={<PlaceholderPage screenId="A-03" title="소스 등록" />} />
-        <Route path="sources/:id" element={<PlaceholderPage screenId="A-02" title="소스 상세" />} />
-        <Route path="sources/:id/edit" element={<PlaceholderPage screenId="A-03" title="소스 수정" />} />
-        <Route path="tags" element={<PlaceholderPage screenId="A-04" title="태그 사전" />} />
+        <Route index element={<AdminDashboardPage />} />
+        <Route path="sources/new" element={<SourceFormPage />} />
+        <Route path="sources/:id" element={<SourceDetailPage />} />
+        <Route path="sources/:id/edit" element={<SourceFormPage />} />
+        <Route path="tags" element={<TagDictionaryPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

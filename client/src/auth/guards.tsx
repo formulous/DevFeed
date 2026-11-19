@@ -30,9 +30,15 @@ export function RequireAdmin({ children }: { children: ReactNode }) {
 }
 
 export function GuestOnly({ children }: { children: ReactNode }) {
-  const { status } = useAuth();
+  const { status, me } = useAuth();
   const [params] = useSearchParams();
   if (status === 'loading') return <FullPageSpinner />;
-  if (status === 'member') return <Navigate to={safeRedirect(params.get('redirect'))} replace />;
+  if (status === 'member') {
+    const target = safeRedirect(params.get('redirect'));
+    if (me && !me.onboardingCompleted) {
+      return <Navigate to={`/onboarding/tags?redirect=${encodeURIComponent(target)}`} replace />;
+    }
+    return <Navigate to={target} replace />;
+  }
   return <>{children}</>;
 }

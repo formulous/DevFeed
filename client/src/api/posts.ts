@@ -1,5 +1,5 @@
 import { request } from './http';
-import type { CursorPage, PostSummary, SourceRef, SourceType, TagItem } from './types';
+import type { CursorPage, PopularPeriod, PopularPost, PostSummary, SourceRef, SourceType, TagItem } from './types';
 
 export interface FeedQuery {
   tagIds: number[];
@@ -22,6 +22,10 @@ export function fetchFeed(filters: FeedQuery, cursor?: string, signal?: AbortSig
       sourceType: filters.sourceType,
     },
   });
+}
+
+export function fetchPopular(period: PopularPeriod, signal?: AbortSignal) {
+  return request<{ items: PopularPost[] }>('/posts/popular', { signal, query: { period } });
 }
 
 export function fetchTags(signal?: AbortSignal) {

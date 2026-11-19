@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { FiStar } from 'react-icons/fi';
 import type { PostSummary } from '@/api/types';
 import { Highlight } from '@/components/common/Highlight';
@@ -10,6 +10,7 @@ interface PostCardProps {
   query?: string;
   onOpen: (post: PostSummary) => void;
   onToggleBookmark: (post: PostSummary) => void;
+  meta?: ReactNode;
 }
 
 function ExternalImage({ src, alt, className }: { src: string | null; alt: string; className: string }) {
@@ -28,7 +29,7 @@ function ExternalImage({ src, alt, className }: { src: string | null; alt: strin
   );
 }
 
-export function PostCard({ post, query, onOpen, onToggleBookmark }: PostCardProps) {
+export function PostCard({ post, query, onOpen, onToggleBookmark, meta }: PostCardProps) {
   return (
     <article
       className={cn(
@@ -37,7 +38,7 @@ export function PostCard({ post, query, onOpen, onToggleBookmark }: PostCardProp
       )}
     >
       <div className="flex items-center gap-2 text-xs text-fg-secondary">
-        <ExternalImage src={post.source.logoUrl} alt="" className="h-5 w-5 shrink-0 rounded" />
+        {post.source.logoUrl && <ExternalImage src={post.source.logoUrl} alt="" className="h-5 w-5 shrink-0 rounded" />}
         <span className="truncate font-medium">{post.source.name}</span>
         <span aria-hidden>·</span>
         <time dateTime={post.publishedAt} className="shrink-0">
@@ -86,12 +87,15 @@ export function PostCard({ post, query, onOpen, onToggleBookmark }: PostCardProp
         )}
       </div>
 
-      {post.tags.length > 0 && (
-        <ul className="mt-3 flex flex-wrap gap-1.5 text-xs text-fg-muted">
-          {post.tags.map((tag) => (
-            <li key={tag.id}>#{tag.name}</li>
-          ))}
-        </ul>
+      {(post.tags.length > 0 || meta) && (
+        <div className="mt-3 flex items-center gap-3 text-xs text-fg-muted">
+          <ul className="flex flex-wrap gap-1.5">
+            {post.tags.map((tag) => (
+              <li key={tag.id}>#{tag.name}</li>
+            ))}
+          </ul>
+          {meta && <span className="ml-auto shrink-0">{meta}</span>}
+        </div>
       )}
     </article>
   );

@@ -6,20 +6,19 @@ import { useLoginPrompt } from '@/auth/LoginPromptProvider';
 
 export const POSTS_KEY = ['posts'] as const;
 
-type PostsCache = InfiniteData<CursorPage<PostSummary>> | undefined;
+type ListCache = { items: PostSummary[] };
+type PostsCache = InfiniteData<CursorPage<PostSummary>> | ListCache | undefined;
+
+function patchItems<T extends ListCache>(list: T, postId: number, patch: Partial<PostSummary>): T {
+  return { ...list, items: list.items.map((item) => (item.id === postId ? { ...item, ...patch } : item)) };
+}
 
 function patchPost(client: QueryClient, postId: number, patch: Partial<PostSummary>) {
-  client.setQueriesData<PostsCache>({ queryKey: POSTS_KEY }, (data) =>
-    data
-      ? {
-          ...data,
-          pages: data.pages.map((page) => ({
-            ...page,
-            items: page.items.map((item) => (item.id === postId ? { ...item, ...patch } : item)),
-          })),
-        }
-      : data,
-  );
+  client.setQueriesData<PostsCache>({ queryKey: POSTS_KEY }, (data) => {
+    if (!data) return data;
+    if ('pages' in data) return { ...data, pages: data.pages.map((page) => patchItems(page, postId, patch)) };
+    return patchItems(data, postId, patch);
+  });
 }
 
 export function useToggleBookmark() {

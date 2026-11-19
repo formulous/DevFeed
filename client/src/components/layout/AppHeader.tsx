@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { FiSearch } from 'react-icons/fi';
 import { Link, NavLink, useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '@/auth/AuthProvider';
@@ -9,8 +9,11 @@ export const SEARCH_MAX = 50;
 
 function SearchBox() {
   const [params] = useSearchParams();
-  const [value, setValue] = useState(params.get('q') ?? '');
+  const urlQuery = params.get('q') ?? '';
+  const [value, setValue] = useState(urlQuery);
   const navigate = useNavigate();
+
+  useEffect(() => setValue(urlQuery), [urlQuery]);
   const trimmed = value.trim();
   const valid = trimmed.length >= SEARCH_MIN;
 

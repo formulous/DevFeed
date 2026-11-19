@@ -26,6 +26,12 @@ export interface PostSummary {
   isRead?: boolean;
 }
 
+export interface PopularPost extends PostSummary {
+  viewCount: number;
+}
+
+export type PopularPeriod = 'DAY' | 'WEEK' | 'MONTH';
+
 export interface TagItem extends TagRef {
   slug: string;
   category: string | null;
@@ -70,4 +76,94 @@ export interface AuthResponse {
   accessToken: string;
   expiresIn: number;
   user: Me;
+}
+
+export type SourceStatus = 'ACTIVE' | 'ERROR' | 'INACTIVE';
+
+export interface AdminStats {
+  todayNewPostCount: number;
+  failingSourceCount: number;
+  activeSourceCount: number;
+}
+
+export interface AdminSourceListItem extends SourceRef {
+  status: SourceStatus;
+  lastSuccessAt: string | null;
+  newPostCount7d: number;
+  consecutiveFailures: number;
+}
+
+export interface AdminSource extends AdminSourceListItem {
+  siteUrl: string;
+  feedUrl: string;
+  crawlIntervalMin: number;
+  nextCrawlAt: string;
+  lastCrawledAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SourceInput {
+  name: string;
+  siteUrl: string;
+  feedUrl: string;
+  type: SourceType;
+  logoUrl: string | null;
+  crawlIntervalMin: number;
+}
+
+export type UpdateSourceInput = Partial<SourceInput> & { status?: 'ACTIVE' | 'INACTIVE' };
+
+export interface FeedValidationResult {
+  valid: boolean;
+  format?: 'RSS' | 'ATOM';
+  feedTitle?: string;
+  itemCount?: number;
+  sampleTitles?: string[];
+  duplicated?: boolean;
+  reason?: string;
+}
+
+export type CrawlResult = 'RUNNING' | 'SUCCESS' | 'NOT_MODIFIED' | 'FAILURE';
+
+export interface CrawlRun {
+  id: number;
+  triggerType: 'SCHEDULED' | 'MANUAL';
+  result: CrawlResult;
+  startedAt: string;
+  finishedAt: string | null;
+  durationMs: number | null;
+  attemptCount: number;
+  httpStatus: number | null;
+  fetchedCount: number;
+  newPostCount: number;
+  updatedPostCount: number;
+  errorMessage: string | null;
+}
+
+export interface AdminTag {
+  id: number;
+  name: string;
+  slug: string;
+  category: string | null;
+  synonyms: string[];
+  postCount: number;
+}
+
+export interface TagInput {
+  name: string;
+  slug: string;
+  category: string | null;
+  synonyms: string[];
+}
+
+export interface Job {
+  id: string;
+  type: 'RETAG';
+  status: 'RUNNING' | 'SUCCEEDED' | 'FAILED';
+  processed: number;
+  total: number;
+  startedAt: string;
+  finishedAt: string | null;
+  errorMessage: string | null;
 }

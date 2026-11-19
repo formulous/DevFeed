@@ -23,3 +23,10 @@ export function renderWithApp(ui: ReactElement, path = '/') {
     </MemoryRouter>,
   );
 }
+
+export async function seedLogin(email: string) {
+  const { request } = await import('@/api/http');
+  await request('/auth/login', { method: 'POST', json: { email, password: 'pw' } });
+  const { setAccessToken } = await import('@/api/http');
+  setAccessToken(null);
+}
