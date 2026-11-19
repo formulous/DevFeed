@@ -61,6 +61,11 @@
 - `noindex` 해제 (사용자 결정): nginx `/portfolio/`의 `X-Robots-Tag` 제거, reload 완료. `/portfolio/api/`는 유지
   - 비공개 화면(S-05~S-10, A-01~A-04)은 client가 라우트별 `<meta name="robots" content="noindex">` 추가
 
+### pm (광고 배포 보류, 2026-11-20)
+- **2번 광고 배포 보류**. 사용자가 "기술 블로그 글을 모아 보여주며 광고 수익을 얻는 방식이 문제없는지" 질문함 → 저작권·AdSense 정책 검토 후 사용자 결정까지 광고(스크립트·메타 태그·SideAd·S-11 광고 문구)를 `build:web`에 포함해 배포하지 않음
+  - 이미 작성 중인 광고 코드는 커밋은 해도 되지만 기능 플래그(예: `VITE_ADS_ENABLED`, 기본 false)로 꺼진 상태로 둘 것
+- 1번 사이드바 수정과 비공개 화면 `meta robots noindex`는 그대로 진행·배포
+
 ## 결정 (pm)
 - 결정: 1번 즉시 진행. 2번은 사용자 확인 후 진행
 - 근거: 1번은 사용성 버그, 2번은 사용자 정보 필요
