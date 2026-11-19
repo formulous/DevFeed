@@ -1,7 +1,7 @@
 # 테이블 명세
 
 - 작성: dba
-- 상태: 초안 v1 (2026-11-19)
+- 상태: 확정 v1 (M6, 2026-11-19). 마이그레이션 0001~0009 기준, `devfeed` 실제 스키마와 대조 완료
 - 공통: InnoDB, utf8mb4_unicode_ci, 시간은 `DATETIME(3)` UTC, PK `BIGINT UNSIGNED AUTO_INCREMENT` (D-01)
 - 결정 번호(D-xx)는 `decisions.md` 참고
 
@@ -57,6 +57,8 @@
 | category | VARCHAR(30) | NULL | A-04 분류. 값 변경 잦을 수 있어 ENUM 대신 VARCHAR |
 | created_at / updated_at | DATETIME(3) | NOT NULL | |
 
+인덱스: `uk_tags_name (name)`, `uk_tags_slug (slug)`
+
 ## tag_synonyms — `0002`
 | 컬럼 | 타입 | 제약 | 설명·이유 |
 |---|---|---|---|
@@ -64,6 +66,8 @@
 | tag_id | BIGINT UNSIGNED | FK → tags CASCADE | |
 | synonym | VARCHAR(100) | NOT NULL, UK | 동의어 하나는 한 태그에만 속함. 콜레이션상 대소문자 무시 |
 | created_at | DATETIME(3) | NOT NULL | |
+
+인덱스: `uk_tag_synonyms_synonym (synonym)`, `idx_tag_synonyms_tag (tag_id)` — FK 인덱스, 태그별 동의어 조회
 
 ## posts — `0003`
 | 컬럼 | 타입 | 제약 | 설명·이유 |
@@ -130,6 +134,8 @@
 | onboarding_completed_at | DATETIME(3) | NULL | 온보딩 완료·건너뛰기 시각. NULL이면 온보딩 표시 |
 | last_login_at | DATETIME(3) | NULL | |
 | created_at / updated_at | DATETIME(3) | NOT NULL | |
+
+인덱스: `uk_users_email (email)`
 
 ## refresh_tokens — `0004`
 | 컬럼 | 타입 | 제약 | 설명·이유 |

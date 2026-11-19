@@ -8,11 +8,14 @@ db/
 ├── conf/devfeed.cnf     # MariaDB 서버 설정 (FULLTEXT 토큰 2자, stopword 끔, UTC)
 ├── perf/                # 성능 측정용 대량 시드 생성기, 측정 스크립트
 ├── queries/            # feed.sql(007), personal.sql·withdrawal-check.sql(012), recommendation.sql(013) 기준 쿼리
+├── ops/                 # launchd 일일 백업 템플릿·설치 스크립트
 ├── migrations/          # 0001~0009, -- migrate:up / -- migrate:down
 ├── scripts/migrate.sh   # 컨테이너에 마이그레이션 적용
 ├── scripts/seed.sh      # seeds/*.sql 순서대로 적용 (재실행 안전)
 ├── scripts/perf-seed.sh # 측정 DB(devfeed_perf)에 글 10만·회원 1만 생성
 ├── scripts/test-db-reset.sh # e2e DB(devfeed_test) 재생성 + 전체 마이그레이션
+├── scripts/backup.sh    # devfeed 덤프 → ~/backups/devfeed, 14일 보관
+├── scripts/restore.sh   # 백업을 지정 DB로 복원 (devfeed는 --force 필요)
 └── seeds/               # 001 소스 36곳, 002 태그 153개·동의어 266개
 ```
 
@@ -40,6 +43,16 @@ db/scripts/seed.sh
 - `002_tags.sql`: 태그 153개(분류 16개), 동의어 266개. 동의어는 태그 간·태그명과 겹치지 않음
   - 오탐 우려로 뺀 짧은 동의어: `CD`, `ES`, `RN`, `PG`, `DW`, `Cursor`, `람다`, `Compose`
 - 모두 `ON DUPLICATE KEY UPDATE`라 여러 번 실행해도 결과 같음
+
+## 백업·복원
+```bash
+export DB_USER=<계정> MYSQL_PWD=<비밀번호>
+db/scripts/backup.sh                                        # ~/backups/devfeed/devfeed_<UTC>.sql.gz
+db/scripts/restore.sh ~/backups/devfeed/<파일> devfeed_restore_check   # 임시 DB로 복원
+db/scripts/restore.sh ~/backups/devfeed/<파일> devfeed --force          # 운영 DB 덮어쓰기
+```
+- 일일 자동 백업 (04:30 KST): `~/.config/devfeed/backup.env`에 `DB_USER`, `MYSQL_PWD` 작성 후 `chmod 600` → `db/ops/install-backup-agent.sh`
+- 로그 `~/backups/devfeed/backup.log`, 14일 지난 백업 자동 삭제. 복원 검증 결과는 discussion 014
 
 ## DB 구성
 | DB | 용도 | 데이터 |

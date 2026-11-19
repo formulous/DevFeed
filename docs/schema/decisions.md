@@ -1,7 +1,7 @@
 # 스키마 결정 기록
 
 - 작성: dba
-- 상태: 초안 v1 (2026-11-19), `server` 검토 대기
+- 상태: 확정 v1 (M6, 2026-11-19). 각 결정의 합의 discussion 번호를 본문에 표기
 - 기준 문서: `docs/spec/01~04`
 
 ## D-01. 공통 규칙
@@ -34,7 +34,7 @@
 ## D-03. 한글 검색: ngram 파서 사용 불가 → 앱 bigram 토큰 + InnoDB FULLTEXT
 - 사실 확인: 컨테이너 MariaDB 12.1.2 플러그인 디렉터리에 ngram 파서·Mroonga 없음. ngram은 MySQL 전용 플러그인이라 MariaDB에서 `WITH PARSER ngram` 사용 불가
 - 기획서의 "FULLTEXT(ngram)"는 그대로 구현할 수 없음 → `docs/discussions/002-server-schema-requirements.md`에서 pm·server와 합의 (server 대안 (a)와 동일)
-- 결정(안)
+- 결정 (002 확정)
   - 검색 전용 테이블 `post_search`에 서버가 만든 토큰 문자열 저장, InnoDB FULLTEXT 인덱스 생성
   - 토큰 규칙 (서버 구현, 저장·질의 양쪽에 같은 함수 사용)
     1. 소문자화, NFKC 정규화
@@ -196,4 +196,14 @@
 - `post_view_guards`는 24시간 소멸을 기다리지 않고 즉시 삭제 (D-08 보완). `viewer_key` 단독 인덱스는 없지만 하루치 크기라 전체 스캔 허용
 - 실측 (`devfeed_perf`, 롤백): 읽은 기록 400건 회원 탈퇴 78ms, 7개 테이블 잔존 0
 - `db/queries/withdrawal-check.sql`은 server e2e가 그대로 읽는 계약 파일임. 회원 연결 테이블을 추가·변경하면 이 파일에 같은 커밋으로 반영하고 server에 알림
+
+## D-17. 백업과 복원 (014)
+- 방식: `mariadb-dump --single-transaction --hex-blob` 논리 백업, gzip. InnoDB 잠금 없이 수집 중에도 일관된 스냅샷
+  - 생성 컬럼(`*_hash`)은 덤프 INSERT에 값이 들어 있지만, 덤프가 비엄격 `sql_mode`로 실행돼 그 값은 경고(1906)와 함께 무시되고 복원 시 재계산됨 (검증에서 불일치 0). 복원을 엄격 모드 클라이언트로 따로 돌리면 오류가 날 수 있어 `restore.sh` 사용 권장. FULLTEXT 인덱스도 복원 시 재생성
+- 주기·보관: 매일 04:30 KST, 저장소 밖 `~/backups/devfeed`, 14일 보관 후 자동 삭제 (launchd `org.devfeed.backup`)
+- 크기: 글 2,383건 기준 924KB, 0.7초. 글 10만 건이면 약 40MB·수십 초로 예상 → 물리 백업(mariabackup)은 필요 없음
+- 복원 검증 (2026-11-19): 임시 DB 복원 후 행 수·해시·FULLTEXT·인덱스·FK 전부 일치
+- 한계: 같은 맥미니 디스크에만 보관 → 디스크 고장 시 함께 유실. 외부 저장소 복사는 운영 확장 시 검토
+- 개인정보: 탈퇴 회원 데이터가 백업에 최대 14일 남음 (개인정보 안내에 명시 필요, pm)
+- 버퍼 풀: **128MB 유지 확정** (014, pm). `devfeed` 6MB라 증설 효과 없음. 기준: `posts`+`post_search`가 버퍼 풀의 70%를 넘으면 재검토
 

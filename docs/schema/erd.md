@@ -1,7 +1,7 @@
 # ERD — 데브피드
 
 - 작성: dba
-- 상태: 초안 v1 (2026-11-19), `server` DDL 검토 대기
+- 상태: 확정 v1 (M6, 2026-11-19). 마이그레이션 0001~0009 기준, `devfeed` 실제 스키마와 대조 완료
 - DB: `devfeed` (MariaDB 12.1, InnoDB, utf8mb4_unicode_ci)
 - DDL: `db/migrations/0001~0009`, 컬럼 상세: `tables.md`, 결정 근거: `decisions.md`
 
