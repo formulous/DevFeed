@@ -96,6 +96,42 @@
   - 다양성 보정은 채운 뒤 전체 목록에 적용함
   - 최근 14일 글 자체가 20건 미만이면 있는 만큼만 반환함
 
+### dba (1차) — 2·7·8번, 스키마 변경 없음
+- 측정 환경: `devfeed_perf` (글 10만, 최근 14일 글 2,539, 회원 1만, 최근 30일 읽기 회원당 평균 55·최대 150), 노출 기록 48만 행(일 6만 × 8일, 클릭률 4%) 임시 생성. DB 실행 시간, 20회
+- 기준 쿼리: `db/queries/recommendation.sql`, 측정: `db/perf/measure_recommendation.py`
+
+#### 2. 후보 조회 — 방식 동의
+| 회원 | 선호 태그 | 후보 | 선호도 계산 p95 | 후보 수집·태그 점수 p95 |
+|---|---|---|---|---|
+| 최다 활동 | 30 | 500 (상한) | 0.4ms | 17.5ms |
+| 중간 | 30 | 500 | 0.2ms | 17.4ms |
+| 최근 30일 읽기 없음 | 19 | 500 | 0.1ms | 8.8ms |
+- 선호도: `idx_read_histories_user_last_read`, `idx_bookmarks_user_created` 범위 + `post_tags` PK. 회원당 수백 행
+- 후보: 선호 태그별 `idx_post_tags_tag_published` 14일 범위 → `posts` PK 조인(조회수·소스) → 읽은 글 제외는 `read_histories` PK
+- 태그별로 나눠 조회해도 되고, 선호 태그를 한 쿼리로 묶어(`tag_id IN (...)` 또는 임시 가중치 조인) `GROUP BY post_id`해도 17ms 수준. 서버 편한 쪽으로
+- 점수(인기도·최신성·다양성)는 서버 메모리 계산 동의. DB는 후보 500건 이내만 넘김
+
+#### 7. 노출·클릭 기록 — 동의
+- 노출 INSERT 20행 1회: 0.27ms. 클릭 UPDATE: `uk_rec_impressions_request_post` 사용 0.15ms (`user_id` 조건은 같은 행 필터라 인덱스 불필요)
+- `recommendationId`는 `BINARY(16)`에 `UNHEX(REPLACE(uuid, '-', ''))`로 저장, 응답·조회 때 같은 변환 사용 요청. 문자열 36자로 넣으면 잘림 오류
+- UUID v4 무작위 값이라 유니크 인덱스에 흩어져 삽입되지만, 90일 약 540만 행(인덱스 약 130MB)에서 쓰기 20행/요청이라 문제없음
+- `algorithm` `TAG_V1`, `COLD_POPULAR`는 `VARCHAR(20) ascii` 안. `position` 최대 200은 `SMALLINT` 안. `reason` 200자 동의
+- 탈퇴 후 `user_id = NULL`이 된 행은 클릭 UPDATE 조건에 안 걸림 → 의도대로 무시
+
+#### 8. 배치 — 동의, 주의 1건
+- 7일 재집계 upsert: 42만 행 범위에서 209ms (90일 누적 시 같은 범위라 비슷하거나 행 조회로 1초 이내 예상). 원본 삭제 1,000건: 2.6ms
+- 주의: `stat_date`는 **UTC 날짜**(D-10a). 04:00 KST(= 전날 19:00 UTC)에 돌면 당일 UTC 날짜는 아직 진행 중이라 부분 집계가 들어감. 다음 날 재집계(최근 7일)로 덮어써지므로 결과는 맞음. 원본 삭제 기준도 `shown_at < UTC_TIMESTAMP() - INTERVAL 90 DAY`로 UTC 통일 요청
+- 집계 쿼리는 D-10a 형태 그대로 사용 (`db/queries/recommendation.sql` 아님, `decisions.md` D-10a)
+
+#### 기타
+- 측정용으로 넣은 노출 48만 행은 `devfeed_perf`에 남겨 둠 (server API 측정 시 클릭률 집계 확인용). 필요 없으면 `TRUNCATE recommendation_impressions`
+
+### server (3차) — dba 의견 수용
+- `recommendationId` 변환: 서버에서 UUID 문자열 ↔ 16바이트 Buffer로 변환해 바인딩 (`UNHEX(REPLACE(...))`와 같은 바이트). 응답에는 하이픈 포함 36자 문자열
+- 후보 조회: 선호 상위 태그를 `tag_id IN (...)` 한 쿼리로 묶고 서버에서 `post_id`별로 합산함 (후보 상한 500 그대로)
+- 배치 시각 기준 UTC 통일: 집계 범위는 `UTC 오늘 0시 - 6일` ~ 현재, 원본 삭제는 `shown_at < 현재(UTC) - 90일`. 서버는 시각을 `Date`로 바인딩하므로 세션 타임존과 무관함. 실행 시각은 다른 일일 정리와 같은 04:00 KST 유지 (부분 집계는 다음 날 재집계로 덮어씀)
+- `devfeed_perf`의 노출 48만 행은 API 측정 후 클릭률 집계 확인에 쓰고 그대로 둠
+
 ## 결정 (pm)
 - 결정:
 - 근거:
