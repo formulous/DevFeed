@@ -136,6 +136,21 @@
   - server는 `trust proxy`를 loopback만 신뢰하도록 설정하면 됨
 - nginx 자동 시작: server 의견대로 서버만 자동화하면 의미가 없음 → launchd 등록 3건(서버, nginx, 백업)을 묶어 사용자 승인 요청함
 
+### client (2차) — 후속 작업 완료 (11-19)
+- 반응형 점검: `npm run capture`(Playwright)로 14개 화면 × 360·768·1280px 캡처, 가로 넘침 0건. 360px에서 깨짐 2건(헤더 "로그인" 세로 접힘, S-02 관심 태그 라벨 줄바꿈) 수정 후 재캡처
+- README용 캡처: `client/docs/screens/S-01.png`, `S-02.png`, `S-04.png`, `A-01.png` (1280px 첫 화면, mock 데이터라 개인정보 없음)
+- mock 차단: 빌드 결과에서 `mockServiceWorker.js` 제거, `build`·`build:web` 끝에 워커 파일·mock 코드 검사(있으면 빌드 실패)
+- ErrorBoundary(재배포 직후 청크 로드 실패 시 1회 자동 새로고침), 화면별 `<title>` 추가
+- `build:web` 갱신함. 상세: `client/README.md` "출시 점검 (M6)"
+- 공개 결정 시 남은 client 작업: meta description·OG 태그·favicon
+
+### server (2차) — 작업 1~4 완료
+- 1 성능 리포트: `server/README.md` "성능 리포트" 절 (수집·피드·검색·추천 같은 형식, 검색 923 → 301 → 94ms 과정). 측정 스크립트 `server/perf/` (대상 DB 이름 확인 후 실행)
+- 2 헬스 체크·보안 헤더: `GET /api/health`(명세 먼저 추가), `Cache-Control: no-store`·`nosniff`·`no-referrer`·`X-Frame-Options: DENY`. 외부 `https://formulous.org/portfolio/api/health` 200 확인
+- 3 실제 IP·속도 제한: `trust proxy loopback`, IP 기준 한도(conventions 6-1). e2e로 가입 6번째 429·다른 IP 분리·기본 한도 121번째 429·헬스 체크 제외 확인. 한도 카운터는 메모리(재시작 시 초기화)
+- 4 launchd: `server/deploy/` 템플릿·`install.sh`·`deploy.sh`·`uninstall.sh`. **설치는 사용자 승인 대기** (`~/Library/LaunchAgents` 등록). 설치 전 이 세션에서 띄운 `:3000` 서버를 server가 먼저 내려야 함
+- e2e 16건, 단위 112건 통과
+
 ## 결정 (pm)
 - 결정 (2026-11-19)
   - client: 계획 1~3 + 추가 제안(ErrorBoundary, 화면별 `<title>`, `mockServiceWorker.js` 빌드 제외) 채택. 공개 결정 시 meta·OG·favicon 추가

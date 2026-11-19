@@ -89,6 +89,22 @@ npm run start:dev          # http://localhost:3000/api
 npm test                   # Jest 단위 테스트
 ```
 
+## 운영 실행 (launchd, 014)
+
+로그인 시 자동 시작·비정상 종료 시 재시작. 템플릿과 스크립트는 `server/deploy/`
+
+```bash
+server/deploy/install.sh     # 최초 1회: npm ci → build → ~/Library/LaunchAgents에 등록 → 헬스 체크
+server/deploy/deploy.sh      # 코드 갱신 후: npm ci → build → 재시작(kickstart -k) → 헬스 체크
+server/deploy/uninstall.sh   # 해제
+launchctl print gui/$(id -u)/org.formulous.portfolio-server   # 상태
+tail -f server/logs/server.log server/logs/server.err.log      # 로그 (gitignore)
+```
+- 설치 전 `:3000`에 수동 실행 중인 서버가 있으면 `install.sh`가 중단함 (먼저 종료)
+- `.env`는 서버 디렉터리 기준으로 읽음 (`WorkingDirectory`). Node는 설치 시점의 `command -v node` 경로로 고정
+- 로그 파일은 계속 커짐. 필요하면 `newsyslog` 설정 추가 (M6 범위 밖)
+- nginx 자동 시작·DB 백업 등록은 각각 pm·dba 범위 (014)
+
 ## 관리자 계정
 ```bash
 npm run build
