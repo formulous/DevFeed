@@ -35,5 +35,5 @@
 - 결정 (2026-11-19): 제안 A. `admin:create`가 계정 생성 시 `onboarding_completed_at`을 채움. 기존 관리자 계정(id 3)은 server가 1회 갱신
 - 근거: 명세의 `onboardingCompleted` 의미 유지, client 변경 없음. B는 역할별 예외 분기가 늘고 관리자의 일반 기능 사용 시 상태가 애매해짐. 관리자도 관심 태그가 필요하면 S-10에서 설정 가능
 - 후속 작업:
-  - server - `admin:create` 수정, 기존 관리자 계정 1회 갱신
+  - server - `admin:create` 수정, 기존 관리자 계정 1회 갱신 (완료: id 1·3 갱신, `GET /me` `onboardingCompleted: true` 확인)
   - client - 수정 후 `/login?redirect=/admin` 복귀 확인
