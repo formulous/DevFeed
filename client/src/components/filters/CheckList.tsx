@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { cn } from '@/lib/cn';
 
 const VISIBLE = 10;
 
@@ -10,15 +11,22 @@ export interface CheckListProps {
   onToggle: (id: number) => void;
 }
 
+export function orderSelectedFirst<T extends { id: number }>(items: T[], selected: number[]) {
+  return [...items.filter((i) => selected.includes(i.id)), ...items.filter((i) => !selected.includes(i.id))];
+}
+
 export function CheckList({ legend, items, selected, max, onToggle }: CheckListProps) {
   const full = selected.length >= max;
   const [keyword, setKeyword] = useState('');
   const [expanded, setExpanded] = useState(false);
   const filtered = useMemo(() => {
     const k = keyword.trim().toLowerCase();
-    return k ? items.filter((i) => i.name.toLowerCase().includes(k)) : items;
-  }, [items, keyword]);
-  const visible = expanded || keyword ? filtered : filtered.slice(0, VISIBLE);
+    const list = k ? items.filter((i) => i.name.toLowerCase().includes(k)) : items;
+    return orderSelectedFirst(list, selected);
+  }, [items, keyword, selected]);
+  const collapsedCount = Math.max(VISIBLE, selected.length);
+  const showAll = expanded || !!keyword;
+  const visible = showAll ? filtered : filtered.slice(0, collapsedCount);
 
   return (
     <fieldset>
@@ -32,7 +40,10 @@ export function CheckList({ legend, items, selected, max, onToggle }: CheckListP
         className="mb-2 h-8 w-full rounded-md border border-line px-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-200/40"
       />
       {full && <p className="mb-1 text-xs text-fg-muted">{legend}는 최대 {max}개까지 고를 수 있음</p>}
-      <ul className="space-y-1">
+      <ul
+        aria-label={`${legend} 목록`}
+        className={cn('space-y-1', showAll && 'max-h-72 overflow-y-auto overscroll-contain pr-1')}
+      >
         {visible.map((item) => (
           <li key={item.id}>
             <label className="flex cursor-pointer items-center gap-2 text-sm has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50">
@@ -48,10 +59,11 @@ export function CheckList({ legend, items, selected, max, onToggle }: CheckListP
             </label>
           </li>
         ))}
+        {keyword && visible.length === 0 && <li className="text-xs text-fg-muted">일치하는 {legend}가 없음</li>}
       </ul>
-      {!keyword && filtered.length > VISIBLE && (
+      {!keyword && filtered.length > collapsedCount && (
         <button type="button" onClick={() => setExpanded((v) => !v)} className="mt-1 text-xs text-brand">
-          {expanded ? '접기' : `더보기 (${filtered.length - VISIBLE})`}
+          {expanded ? '접기' : `더보기 (${filtered.length - collapsedCount})`}
         </button>
       )}
     </fieldset>

@@ -69,10 +69,32 @@ function buildPosts(count: number): PostSummary[] {
 
 export const mockPosts = buildPosts(65);
 
-export const mockTags: TagItem[] = TAGS.map(([name, category], i) => ({
+const EXTRA_TAGS = [
+  'Go', 'Rust', 'Python', 'Java', 'JavaScript', 'Node.js', 'NestJS', 'Vue', 'Svelte', 'GraphQL',
+  'gRPC', 'PostgreSQL', 'MongoDB', 'ClickHouse', 'Airflow', 'Spark', 'Terraform', 'ArgoCD', 'Prometheus', 'Grafana',
+  'OpenTelemetry', 'Istio', 'RAG', 'MLOps', 'Android', 'iOS', 'Unity', 'WebAssembly', 'Security', 'Testing',
+];
+
+export const mockExtraSources: SourceRef[] = Array.from({ length: 28 }, (_, i) => ({
+  id: 100 + i,
+  name: `${i % 2 === 0 ? '테크' : '개발'} 블로그 ${i + 1}`,
+  logoUrl: null,
+  type: i % 3 === 0 ? 'PERSONAL' : 'COMPANY',
+}));
+
+export const mockTags: TagItem[] = TAGS.map(([name, category], i): TagItem => ({
   id: i + 1,
   name,
   slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
   category,
   postCount: mockPosts.filter((p) => p.tags.some((t) => t.id === i + 1)).length,
-})).sort((a, b) => b.postCount - a.postCount);
+})).concat(
+  EXTRA_TAGS.map((name, i): TagItem => ({
+    id: 100 + i,
+    name,
+    slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    category: null,
+    postCount: 0,
+  })),
+)
+  .sort((a, b) => b.postCount - a.postCount);

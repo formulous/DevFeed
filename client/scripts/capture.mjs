@@ -94,6 +94,45 @@ async function main() {
       await page.screenshot({ path: `${OUT}/overview-${width}.png`, fullPage: true });
       await page.close();
     }
+    const sidebarChecks = [];
+    {
+      const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, locale: 'ko-KR' });
+      await context.route(/^https?:\/\/(?!localhost)/, (route) => route.abort());
+      const page = await context.newPage();
+      await page.goto(base);
+      const aside = page.getByTestId('filter-sidebar');
+      await aside.getByRole('button', { name: /^더보기/ }).nth(1).waitFor();
+      while ((await aside.getByRole('button', { name: /^더보기/ }).count()) > 0) await aside.getByRole('button', { name: /^더보기/ }).first().click();
+      await page.mouse.move(1279, 719);
+      await aside.evaluate((el) => (el.scrollTop = el.scrollHeight));
+      await page.screenshot({ path: `${OUT}/1280/S-01-sidebar-expanded.png` });
+      const sourceList = aside.getByRole('list', { name: '소스 목록' });
+      await sourceList.evaluate((el) => (el.scrollTop = el.scrollHeight));
+      const last = sourceList.getByRole('checkbox').last();
+      sidebarChecks.push(`1280x720 last source visible: ${await last.isVisible()} inViewport: ${await last.evaluate((el) => { const r = el.getBoundingClientRect(); return r.bottom <= window.innerHeight && r.top >= 0; })}`);
+      await context.close();
+    }
+    {
+      const context = await browser.newContext({ viewport: { width: 360, height: 740 }, locale: 'ko-KR' });
+      await context.route(/^https?:\/\/(?!localhost)/, (route) => route.abort());
+      const page = await context.newPage();
+      await page.goto(base);
+      await page.getByRole('button', { name: /^필터/ }).click();
+      const drawer = page.getByRole('dialog', { name: '필터' });
+      await drawer.getByRole('button', { name: /^더보기/ }).nth(1).waitFor();
+      while ((await drawer.getByRole('button', { name: /^더보기/ }).count()) > 0) await drawer.getByRole('button', { name: /^더보기/ }).first().click();
+      await page.screenshot({ path: `${OUT}/360/S-01-drawer.png` });
+      const body = drawer.getByTestId('filter-drawer-body');
+      await body.evaluate((el) => (el.scrollTop = el.scrollHeight));
+      const sourceList = drawer.getByRole('list', { name: '소스 목록' });
+      await sourceList.evaluate((el) => (el.scrollTop = el.scrollHeight));
+      await page.screenshot({ path: `${OUT}/360/S-01-drawer-bottom.png` });
+      const last = sourceList.getByRole('checkbox').last();
+      const footerTop = await drawer.getByRole('button', { name: '결과 보기' }).evaluate((el) => el.getBoundingClientRect().top);
+      sidebarChecks.push(`360 drawer last source above footer: ${await last.evaluate((el, top) => el.getBoundingClientRect().bottom <= top, footerTop)}`);
+      await context.close();
+    }
+    console.log(sidebarChecks.join('\n'));
     await mkdir(README_OUT, { recursive: true });
     for (const id of README_SET) await copyFile(`${OUT}/1280/${id}.top.png`, `${README_OUT}/${id}.png`);
   } finally {

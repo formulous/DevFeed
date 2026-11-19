@@ -240,6 +240,15 @@ npm run capture    # 반응형 점검·README용 스크린샷 (Playwright, 최�
   - 진입: 공통 푸터(`AppFooter`, `AppLayout`·`AuthLayout` 하단), 회원가입 화면 하단 링크
   - onyx `SiteFooter`는 formulous 링크(소개·문의 등)가 고정돼 있어 쓰지 않음
 - 공개 전환(2026-11-19, `https://formulous.org/portfolio/`, nginx `noindex` 유지)에 맞춰 `index.html`에 meta description·OG·Twitter 카드, `public/favicon.svg`, `public/og.png`(S-01 1280px 캡처) 추가. OG URL은 공개 주소 절대 경로로 고정
+- 필터 사이드바 스크롤 (`docs/discussions/016` 1번, 2026-11-20)
+  - 홈·검색이 `components/filters/FilterLayout.tsx`를 공유
+  - 데스크톱(`lg` 이상): 사이드바가 `sticky` + 화면 높이 안에서 독립 스크롤(`max-h: calc(100dvh - 8.5rem)`, `overscroll-contain`)
+  - 모바일: 왼쪽 드로어. 본문만 스크롤, 하단 [초기화][결과 보기] 고정. 필터는 고르는 즉시 적용, 버튼에 적용 개수 표시
+  - `CheckList`: 더보기로 펼친 목록은 `max-h-72`(약 12줄) 안에서 스크롤. 선택한 항목은 접힘·펼침과 관계없이 맨 위
+  - 캡처에서 1280×720 사이드바 끝·360 드로어 끝 항목 도달 여부를 자동 확인 (`S-01-sidebar-expanded.png`, `S-01-drawer*.png`)
+  - mock 태그·소스를 늘림(태그 45, 공개 소스 36). 글·관리자 mock에는 영향 없음
+- 광고(F-060)는 사용자 결정으로 제외 (`docs/discussions/016` decided). 관련 코드 없음
+- 비공개 화면 `meta robots noindex` (016, 사용자가 nginx `noindex` 해제): S-05~S-10, A-01~A-04 진입 시 `RouteTitle`이 `<meta name="robots" content="noindex">`를 붙이고, 공개 화면(S-01~S-04, S-11)으로 오면 뗌
 - 화면별 `<title>`: `components/layout/RouteTitle.tsx`의 경로 표 한 곳에서 관리 (예: "검색: 카프카 · DevFeed")
 - 반응형 점검: `npm run capture`가 dev 서버(MSW mock)를 띄워 15개 화면 × 360·768·1280px를 찍음
   - 결과: `screenshots/{폭}/{화면}.png`(전체), `.top.png`(첫 화면), `screenshots/overview-{폭}.png`(폭별 모음). git 제외

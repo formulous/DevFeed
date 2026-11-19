@@ -30,10 +30,31 @@ export function titleFor(pathname: string, search: string) {
   return hit ? `${hit[1]} · ${APP}` : `페이지를 찾을 수 없음 · ${APP}`;
 }
 
+const NOINDEX_PATTERNS = ['/login', '/signup', '/onboarding/*', '/me/*', '/admin', '/admin/*'];
+
+export function isNoindex(pathname: string) {
+  return NOINDEX_PATTERNS.some((pattern) => matchPath(pattern, pathname));
+}
+
+function setRobots(noindex: boolean) {
+  let meta = document.head.querySelector<HTMLMetaElement>('meta[name="robots"]');
+  if (!noindex) {
+    meta?.remove();
+    return;
+  }
+  if (!meta) {
+    meta = document.createElement('meta');
+    meta.name = 'robots';
+    document.head.appendChild(meta);
+  }
+  meta.content = 'noindex';
+}
+
 export function RouteTitle() {
   const { pathname, search } = useLocation();
   useEffect(() => {
     document.title = titleFor(pathname, search);
+    setRobots(isNoindex(pathname));
   }, [pathname, search]);
   return null;
 }

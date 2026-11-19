@@ -1,12 +1,12 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
-import { FiFilter } from 'react-icons/fi';
+import { useEffect } from 'react';
 import { Link } from 'react-router';
 import { fetchSearch, SEARCH_MAX_PAGE, SEARCH_TOTAL_CAP, type SearchSort } from '@/api/search';
 import { useAuth } from '@/auth/AuthProvider';
 import { EmptyState } from '@/components/common/EmptyState';
 import { ErrorState } from '@/components/common/ErrorState';
 import { Pagination } from '@/components/common/Pagination';
+import { FilterLayout } from '@/components/filters/FilterLayout';
 import { PostCard } from '@/components/post/PostCard';
 import { PostCardSkeleton } from '@/components/post/PostCardSkeleton';
 import { SEARCH_MIN } from '@/components/layout/AppHeader';
@@ -45,7 +45,6 @@ function PopularTags() {
 export function SearchPage() {
   const { status } = useAuth();
   const { state, setSort, setPage, resetFilters } = useSearchState();
-  const [filterOpen, setFilterOpen] = useState(false);
   const valid = isValidQuery(state.q);
   const search = useQuery({
     queryKey: [...POSTS_KEY, 'search', status, state],
@@ -64,21 +63,11 @@ export function SearchPage() {
   const totalPages = search.data ? Math.min(Math.ceil(search.data.total / search.data.size), SEARCH_MAX_PAGE) : 0;
 
   return (
-    <div className="flex flex-col gap-6 lg:flex-row">
-      <aside className="lg:w-64 lg:shrink-0">
-        <button
-          type="button"
-          onClick={() => setFilterOpen((v) => !v)}
-          aria-expanded={filterOpen}
-          className="mb-3 flex items-center gap-1 text-sm font-medium text-fg-secondary lg:hidden"
-        >
-          <FiFilter size={14} /> 필터
-        </button>
-        <div className={cn(filterOpen ? 'block' : 'hidden', 'lg:sticky lg:top-28 lg:block')}>
-          <SearchSidebar />
-        </div>
-      </aside>
-
+    <FilterLayout
+      sidebar={<SearchSidebar />}
+      activeCount={state.tagIds.length + state.sourceIds.length + (state.period !== 'ALL' ? 1 : 0)}
+      onReset={resetFilters}
+    >
       <section className="min-w-0 flex-1" aria-label="검색 결과">
         {!valid ? (
           <EmptyState
@@ -156,6 +145,6 @@ export function SearchPage() {
           </>
         )}
       </section>
-    </div>
+    </FilterLayout>
   );
 }

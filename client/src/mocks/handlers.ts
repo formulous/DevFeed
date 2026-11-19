@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw';
 import type { Me, PostSummary } from '@/api/types';
 import { resetAdminState } from './adminFixtures';
 import { adminHandlers } from './adminHandlers';
-import { mockPosts, mockSources, mockTags } from './fixtures';
+import { mockExtraSources, mockPosts, mockSources, mockTags } from './fixtures';
 
 const MOCK_TOKEN = 'mock-access-token';
 
@@ -151,7 +151,7 @@ export const handlers = [
   }),
 
   http.get('*/api/tags', () => HttpResponse.json({ items: mockTags })),
-  http.get('*/api/sources', () => HttpResponse.json({ items: mockSources })),
+  http.get('*/api/sources', () => HttpResponse.json({ items: [...mockSources, ...mockExtraSources] })),
 
   http.post('*/api/posts/:id/views', async ({ request, params }) => {
     if (isMember(request)) state.reads.set(Number(params.id), new Date().toISOString());

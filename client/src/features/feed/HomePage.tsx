@@ -1,16 +1,14 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { useState } from 'react';
-import { FiFilter } from 'react-icons/fi';
 import { Button } from '@onyx/components/button/button';
 import { useAuth } from '@/auth/AuthProvider';
 import { EmptyState } from '@/components/common/EmptyState';
 import { ErrorState } from '@/components/common/ErrorState';
 import { PostCard } from '@/components/post/PostCard';
 import { PostCardSkeleton } from '@/components/post/PostCardSkeleton';
+import { FilterLayout } from '@/components/filters/FilterLayout';
 import { useFeedFilters } from '@/hooks/useFeedFilters';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useOpenPost, useToggleBookmark } from '@/hooks/usePostActions';
-import { cn } from '@/lib/cn';
 import { ActiveFilterChips } from './ActiveFilterChips';
 import { FeedSidebar } from './FeedSidebar';
 import { feedQuery } from './queries';
@@ -18,7 +16,6 @@ import { feedQuery } from './queries';
 export function HomePage() {
   const { status } = useAuth();
   const { filters, reset } = useFeedFilters();
-  const [filterOpen, setFilterOpen] = useState(false);
   const feed = useInfiniteQuery({ ...feedQuery(filters, status), enabled: status !== 'loading' });
   const openPost = useOpenPost();
   const toggleBookmark = useToggleBookmark();
@@ -30,21 +27,11 @@ export function HomePage() {
   const posts = feed.data?.pages.flatMap((p) => p.items) ?? [];
 
   return (
-    <div className="flex flex-col gap-6 lg:flex-row">
-      <aside className="lg:w-64 lg:shrink-0">
-        <button
-          type="button"
-          onClick={() => setFilterOpen((v) => !v)}
-          aria-expanded={filterOpen}
-          className="mb-3 flex items-center gap-1 text-sm font-medium text-fg-secondary lg:hidden"
-        >
-          <FiFilter size={14} /> 필터
-        </button>
-        <div className={cn(filterOpen ? 'block' : 'hidden', 'lg:sticky lg:top-28 lg:block')}>
-          <FeedSidebar />
-        </div>
-      </aside>
-
+    <FilterLayout
+      sidebar={<FeedSidebar />}
+      activeCount={filters.tagIds.length + filters.sourceIds.length + (filters.sourceType ? 1 : 0)}
+      onReset={reset}
+    >
       <section className="min-w-0 flex-1" aria-label="최신 피드">
         <h1 className="sr-only">최신 피드</h1>
         <ActiveFilterChips />
@@ -86,6 +73,6 @@ export function HomePage() {
           </div>
         )}
       </section>
-    </div>
+    </FilterLayout>
   );
 }
