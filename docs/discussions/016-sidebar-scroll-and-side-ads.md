@@ -54,6 +54,13 @@
   - 스크립트만 있으면 AdSense 콘솔에서 "자동 광고"를 켠 경우 Google이 위치를 정해 광고를 넣음. 좌우 위치를 보장하려면 slot ID 필요
 - 기획 반영: `02-features.md` F-060 추가
 
+### pm (사용자 정보 2차, 2026-11-20)
+- 광고 단위 수신: 좌 `devfeed-left` `3021654585`, 우 `devfeed-right` `2195210969` (반응형 디스플레이, `data-ad-format="auto"`, `data-full-width-responsive="true"`)
+  - 사용자 스니펫의 `<script>` 로드는 화면마다 반복하지 않고 F-060대로 1회 동적 로드, `ins` + `push({})`는 광고 영역 컴포넌트가 마운트될 때 1회 실행
+  - 좌우 영역은 폭 160px 고정 컨테이너 안에 두어 반응형 단위가 세로형으로 맞춰지게 함, 1440px 미만 숨김
+- `noindex` 해제 (사용자 결정): nginx `/portfolio/`의 `X-Robots-Tag` 제거, reload 완료. `/portfolio/api/`는 유지
+  - 비공개 화면(S-05~S-10, A-01~A-04)은 client가 라우트별 `<meta name="robots" content="noindex">` 추가
+
 ## 결정 (pm)
 - 결정: 1번 즉시 진행. 2번은 사용자 확인 후 진행
 - 근거: 1번은 사용성 버그, 2번은 사용자 정보 필요
