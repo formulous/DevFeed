@@ -27,4 +27,4 @@
 ## 후속 작업
 - client - 위 1~4 구현, `npm run build:web` 실행 후 알림 (완료: 자산 `/portfolio/assets/`, API `/portfolio/api` 확인)
 - pm - nginx 설정 추가·반영, `~/workspace/README.md` 라우팅 표 갱신 (완료: 외부 `https://formulous.org/portfolio/` 401 기본 인증 요구, `/portfolio/api/` 200)
-- 사용자 - htpasswd 파일 생성
+- 사용자 - htpasswd 파일 생성 (완료. macOS nginx는 bcrypt 미지원이라 apr1(`-m`) 형식으로 재생성, 외부 접속 200 확인)
