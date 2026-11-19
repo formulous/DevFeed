@@ -38,6 +38,94 @@
 
 ## 의견
 
+### client (1차)
+- 현재 상태 확인 (11-19)
+  - 프로덕션 번들(`dist-web/assets/*.js`)에 `msw`·`setupWorker` 문자열 0건. mock 시작 코드는 `import.meta.env.DEV`일 때만 동적 import라 번들에서 빠짐
+  - 다만 `public/mockServiceWorker.js`가 `dist-web/`에 그대로 복사됨. 등록하는 코드가 없어 실행되지는 않지만 불필요한 파일이 공개 경로에 남음
+  - 전역 에러 화면(ErrorBoundary)이 없음. 렌더링 오류나 재배포 직후 관리자 청크(lazy) 로드 실패 시 빈 화면이 됨
+  - 화면별 `<title>`이 모두 "DevFeed"로 같음
+  - 이 세션에는 브라우저 도구가 없어 화면을 직접 볼 수 없음 → 1·3번은 도구가 필요함
+- 계획
+  1. 반응형 점검·3. 화면 캡처를 한 번에 처리: Playwright로 `360 / 768 / 1280px` × 주요 화면 스크린샷을 찍는 스크립트(`npm run capture`)를 둠
+     - 데이터: 기본은 dev 서버 + MSW mock (결정적 화면, 개인정보 없음). 옵션으로 실서버(`VITE_API_MOCK=false`) 캡처
+     - 결과: 반응형 점검용은 `client/screenshots/`(git 제외), README용 4장(S-01·S-02·S-04·A-01, 1280px)은 `client/docs/screens/`에 커밋 → pm이 요약 문서에서 링크
+     - 깨짐은 스크린샷으로 확인하고 고친 뒤 다시 캡처. 점검 결과는 `client/README.md`에 화면×폭 표로 기록
+     - **사용자 승인 필요**: Playwright devDependency 추가와 Chromium 브라우저 다운로드(약 150MB)
+  2. 프로덕션 빌드 mock 차단: `vite build` 결과에서 `mockServiceWorker.js`를 빼도록 설정하고, 빌드 후 `msw` 문자열·워커 파일이 없는지 확인하는 테스트(또는 `build` 스크립트 후검사) 추가
+  - 추가 제안 (출시 품질, client 범위)
+    - 전역 ErrorBoundary: 오류 화면 + 새로고침 버튼, 청크 로드 실패면 1회 자동 새로고침
+    - 화면별 `<title>` (예: "검색: 카프카 · DevFeed")
+    - 공개로 결정되면: `meta description`·OG 태그·favicon 추가. `noindex`는 nginx 헤더(pm)라 client 변경 없음
+- 이견: 없음. 다만 1·3번은 위 승인이 없으면 사용자가 formulous에서 직접 확인·캡처해야 함 (그 경우 client는 점검 체크리스트만 제공)
+
+### dba (1차) — 계획
+#### 1. 버퍼 풀: **증설하지 않고 128MB 유지** 제안
+- 실측 크기: `devfeed` 6MB (글 2,383건). 버퍼 풀 128MB 안에 전부 들어가 증설 효과 없음
+- 10만 건(`devfeed_perf` 834MB)에서도 128MB로 검색 c=1 p95 94ms, 추천 18.6ms로 목표 충족 (010, 013)
+- 증설하면 컨테이너 재시작이 필요하고, 같은 컨테이너의 다른 프로젝트 DB(`floa` 467MB)에도 영향이 감. 측정 수치만 좋아지고 실서비스 이득이 없음
+- 리포트에는 "버퍼 풀 128MB(기본값) 조건에서 측정"을 명시. 글이 수만 건 이상으로 늘면 재검토 (기준: `posts`+`post_search` 크기가 버퍼 풀의 70% 초과)
+- 참고: `db/conf/devfeed.cnf`는 `docker cp`로 넣은 상태라 컨테이너를 새로 만들면 사라짐 (데이터 볼륨은 유지). 운영 정리 시 conf 디렉터리 마운트로 바꾸길 권장 (사용자 작업)
+
+#### 2. 백업
+- `db/scripts/backup.sh`: `mariadb-dump --single-transaction --hex-blob --routines --triggers devfeed | gzip` → 저장소 밖 디렉터리(기본 `~/backups/devfeed`), 파일명에 UTC 시각, **14일 보관** 후 자동 삭제
+  - `--single-transaction`: InnoDB 잠금 없이 일관된 스냅샷 (수집 중에도 가능)
+  - `--hex-blob`: `url_hash`, `token_hash` 등 `BINARY` 컬럼 안전 보관
+- `db/scripts/restore.sh`: 지정한 DB로 복원. 대상이 `devfeed`면 확인 플래그 없이는 거부
+- 복원 검증 1회: 임시 DB `devfeed_restore_check`에 복원 → 테이블별 행 수, 생성 컬럼(`url_hash` 등) 값, FULLTEXT 검색 결과를 원본과 비교 → 임시 DB 삭제. 결과는 이 문서에 기록
+- 일일 실행: 맥미니 `launchd`(또는 crontab)에 등록. 호스트 설정이라 사용자 승인 후 등록
+- 개인정보: 백업에 회원 이메일·비밀번호 해시가 포함됨 → 탈퇴 회원 데이터가 백업에 최대 14일 남음. 개인정보 안내 문구에 반영 필요 (pm 확인)
+
+#### 3. 스키마 최종 문서
+- `decisions.md` D-01~D-16 상태 점검: "초안", "결정(안)" 표기를 확정 상태로 정리, 기각안과 측정 근거 링크 확인
+- `erd.md`·`tables.md` 마이그레이션 0001~0009와 일치 여부를 실제 `devfeed` 스키마와 대조
+- 리포트용 요약: 스키마 설계 결정 중 포트폴리오에 쓸 핵심 3가지(앱 bigram FULLTEXT, 커서 인덱스 비정규화, 커버링 인덱스로 검색 923→94ms) 정리해 pm 초안에 링크 제공
+
+### server (1차) — 계획·점검 결과·이견
+#### 1. 운영 실행 (자동 재시작)
+- 현재: 이 Claude 세션의 백그라운드 작업으로 `node dist/main`을 띄운 상태라 세션이 끝나면 서버도 꺼짐. 재부팅 후 자동 시작 없음
+- 제안: macOS `launchd` 사용자 에이전트 (`~/Library/LaunchAgents/org.formulous.portfolio-server.plist`)
+  - `RunAtLoad` + `KeepAlive`(비정상 종료 시 재시작), 작업 디렉터리 `server/`, `node dist/main`, 로그는 `server/logs/`(gitignore)
+  - korail_macro처럼 tmux 재시작 루프도 가능하지만 재부팅 시 자동 시작이 안 됨. launchd는 로그인 시 자동 시작·크래시 재시작을 둘 다 처리함
+  - 서버는 `server/deploy/`에 plist 템플릿과 설치·제거 스크립트(`install.sh`, `uninstall.sh`)만 둠. `~/Library` 설치·`launchctl` 실행은 쓰기 경로 밖이라 사용자 승인 후 사용자가 실행 (또는 승인 시 server가 실행)
+  - 배포 순서 문서화: `git pull` → `npm ci` → `npm run build` → `launchctl kickstart -k`로 재시작
+- 이견: nginx도 재부팅 시 자동 시작이 안 됨(`~/workspace/README.md`). 서버만 자동화하면 외부 접속은 여전히 수동 → nginx 자동 시작은 pm이 사용자에게 함께 확인 요청 바람 (server 범위 밖)
+
+#### 2. 보안 점검표 (현재 상태, 코드 확인)
+| 항목 | 상태 | 근거·조치 |
+|---|---|---|
+| 비밀번호 해시 | 충족 | bcrypt 12라운드, 없는 계정도 같은 비용으로 비교(시간 차 노출 방지) |
+| 관리자 권한 분리 | 충족 | `/api/admin/**` 전부 JWT + `ADMIN` 역할 가드, e2e·실서버 403 확인 |
+| 로그인 잠금 | 충족 | 5회 실패 10분 잠금, 423 + `Retry-After` (e2e) |
+| 쿠키 속성 | 충족 | 리프레시 `HttpOnly; Secure; SameSite=Strict; Path=/api/auth`(nginx가 `/portfolio/api/`로 변환), 비회원 `df_vid` `HttpOnly; SameSite=Lax; Secure` |
+| 토큰 | 충족 | 액세스 15분, 리프레시 회전·재사용 탐지(계열 폐기), DB에는 해시만 저장 |
+| 에러 내부 정보 | 충족 | 500은 `INTERNAL_ERROR` 고정 문구, 스택은 서버 로그만. 알 수 없는 경로·메서드도 공통 형식 |
+| 요청 크기 | 충족 | JSON 본문 100kb, 피드 수집 응답 20MB |
+| 입력 검증 | 충족 | 전 DTO 화이트리스트(모르는 필드 400), 검색 FULLTEXT 질의는 토큰만 남겨 연산자 주입 불가, SQL은 전부 바인딩 |
+| **요청 속도 제한** | **미구현** | 로그인 잠금 외 제한 없음 → 가입·로그인·리프레시·조회 기록·검색에 IP 기준 제한 추가 제안 (`@nestjs/throttler`, 429 `RATE_LIMITED`는 conventions에 이미 정의) |
+| **실제 클라이언트 IP** | **미설정** | Cloudflare → nginx → 서버 구조라 지금은 모든 요청이 127.0.0.1로 보임. 속도 제한 전에 `trust proxy`(loopback)와 nginx `X-Forwarded-For`/`CF-Connecting-IP` 전달 확인 필요 (nginx는 pm 관리) |
+| 보안 헤더 | 일부 | API는 JSON만 응답. `X-Powered-By` 제거함. `X-Content-Type-Options: nosniff`, `Cache-Control: no-store`(인증·내 정보 응답) 추가 제안 |
+| 관리자 계정 생성 | 충족 | 스크립트로만 생성(`admin:create`), 가입 API로는 `USER`만 |
+| 헬스 체크 | 없음 | launchd·외부 모니터링용 `GET /api/health`(DB 연결 확인) 추가 제안 → openapi에 먼저 추가 |
+
+#### 3. 성능 리포트 원자료
+- `server/README.md`에 "성능 리포트" 절을 새로 만들고 같은 형식(데이터 규모, 동시성, p50/p95, 측정 방법, 원자료 위치)으로 정리
+  - 수집(M1): 36곳 20초, 중복 0, 데드락 수정 전후
+  - 피드(M2·007): 커서 정확성, API p95 2.5ms(2,383건), dba 10만 건 DB p95 최대 6.2ms
+  - 검색(M3·010): 923 → 301 → 94ms 단계별 원인·조치, LIKE 기준선 비교, c=10 참고치
+  - 추천(M5·013): 첫 페이지 p95 18.6ms, 다음 페이지 5.9ms
+- dba가 버퍼 풀 512MB를 적용하면 검색·추천을 같은 스크립트로 재측정해 전후를 같이 남김
+- 측정 스크립트를 지금은 scratchpad에서 돌렸음 → `server/scripts/perf/`로 옮겨 재현 가능하게 함 (측정 DB `devfeed_perf` 고정 확인 포함)
+
+#### 4. 공개 범위 (사용자 결정 사항에 대한 server 의견)
+- 공개한다면 **2번의 속도 제한·실제 IP 처리를 먼저 반영한 뒤** 기본 인증을 푸는 순서를 권장함. 지금은 가입·로그인·조회 기록에 무제한 요청이 가능함
+- 관리자 API는 JWT 역할 검사로 막혀 있어 공개해도 노출 범위는 같음. 추가로 nginx에서 `/portfolio/api/admin/`을 특정 IP로 제한할지는 선택 사항
+
+#### 작업 순서 (사용자 승인 후)
+1. 성능 리포트 정리·측정 스크립트 이전 (코드 영향 없음)
+2. `GET /api/health` 명세 추가 → 구현, 보안 헤더
+3. `trust proxy` + 속도 제한 (nginx IP 전달 확인 후)
+4. launchd 템플릿·스크립트 → 사용자 설치
+
 ## 결정 (pm)
 - 결정:
 - 근거:
