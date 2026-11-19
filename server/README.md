@@ -26,11 +26,15 @@ NestJS 12 + TypeORM(MariaDB, mysql2) API 서버. 명세는 `../docs/api/openapi.
   - `GET /api/tags`, `GET /api/sources`
   - 로그인 선택 API: 토큰 없으면 게스트, 만료·위조면 401 `TOKEN_EXPIRED`. 회원이면 `isBookmarked`·`isRead` 포함
   - 정리 배치: `post_view_guards` 24시간(매시 5분), `read_histories` 1년(매일 04:00 KST)
-- M3 검색 (F-020~F-022, 진행 중)
+- M3 검색 (F-020~F-022)
   - `GET /api/search`: 질의는 저장과 같은 규칙으로 토큰화, 한글 단어는 bigram을 구문(`+"리밸 밸런 런싱"`)으로 묶어 매칭. 관련도 = 제목 일치 × 2 + 전체 일치, 최신순 선택. 페이지 최대 50
   - 토큰이 남지 않는 검색어(1글자 단어만 등)는 DB 조회 없이 0건
   - 하이라이트는 client 처리 (서버는 원문 텍스트만 반환)
-  - 성능: 10만 건에서 흔한 단어(결과 1만 건 이상) p95 미달 → `docs/discussions/010-search-performance.md`에서 개선안 협의 중
+  - 성능 (010): 글 10만 건 c=1 API p95 94ms (목표 300ms), c=10 p95 497ms
+    - 건수 COUNT는 1,001건에서 중단 → `total ≤ 1000` + `totalCapped`
+    - 기간·소스 필터·최신순이 없으면 `post_search`만, 있으면 `posts FORCE INDEX (idx_posts_search_filter)` 커버링 인덱스 조인(`0009`)
+    - 같은 검색어·필터 결과(글 ID·건수) 1분 캐시, 회원 플래그는 매번 조회. 측정 시 `SEARCH_CACHE_ENABLED=false`
+  - 알려진 한계: 영문은 단어 단위 매칭이라 합성어 안의 단어(`ReactNative`의 react)는 찾지 않음
 
 ## 구조
 ```
@@ -54,6 +58,7 @@ src/
   - `JWT_ACCESS_SECRET`: 32자 이상
   - `COOKIE_SECURE`: dev Safari 확인 시에만 `false`
   - `CRAWL_SCHEDULER_ENABLED`: `false`면 주기 수집 중지 (즉시 수집 API는 동작)
+  - `SEARCH_CACHE_ENABLED`: 검색 결과 1분 캐시 (성능 측정 시 `false`)
 - DB 스키마는 `../db/migrations`(dba)로만 반영함. 서버는 DDL을 실행하지 않음
 
 ## 실행

@@ -1,41 +1,65 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { APP_ENV } from '../config/env';
+import type { AppEnv } from '../config/env';
 import { buildMatchQuery, MatchMode } from '../ingest/tokenizer';
 import { searchSince } from '../posts/period';
 import { withoutViewCount } from '../posts/post-cards';
 import { PostCardsService } from '../posts/post-cards.service';
-import { buildSearchQueries } from './search-query';
+import { CachedSearch, SearchCache, searchCacheKey } from './search-cache';
+import { buildSearchQueries, SearchFilter, TOTAL_CAP } from './search-query';
 import { SearchQueryDto } from './search.dto';
 
 export const SEARCH_MATCH_MODE: MatchMode = 'PHRASE';
 
 @Injectable()
 export class SearchService {
+  private readonly cache = new SearchCache();
+
   constructor(
     private readonly dataSource: DataSource,
     private readonly cards: PostCardsService,
+    @Inject(APP_ENV) private readonly env: AppEnv,
   ) {}
 
   async search(query: SearchQueryDto, userId?: number, now = new Date()) {
     const page = query.page ?? 1;
     const size = query.size ?? 20;
     const match = buildMatchQuery(query.q, SEARCH_MATCH_MODE);
-    if (!match) return { items: [], total: 0, page, size };
+    if (!match) return { items: [], total: 0, totalCapped: false, page, size };
 
-    const { list, count } = buildSearchQueries({
+    const period = query.period ?? 'ALL';
+    const sort = query.sort ?? 'RELEVANCE';
+    const filter: SearchFilter = {
       match,
       tagIds: query.tagIds,
       sourceIds: query.sourceIds,
-      since: searchSince(query.period ?? 'ALL', now),
-      sort: query.sort ?? 'RELEVANCE',
+      since: searchSince(period, now),
+      sort,
       limit: size,
       offset: (page - 1) * size,
-    });
+    };
+    const result = this.env.searchCacheEnabled
+      ? await this.cache.get(
+          searchCacheKey({ match, tagIds: query.tagIds, sourceIds: query.sourceIds, period, sort, page, size }),
+          () => this.run(filter),
+        )
+      : await this.run(filter);
+    const items = await this.cards.load(result.ids, userId);
+    return { items: items.map(withoutViewCount), total: result.total, totalCapped: result.totalCapped, page, size };
+  }
+
+  private async run(filter: SearchFilter): Promise<CachedSearch> {
+    const { list, count } = buildSearchQueries(filter);
     const [rows, totals] = await Promise.all([
       this.dataSource.query(list.sql, list.params) as Promise<{ id: number | string }[]>,
       this.dataSource.query(count.sql, count.params) as Promise<{ total: number | string }[]>,
     ]);
-    const items = await this.cards.load(rows.map((r) => Number(r.id)), userId);
-    return { items: items.map(withoutViewCount), total: Number(totals[0]?.total ?? 0), page, size };
+    const counted = Number(totals[0]?.total ?? 0);
+    return {
+      ids: rows.map((r) => Number(r.id)),
+      total: Math.min(counted, TOTAL_CAP),
+      totalCapped: counted > TOTAL_CAP,
+    };
   }
 }

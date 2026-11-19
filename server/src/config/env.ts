@@ -4,6 +4,7 @@ export interface AppEnv {
   jwt: { accessSecret: string; accessTtlSec: number };
   cookieSecure: boolean;
   crawl: { schedulerEnabled: boolean; concurrency: number };
+  searchCacheEnabled: boolean;
 }
 
 function required(env: NodeJS.ProcessEnv, key: string): string {
@@ -46,6 +47,7 @@ export function loadEnv(env: NodeJS.ProcessEnv = process.env): AppEnv {
       schedulerEnabled: bool(env, 'CRAWL_SCHEDULER_ENABLED', true),
       concurrency: Math.max(1, int(env, 'CRAWL_CONCURRENCY', 5)),
     },
+    searchCacheEnabled: bool(env, 'SEARCH_CACHE_ENABLED', true),
   };
 }
 

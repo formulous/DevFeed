@@ -404,7 +404,8 @@ paths:
       description: |
         검색 대상: 제목·요약·태그(동의어 포함)·소스 이름. 한글은 2글자 단위(bigram) 부분 일치.
         관련도는 제목 일치 가중. 하이라이트는 client가 검색어로 처리 (서버는 HTML·구간 정보 미제공).
-        page는 최대 50 (상위 1,000건)
+        page는 최대 50 (상위 1,000건). total은 최대 1,000이고 넘으면 totalCapped=true.
+        같은 검색어·필터 결과(글 목록·건수)는 최대 1분 캐시될 수 있음. 회원 플래그는 매번 조회
       security:
         - {}
         - bearerAuth: []
@@ -1144,12 +1145,18 @@ components:
 
     SearchPage:
       type: object
-      required: [items, total, page, size]
+      required: [items, total, totalCapped, page, size]
       properties:
         items:
           type: array
           items: { $ref: '#/components/schemas/PostSummary' }
-        total: { type: integer }
+        total:
+          type: integer
+          maximum: 1000
+          description: 검색 결과 수. 1,000건을 넘으면 1000 (010)
+        totalCapped:
+          type: boolean
+          description: true면 실제 결과가 1,000건 초과 → 화면에 "1,000건 이상" 표시 (010)
         page: { type: integer }
         size: { type: integer }
 

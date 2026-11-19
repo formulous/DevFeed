@@ -1,22 +1,25 @@
-import { buildSearchQueries } from './search-query';
+import { buildSearchQueries, needsPostsJoin } from './search-query';
 
 describe('buildSearchQueries', () => {
-  it('관련도순: 제목 가중 점수로 정렬하고 같은 조건으로 COUNT', () => {
+  it('필터 없는 관련도순은 post_search만 사용함', () => {
     const { list, count } = buildSearchQueries({ match: '+kafka', sort: 'RELEVANCE', limit: 20, offset: 40 });
+    expect(list.sql).not.toContain('JOIN');
     expect(list.sql).toContain('MATCH(s.title_tokens) AGAINST (? IN BOOLEAN MODE) * 2');
-    expect(list.sql).toContain('ORDER BY score DESC, p.published_at DESC, p.id DESC LIMIT ? OFFSET ?');
+    expect(list.sql).toContain('ORDER BY score DESC, s.post_id DESC LIMIT ? OFFSET ?');
     expect(list.params).toEqual(['+kafka', '+kafka', '+kafka', 20, 40]);
-    expect(count.sql).toMatch(/^SELECT COUNT\(\*\) AS total FROM post_search s JOIN posts p/);
-    expect(count.params).toEqual(['+kafka']);
+    expect(count.sql).toBe(
+      'SELECT COUNT(*) AS total FROM (SELECT 1 FROM post_search s WHERE MATCH(s.title_tokens, s.body_tokens) AGAINST (? IN BOOLEAN MODE) LIMIT ?) capped',
+    );
+    expect(count.params).toEqual(['+kafka', 1001]);
   });
 
-  it('최신순은 점수를 계산하지 않음', () => {
-    const { list } = buildSearchQueries({ match: '+kafka', sort: 'LATEST', limit: 20, offset: 0 });
-    expect(list.sql).not.toContain('score');
-    expect(list.sql).toContain('ORDER BY p.published_at DESC, p.id DESC');
+  it('태그 필터만 있으면 조인 없이 post_tags EXISTS', () => {
+    const { list } = buildSearchQueries({ match: '+x', sort: 'RELEVANCE', tagIds: [9, 3], limit: 20, offset: 0 });
+    expect(list.sql).not.toContain('JOIN');
+    expect(list.sql).toContain('pt.post_id = s.post_id AND pt.tag_id IN (?, ?)');
   });
 
-  it('기간·소스·태그 필터를 순서대로 바인딩함', () => {
+  it('최신순·기간·소스 필터는 커버링 인덱스를 강제한 posts 조인', () => {
     const since = new Date('2026-11-12T00:00:00Z');
     const { list, count } = buildSearchQueries({
       match: '+x',
@@ -27,7 +30,19 @@ describe('buildSearchQueries', () => {
       limit: 20,
       offset: 0,
     });
-    expect(list.sql).toContain('p.published_at >= ? AND p.source_id IN (?, ?) AND EXISTS (SELECT 1 FROM post_tags pt WHERE pt.post_id = p.id AND pt.tag_id IN (?))');
-    expect(count.params).toEqual(['+x', since, 1, 2, 9]);
+    expect(list.sql).toContain('JOIN posts p FORCE INDEX (idx_posts_search_filter) ON p.id = s.post_id');
+    expect(list.sql).toContain('p.published_at >= ? AND p.source_id IN (?, ?) AND EXISTS');
+    expect(list.sql).toContain('ORDER BY p.published_at DESC, p.id DESC');
+    expect(list.sql).not.toContain('score');
+    expect(count.params).toEqual(['+x', since, 1, 2, 9, 1001]);
+  });
+
+  it('조인 필요 여부', () => {
+    const base = { match: '+x', limit: 20, offset: 0 };
+    expect(needsPostsJoin({ ...base, sort: 'RELEVANCE' })).toBe(false);
+    expect(needsPostsJoin({ ...base, sort: 'RELEVANCE', tagIds: [1] })).toBe(false);
+    expect(needsPostsJoin({ ...base, sort: 'LATEST' })).toBe(true);
+    expect(needsPostsJoin({ ...base, sort: 'RELEVANCE', since: new Date() })).toBe(true);
+    expect(needsPostsJoin({ ...base, sort: 'RELEVANCE', sourceIds: [1] })).toBe(true);
   });
 });
