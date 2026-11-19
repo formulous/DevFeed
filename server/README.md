@@ -101,13 +101,18 @@ npm test                   # Jest 단위 테스트
 ```bash
 server/deploy/install.sh     # 최초 1회: npm ci → build → ~/Library/LaunchAgents에 등록 → 헬스 체크
 server/deploy/deploy.sh      # 코드 갱신 후: npm ci → build → 재시작(kickstart -k) → 헬스 체크
-server/deploy/uninstall.sh   # 해제
+server/deploy/uninstall.sh   # 해제 (서버·로그 회전 에이전트 모두)
 launchctl print gui/$(id -u)/org.formulous.portfolio-server   # 상태
 tail -f server/logs/server.log server/logs/server.err.log      # 로그 (gitignore)
 ```
 - 설치 전 `:3000`에 수동 실행 중인 서버가 있으면 `install.sh`가 중단함 (먼저 종료)
 - `.env`는 서버 디렉터리 기준으로 읽음 (`WorkingDirectory`). Node는 설치 시점의 `command -v node` 경로로 고정
-- 로그 파일은 계속 커짐. 필요하면 `newsyslog` 설정 추가 (M6 범위 밖)
+- 로그 회전: 별도 에이전트 `org.formulous.portfolio-logrotate`가 매시간 `deploy/rotate-logs.sh` 실행
+  - `server.log`·`server.err.log`·`logrotate.log`가 10MB를 넘거나 마지막 회전 후 24시간이 지나면 `*.1.gz`로 복사·압축 후 원본을 비움(copytruncate), 7세대 보관
+  - 서버 재시작 불필요: launchd가 로그를 이어쓰기(`O_APPEND`) 모드로 열어서 원본을 비워도 파일 끝부터 이어 씀 (`lsof +fg`로 `AP` 플래그 확인)
+  - 한계: 복사와 비우기 사이에 쓰인 몇 줄은 잃을 수 있음
+  - 수동 실행: `FORCE=1 server/deploy/rotate-logs.sh`. 기존 설치에 회전만 추가: `server/deploy/install-logrotate.sh` (`install.sh`는 자동 포함)
+  - `newsyslog`는 쓰지 않음: `/etc` 설정에 sudo가 필요하고, 이름 변경 방식이라 launchd가 연 파일을 서버가 다시 열 수 없음
 - nginx 자동 시작·DB 백업 등록은 각각 pm·dba 범위 (014)
 
 ## 관리자 계정

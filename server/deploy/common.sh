@@ -1,6 +1,8 @@
 LABEL="org.formulous.portfolio-server"
 SERVER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+ROTATE_LABEL="org.formulous.portfolio-logrotate"
+ROTATE_PLIST="$HOME/Library/LaunchAgents/$ROTATE_LABEL.plist"
 DOMAIN="gui/$(id -u)"
 PORT="${PORT:-3000}"
 

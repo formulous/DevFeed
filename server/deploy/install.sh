@@ -24,3 +24,4 @@ plutil -lint "$PLIST"
 launchctl bootstrap "$DOMAIN" "$PLIST"
 echo "[deploy] 등록: $PLIST (node $NODE_BIN)"
 wait_healthy
+"$SERVER_DIR/deploy/install-logrotate.sh"
