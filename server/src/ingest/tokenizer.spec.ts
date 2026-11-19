@@ -1,4 +1,4 @@
-import { buildBooleanQuery, toTokenString, tokenize } from './tokenizer';
+import { buildBooleanQuery, buildMatchQuery, toTokenString, tokenize } from './tokenizer';
 
 describe('tokenize', () => {
   it('한글 단어는 bigram으로 분해함', () => {
@@ -33,5 +33,30 @@ describe('buildBooleanQuery', () => {
     for (const token of buildBooleanQuery('리밸런싱').split(' ')) {
       expect(stored).toContain(token.slice(1));
     }
+  });
+});
+
+describe('buildMatchQuery', () => {
+  it('한글 단어는 bigram을 구문으로 묶고 영문 단어는 필수 토큰으로 둠', () => {
+    expect(buildMatchQuery('카프카 컨슈머 리밸런싱')).toBe('+"카프 프카" +"컨슈 슈머" +"리밸 밸런 런싱"');
+    expect(buildMatchQuery('Kafka 리밸')).toBe('+kafka +리밸');
+  });
+
+  it('1글자 단어만 있으면 빈 문자열, 중복 단어는 한 번만', () => {
+    expect(buildMatchQuery('a 가')).toBe('');
+    expect(buildMatchQuery('react React')).toBe('+react');
+  });
+
+  it('따옴표·연산자 문자는 질의에 남지 않음', () => {
+    expect(buildMatchQuery('"react" -vue +(next*)')).toBe('+react +vue +next');
+  });
+
+  it('ALL 모드는 모든 bigram을 각각 필수로 둠', () => {
+    expect(buildMatchQuery('리밸런싱', 'ALL')).toBe('+리밸 +밸런 +런싱');
+  });
+
+  it('구문 질의는 저장 토큰에서 연속으로 나타남', () => {
+    const stored = toTokenString('컨슈머 리밸런싱이 줄어드는 이유');
+    expect(stored).toContain('리밸 밸런 런싱');
   });
 });

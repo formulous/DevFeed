@@ -29,3 +29,18 @@ export function buildBooleanQuery(query: string): string {
   const unique = [...new Set(tokenize(query))];
   return unique.map((token) => `+${token}`).join(' ');
 }
+
+export type MatchMode = 'PHRASE' | 'ALL';
+
+export function buildMatchQuery(query: string, mode: MatchMode = 'PHRASE'): string {
+  if (mode === 'ALL') return buildBooleanQuery(query);
+  const words = query.normalize('NFKC').toLowerCase().split(SEPARATOR).filter(Boolean);
+  const terms: string[] = [];
+  for (const word of words) {
+    const tokens = tokenize(word);
+    if (!tokens.length) continue;
+    const term = tokens.length > 1 ? `+"${tokens.join(' ')}"` : `+${tokens[0]}`;
+    if (!terms.includes(term)) terms.push(term);
+  }
+  return terms.join(' ');
+}
