@@ -7,7 +7,7 @@
 db/
 ├── conf/devfeed.cnf     # MariaDB 서버 설정 (FULLTEXT 토큰 2자, stopword 끔, UTC)
 ├── perf/                # 성능 측정용 대량 시드 생성기, 측정 스크립트
-├── queries/            # feed.sql(007), personal.sql·withdrawal-check.sql(012) 기준 쿼리
+├── queries/            # feed.sql(007), personal.sql·withdrawal-check.sql(012), recommendation.sql(013) 기준 쿼리
 ├── migrations/          # 0001~0009, -- migrate:up / -- migrate:down
 ├── scripts/migrate.sh   # 컨테이너에 마이그레이션 적용
 ├── scripts/seed.sh      # seeds/*.sql 순서대로 적용 (재실행 안전)
@@ -54,11 +54,12 @@ export DB_USER=<계정> MYSQL_PWD=<비밀번호>
 db/scripts/perf-seed.sh                    # devfeed_perf 비어 있어야 함, 약 30초
 MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_feed.py   # 피드 쿼리 p50/p95
 MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_search.py # 검색 쿼리 p50/p95 (현행·권장·LIKE 기준선)
+MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_recommendation.py # 추천 선호도·후보 쿼리 p50/p95
 ```
 - DB `devfeed_perf`는 미리 생성 (`utf8mb4_unicode_ci`). 개발 DB `devfeed`와 분리해 합성 글이 섞이지 않게 함
 - 글 10만, post_tags 약 20만, 회원 1만, 북마크 약 50만, 읽은 기록 약 190만. 디스크 약 800MB
 - 글 텍스트는 `devfeed` 실제 글 단어를 재조합. 토큰은 서버 `tokenizer.ts`와 같은 규칙 (`perf/generate_posts.py`)
-- 고정 시드라 재생성해도 같은 분포. 측정 결과는 discussion 007 (피드), 010 (검색)
+- 고정 시드라 재생성해도 같은 분포. 측정 결과는 discussion 007 (피드), 010 (검색), 013 (추천)
 
 ## 검증 기록 (2026-11-19, MariaDB 12.1.2)
 - 설정 반영 확인: `innodb_ft_min_token_size=2`, `innodb_ft_enable_stopword=OFF`, `time_zone=+00:00`
