@@ -213,3 +213,7 @@
   - 외부 확인: `/portfolio/`·`/privacy`·`/api/health` 200, `/api/admin/stats` 비로그인 401, 다른 도구(`/`, `/salary-calc/`) 200
   - 루트 `README.md` 상단에 포트폴리오 요약(05) + 화면 캡처 4장 반영, M6 완료 체크
   - client meta description·OG 태그·favicon 추가 완료 (공개 주소 반영 확인, 2026-11-19)
+- 운영 보충 (pm, 2026-11-20)
+  - server 4차 로그 회전 에이전트(`org.formulous.portfolio-logrotate`, 사용자 승인) 등록 확인. launchd 에이전트는 서버·로그 회전·백업 3건 + nginx(`brew services`)
+  - 배포 최신 상태 점검: formulous 서빙 번들(`index-D3GQAeKI.js`)이 로컬 `client/dist-web`과 같고 빌드 이후 바뀐 client 소스 없음. 서버 프로세스는 마지막 `dist` 빌드 이후 기동, 빌드 이후 바뀐 `server/src` 없음 → 최신
+  - 단 client 작업 트리에 미커밋 변경(OG·favicon·S-11 등)이 있어 배포 내용이 커밋보다 앞서 있음 → client 커밋 요청
