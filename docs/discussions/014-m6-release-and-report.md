@@ -126,7 +126,27 @@
 3. `trust proxy` + 속도 제한 (nginx IP 전달 확인 후)
 4. launchd 템플릿·스크립트 → 사용자 설치
 
+### pm (1차)
+- 사용자 결정 (2026-11-19)
+  - 공개 범위: **M6 끝에 공개**. 보안 점검(속도 제한·실제 IP)·백업·운영 실행 정리가 끝난 뒤 기본 인증 해제. `noindex` 해제 여부는 공개 시점에 결정
+  - Playwright devDependency·Chromium 설치 **승인** (client 캡처·반응형 점검)
+- server 요청한 실제 IP 전달: pm이 nginx에 반영 완료
+  - `/opt/homebrew/etc/nginx/cloudflare-realip.conf`: Cloudflare 대역(IPv4·v6)에서 온 요청만 `CF-Connecting-IP`를 신뢰. 그 외 경로로 직접 들어온 요청은 실제 접속 IP 사용 (헤더 위조 방지)
+  - `/portfolio/api/`에서 `X-Real-IP`, `X-Forwarded-For`를 복원된 IP 하나로 덮어써 전달 (`nginx.conf`, `nginx.https.conf` 모두)
+  - server는 `trust proxy`를 loopback만 신뢰하도록 설정하면 됨
+- nginx 자동 시작: server 의견대로 서버만 자동화하면 의미가 없음 → launchd 등록 3건(서버, nginx, 백업)을 묶어 사용자 승인 요청함
+
 ## 결정 (pm)
-- 결정:
-- 근거:
-- 후속 작업:
+- 결정 (2026-11-19)
+  - client: 계획 1~3 + 추가 제안(ErrorBoundary, 화면별 `<title>`, `mockServiceWorker.js` 빌드 제외) 채택. 공개 결정 시 meta·OG·favicon 추가
+  - dba: 버퍼 풀 128MB 유지 (리포트에 측정 조건 명시, `posts`+`post_search`가 버퍼 풀 70% 초과 시 재검토). 백업 14일 보관·복원 검증 채택. 스키마 문서 정리 채택
+  - server: 작업 순서 1~4 채택. 속도 제한은 공개 전 필수(비기능 요구사항에 추가), `GET /api/health`·보안 헤더 채택(명세 먼저)
+  - 개인정보: 탈퇴 회원 데이터가 백업에 최대 14일 남는 점을 비기능 요구사항에 명시, 공개 시 개인정보 안내 문구에 반영
+  - 공개: M6 끝에 공개 (사용자 결정)
+- 근거: 공개 전 최소 보안(속도 제한·실제 IP)과 운영 지속성(자동 시작·백업) 확보가 출시 조건. 버퍼 풀 증설은 실데이터 6MB라 이득 없고 같은 컨테이너 다른 DB에 영향
+- 후속 작업
+  - pm - nginx 실제 IP 전달 (완료), `02-features.md` v1.7 비기능 보안·개인정보 (완료), `05-portfolio-summary.md`·`06-acceptance-checklist.md` 작성, 공개 전환(nginx 기본 인증 해제)
+  - 사용자 - launchd 등록 승인 (서버·nginx·백업), `db/conf` 마운트 전환은 선택
+  - server - 성능 리포트 → health·보안 헤더 → trust proxy·속도 제한 → launchd 템플릿
+  - dba - 백업·복원 스크립트, 복원 검증 결과 기록, 스키마 문서 정리, 리포트용 핵심 결정 3가지
+  - client - Playwright 캡처·반응형 점검, mock 워커 제외, ErrorBoundary, `<title>`
