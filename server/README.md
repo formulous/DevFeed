@@ -117,4 +117,29 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
 ## 알려진 제약
 - 피드 카테고리 저장(`0008`) 이전에 수집된 글은 카테고리가 없어, 재태깅하면 카테고리 기반 태그가 빠짐 (실측: 태그 행 2,940 → 2,820). 해당 글이 갱신되거나 새로 수집되는 글부터 해소됨
 - 재태깅 작업 상태는 서버 메모리에 보관함 (재시작 시 소실)
-- 테스트는 Nest를 import하지 않는 순수 모듈 대상임. Nest 12가 ESM 전용이고 Jest의 require(esm)는 Node 24.9 이상에서만 동작해서, Nest 의존 코드의 Jest 테스트(e2e 포함)는 Node 업그레이드 후 추가 예정
+- Jest 단위 테스트는 Nest를 import하지 않는 순수 모듈만 대상임. Nest 12는 ESM 전용이고 Jest의 require(esm)는 Node 24.9 이상에서만 동작함 (현재 로컬 Node 24.3). Nest 의존 코드는 아래 e2e 계획으로 검증함
+
+## e2e 테스트 계획 (M4 완료 전 필수, 002 결정: 탈퇴 후 개인 데이터 잔존 검사)
+
+### 기본안: Node 내장 테스트 러너 + 빌드 결과물 (Node 업그레이드 불필요)
+- 방식: `node --test`로 `dist/`의 Nest 모듈을 불러와 `@nestjs/testing`으로 앱을 띄우고 실제 HTTP 요청으로 검증
+  - Jest와 달리 Node 자체 `require(esm)`을 써서 Node 24.3에서도 동작함
+  - 사전 확인 (2026-11-19): `node:test`에서 `Test.createTestingModule` → `app.listen(0)` → `fetch`로 컨트롤러 응답 확인, 통과
+- 구성 (M4 착수 시 추가)
+  - `server/test/e2e/*.e2e.test.js`, 스크립트 `npm run test:e2e` = `npm run build && node --test test/e2e`
+  - 전용 DB `devfeed_test`: dba가 `db/migrations` 전체를 적용해 생성. 테스트는 `DB_DATABASE=devfeed_test`로 실행하고 개발 DB(`devfeed`)는 건드리지 않음
+    - 접속 정보는 `server/.env.test` (사용자가 작성, 키는 `.env.example`과 같음)
+    - 테스트마다 사용자·글을 직접 만들고 끝나면 지움. 수집 스케줄러는 `CRAWL_SCHEDULER_ENABLED=false`
+  - 첫 대상
+    1. 탈퇴(`POST /me/withdraw`) 후 `bookmarks`·`read_histories`·`user_interest_tags`·`refresh_tokens`에 해당 회원 행 0건, `recommendation_impressions.user_id` NULL, `posts.view_count` 유지
+    2. 인증 흐름: 로그인 → refresh 회전 → 재사용 30초 경과 시 계열 전체 폐기 → 로그아웃 (M1에서 단위 테스트로만 확인한 부분)
+    3. 피드 커서·필터 조합 (M2 검증 스크립트를 테스트로 옮김)
+- 한계: TypeScript 소스가 아니라 빌드 결과를 검사하므로 실행 전 빌드가 필요함. 테스트 코드는 JS로 작성함
+
+### 대안: Node 24.9 이상으로 업그레이드
+- Jest에서 Nest를 바로 불러올 수 있어 단위·e2e 테스트를 TypeScript로 통일할 수 있음
+- 로컬 Node 버전 변경은 사용자 결정 사항이라 기본안으로 두지 않음. 업그레이드하면 `package.json`의 `engines`와 테스트 설정을 함께 바꾸고 기본안을 대체함
+
+### 필요한 협업
+- dba: `devfeed_test` 생성·마이그레이션 적용 방법 (`db/scripts`) — M4 착수 전 요청 예정
+- 사용자: `server/.env.test` 작성
