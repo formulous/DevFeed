@@ -7,7 +7,7 @@ import { TagDictionaryService } from '../../crawl/tag-dictionary.service';
 import { splitCategories } from '../../ingest/categories';
 import { CreateTagDto, UpdateTagDto } from '../dto/tag.dto';
 import { JobsService } from '../jobs/jobs.service';
-import { TagCountsService } from './tag-counts.service';
+import { TagCountsService } from '../../catalog/tag-counts.service';
 
 interface TagRow {
   id: number | string;

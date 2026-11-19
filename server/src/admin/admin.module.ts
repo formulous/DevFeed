@@ -7,12 +7,11 @@ import { AdminSourcesService } from './sources/admin-sources.service';
 import { AdminStatsController } from './stats/admin-stats.controller';
 import { AdminTagsController } from './tags/admin-tags.controller';
 import { AdminTagsService } from './tags/admin-tags.service';
-import { TagCountsService } from './tags/tag-counts.service';
+import { CatalogModule } from '../catalog/catalog.module';
 
 @Module({
-  imports: [CrawlModule],
+  imports: [CrawlModule, CatalogModule],
   controllers: [AdminSourcesController, AdminTagsController, AdminStatsController, AdminJobsController],
-  providers: [AdminSourcesService, AdminTagsService, TagCountsService, JobsService],
-  exports: [TagCountsService],
+  providers: [AdminSourcesService, AdminTagsService, JobsService],
 })
 export class AdminModule {}

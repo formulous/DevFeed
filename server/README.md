@@ -19,6 +19,14 @@ NestJS 12 + TypeORM(MariaDB, mysql2) API 서버. 명세는 `../docs/api/openapi.
   - 가입·탈퇴·관심 태그는 M4
 - 피드 카테고리: `post_search.feed_categories`(줄바꿈 구분, 500자, 카테고리 단위 절단)에 저장하고 재태깅·소스 이름 변경 재색인에 사용. 기존 글은 다음 갱신 때부터 채워짐
 
+- M2 피드 (F-010~F-013)
+  - `GET /api/posts`: 커서 `(published_at, id)`, 태그(OR, 최대 10)·소스(최대 20)·유형 필터, 복수 필터는 서브쿼리 `UNION`/`UNION ALL` 분해 (007)
+  - `GET /api/posts/popular?period=DAY|WEEK|MONTH`: 최근 24시간·7일·30일 조회수 상위 20건, 10분 캐시
+  - `POST /api/posts/{id}/views`: 같은 viewer(회원 ID 또는 `df_vid` 쿠키) 24시간 1회 집계, 회원은 읽은 기록 저장. `recommendationId`는 형식만 검증 (추천 클릭 기록은 M5)
+  - `GET /api/tags`, `GET /api/sources`
+  - 로그인 선택 API: 토큰 없으면 게스트, 만료·위조면 401 `TOKEN_EXPIRED`. 회원이면 `isBookmarked`·`isRead` 포함
+  - 정리 배치: `post_view_guards` 24시간(매시 5분), `read_histories` 1년(매일 04:00 KST)
+
 ## 구조
 ```
 src/
@@ -31,6 +39,8 @@ src/
 ├── crawl/             # 스케줄러, 수집 실행, 글 저장·재색인, 태그 사전 캐시, 일일 정리
 ├── admin/             # 관리자 컨트롤러·서비스, 백그라운드 작업(재태깅)
 ├── me/                # GET /me
+├── catalog/           # 공개 태그·소스 목록, 태그 글 수 캐시
+├── posts/             # 피드·인기 글·조회 기록, 카드 조립
 └── scripts/           # 관리자 계정 생성, 개발용 토큰 발급
 ```
 
@@ -83,6 +93,18 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
 | `/me`·관리자 | 로그인 토큰으로 `GET /me`, `/api/admin/**` 정상 |
 | 피드 카테고리 | 카테고리에만 있는 태그(`쿠버네티스` → Kubernetes)가 재태깅 후에도 유지, 재태깅 전후 태그 행 수 동일 |
 | 미검증 | 30초 이후 재사용 시 계열 전체 폐기는 단위 테스트로만 확인 (실서버에서 30초 대기 검증은 생략) |
+
+## M2 피드 검증 결과 (2026-11-19, 글 2,383건)
+
+| 항목 | 결과 |
+|---|---|
+| 커서 정확성 | 필터 8조합 전체 스크롤 결과가 기준 SQL과 순서까지 일치, 중복·누락 0 |
+| 스크롤 중 새 글 | 첫 페이지 뒤 새 글 삽입해도 이후 페이지 중복·누락 0 (새 글은 다음 새로고침에 노출) |
+| 응답 시간 | 피드 p50 1.1ms, p95 2.5ms (293요청). 10만 건 측정은 M3 시드 생성 후 |
+| 조회 집계 | 비회원 첫 조회·같은 비회원 재조회·다른 비회원·회원 2회 → 조회수 3, guard 3행, 회원 읽은 기록 1행(재조회 시 `last_read_at`만 갱신) |
+| 회원 플래그 | 회원 응답에만 `isBookmarked`·`isRead`, 게스트 응답에는 키 없음 |
+| 오류 | 없는 글 404, 잘못된 `recommendationId`·`tagIds`·`size`·`period`·알 수 없는 쿼리 400, 잘못된 커서 400 `INVALID_CURSOR`, 위조 토큰 401 `TOKEN_EXPIRED` |
+| 정리 | 검증용 조회수·guard·읽은 기록은 원복함 |
 
 ### 검증 중 발견해 고친 문제
 - 동시 수집 시 데드락(10곳 중 8곳 실패): 기존 글 조회의 `FOR UPDATE`와 빈 범위 `DELETE`의 gap lock이 다른 소스의 INSERT와 충돌함

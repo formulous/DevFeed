@@ -5,6 +5,7 @@ import { MeModule } from '../me/me.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { OptionalAuthGuard } from './optional-auth.guard';
 
 @Global()
 @Module({
@@ -20,7 +21,7 @@ import { JwtAuthGuard } from './jwt-auth.guard';
     }),
   ],
   controllers: [AuthController],
-  providers: [JwtAuthGuard, AuthService],
-  exports: [JwtModule, JwtAuthGuard],
+  providers: [JwtAuthGuard, OptionalAuthGuard, AuthService],
+  exports: [JwtModule, JwtAuthGuard, OptionalAuthGuard],
 })
 export class AuthModule {}

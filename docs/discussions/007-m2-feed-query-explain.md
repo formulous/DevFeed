@@ -62,6 +62,40 @@
 - 4: 인기 글은 기간별 10분 메모리 캐시. `viewCount`는 캐시 시점 값으로 응답함 (순서와 수치를 일치시키기 위함)
 - 구현 후 실제 서버 쿼리를 이 문서에 붙이고 dba에게 `ANALYZE` 재확인 요청 예정
 
+### server (2차) — 구현 쿼리 첨부, ANALYZE 요청
+- 생성 위치: `server/src/posts/feed-query.ts` (`buildFeedQuery`), 단위 테스트 `feed-query.spec.ts`
+- 아래는 실제 생성 SQL과 바인딩 값 예시 (커서 = 2026-11-10, id 500)
+
+```sql
+-- 최신 피드 다음 페이지
+SELECT p.id AS id, p.published_at AS published_at FROM posts p WHERE (p.published_at < ? OR (p.published_at = ? AND p.id < ?)) ORDER BY p.published_at DESC, p.id DESC LIMIT ?;
+-- params: ["2026-11-10T00:00:00.000Z","2026-11-10T00:00:00.000Z",500,21]
+
+-- sourceType
+SELECT p.id AS id, p.published_at AS published_at FROM posts p WHERE p.source_type = ? AND (p.published_at < ? OR (p.published_at = ? AND p.id < ?)) ORDER BY p.published_at DESC, p.id DESC LIMIT ?;
+-- params: ["PERSONAL","2026-11-10T00:00:00.000Z","2026-11-10T00:00:00.000Z",500,21]
+
+-- sourceIds 여러 개
+SELECT id, published_at FROM ((SELECT p.id AS id, p.published_at AS published_at FROM posts p WHERE p.source_id = ? AND (p.published_at < ? OR (p.published_at = ? AND p.id < ?)) ORDER BY p.published_at DESC, p.id DESC LIMIT ?) UNION ALL (SELECT p.id AS id, p.published_at AS published_at FROM posts p WHERE p.source_id = ? AND (p.published_at < ? OR (p.published_at = ? AND p.id < ?)) ORDER BY p.published_at DESC, p.id DESC LIMIT ?) UNION ALL (SELECT p.id AS id, p.published_at AS published_at FROM posts p WHERE p.source_id = ? AND (p.published_at < ? OR (p.published_at = ? AND p.id < ?)) ORDER BY p.published_at DESC, p.id DESC LIMIT ?)) f ORDER BY published_at DESC, id DESC LIMIT ?;
+-- params: [1,"2026-11-10T00:00:00.000Z","2026-11-10T00:00:00.000Z",500,21,2,"2026-11-10T00:00:00.000Z","2026-11-10T00:00:00.000Z",500,21,3,"2026-11-10T00:00:00.000Z","2026-11-10T00:00:00.000Z",500,21,21]
+
+-- tagIds 1개
+SELECT pt.post_id AS id, pt.published_at AS published_at FROM post_tags pt WHERE pt.tag_id = ? AND (pt.published_at < ? OR (pt.published_at = ? AND pt.post_id < ?)) ORDER BY pt.published_at DESC, pt.post_id DESC LIMIT ?;
+-- params: [1,"2026-11-10T00:00:00.000Z","2026-11-10T00:00:00.000Z",500,21]
+
+-- tagIds 여러 개 + sourceType
+SELECT id, published_at FROM ((SELECT pt.post_id AS id, pt.published_at AS published_at FROM post_tags pt JOIN posts p ON p.id = pt.post_id WHERE pt.tag_id = ? AND (pt.published_at < ? OR (pt.published_at = ? AND pt.post_id < ?)) AND p.source_type = ? ORDER BY pt.published_at DESC, pt.post_id DESC LIMIT ?) UNION (SELECT pt.post_id AS id, pt.published_at AS published_at FROM post_tags pt JOIN posts p ON p.id = pt.post_id WHERE pt.tag_id = ? AND (pt.published_at < ? OR (pt.published_at = ? AND pt.post_id < ?)) AND p.source_type = ? ORDER BY pt.published_at DESC, pt.post_id DESC LIMIT ?) UNION (SELECT pt.post_id AS id, pt.published_at AS published_at FROM post_tags pt JOIN posts p ON p.id = pt.post_id WHERE pt.tag_id = ? AND (pt.published_at < ? OR (pt.published_at = ? AND pt.post_id < ?)) AND p.source_type = ? ORDER BY pt.published_at DESC, pt.post_id DESC LIMIT ?)) f ORDER BY published_at DESC, id DESC LIMIT ?;
+-- params: [1,"2026-11-10T00:00:00.000Z","2026-11-10T00:00:00.000Z",500,"COMPANY",21,3,"2026-11-10T00:00:00.000Z","2026-11-10T00:00:00.000Z",500,"COMPANY",21,119,"2026-11-10T00:00:00.000Z","2026-11-10T00:00:00.000Z",500,"COMPANY",21,21]
+```
+
+- 카드 조회: `posts JOIN sources WHERE p.id IN (...)`, `post_tags JOIN tags WHERE post_id IN (...) ORDER BY post_id, tag_rank`, 회원이면 `bookmarks`·`read_histories`를 `user_id = ? AND post_id IN (...)`로 각 1회
+- 인기 글: `SELECT id FROM posts WHERE published_at >= ? ORDER BY view_count DESC, published_at DESC, id DESC LIMIT 20` (기간별 10분 캐시)
+- 서버 쪽 확인 결과 (글 2,383건)
+  - 필터 8가지 조합(없음, 유형, 소스 1·3개, 태그 1·3개, 태그3+유형, 태그2+소스3)을 끝까지 스크롤한 결과가 기준 SQL과 순서까지 일치, 중복·누락 0
+  - 스크롤 도중 새 글을 넣어도 중복·누락 0
+  - API 응답 p50 1.1ms, p95 2.5ms (293요청)
+- dba에게 위 쿼리 `ANALYZE` 재확인 요청함
+
 ## 결정 (pm)
 - 결정 (2026-11-19): dba 제안 1~5 채택, server 구현 방식 승인
   - `sourceIds` 2개 이상은 소스별 `UNION ALL`, `tagIds` 2개 이상은 태그별 `UNION`
