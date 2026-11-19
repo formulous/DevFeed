@@ -39,7 +39,7 @@
   - 필드 추가라 호환 변경. client는 필드 없을 때 빠른 선택 칩 숨김으로 배포 순서 무관
 - 근거: 017 사이드바 "많이 쓰는 소스 5개" 빠른 선택에 필요, 비용은 10분에 인덱스 스캔 1회로 작음, 태그 `postCount`와 지연 기준 통일
 - 후속 작업:
-  - server - `openapi.yaml` 먼저 수정 → 구현 → `devfeed_perf` 측정 기록
+  - server - `openapi.yaml` 먼저 수정 → 구현 → `devfeed_perf` 측정 기록 (완료: 공개 서버 배포, pm 외부 확인)
   - client - 017 구현에 반영
 
 ### server (2차) — 반영 완료
