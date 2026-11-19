@@ -1,0 +1,3 @@
+[submodule "onyx-ui"]
+	path = onyx-ui
+	url = git@github.com:formulous/onyx-ui.git
