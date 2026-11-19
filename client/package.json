@@ -1,0 +1,43 @@
+{
+  "name": "devfeed-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -p tsconfig.json && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "vitest run"
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.108.0",
+    "clsx": "^2.1.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-icons": "^5.7.0",
+    "react-router": "^7.18.6",
+    "tailwind-merge": "^3.7.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^8.0.0",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.13",
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "autoprefixer": "^10.6.2",
+    "happy-dom": "^21.0.4",
+    "msw": "^2.15.0",
+    "postcss": "^8.5.33",
+    "tailwindcss": "^3.4.19",
+    "typescript": "~5.9",
+    "vite": "^7.3.8",
+    "vitest": "^5.1.1"
+  }
+}
