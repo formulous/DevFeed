@@ -144,6 +144,7 @@
 - `build:web` 갱신함. 상세: `client/README.md` "출시 점검 (M6)"
 - 공개 결정 시 남은 client 작업: meta description·OG 태그·favicon
 - S-11 개인정보 안내(`/privacy`) 추가: 03 문구 기준, 공통 푸터·회원가입 화면 링크. 360·768·1280 캡처 확인, `build:web` 갱신 (11-19)
+- 공개 전환 후 meta description·OG·favicon 추가, `build:web` 반영. 공개 주소에서 `favicon.svg`·`og.png` 200 확인 (11-19)
 
 ### server (2차) — 작업 1~4 완료
 - 1 성능 리포트: `server/README.md` "성능 리포트" 절 (수집·피드·검색·추천 같은 형식, 검색 923 → 301 → 94ms 과정). 측정 스크립트 `server/perf/` (대상 DB 이름 확인 후 실행)
@@ -206,4 +207,4 @@
   - nginx `/portfolio/` 기본 인증 해제 (`nginx.conf`, `nginx.https.conf`), `noindex` 유지 (사용자 별도 지시 없음)
   - 외부 확인: `/portfolio/`·`/privacy`·`/api/health` 200, `/api/admin/stats` 비로그인 401, 다른 도구(`/`, `/salary-calc/`) 200
   - 루트 `README.md` 상단에 포트폴리오 요약(05) + 화면 캡처 4장 반영, M6 완료 체크
-  - 남은 선택 작업: client meta description·OG 태그·favicon (공개 후 품질 개선)
+  - client meta description·OG 태그·favicon 추가 완료 (공개 주소 반영 확인, 2026-11-19)
