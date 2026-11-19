@@ -91,15 +91,50 @@
 - B: 기획 측 이견 없음. 스키마 판단은 dba
 - C(1분 캐시): 실서비스 적용 승인, 측정에서는 끔. 단 캐시 대상은 글 ID 목록·건수로 한정하고 회원별 북마크·읽음 플래그는 캐시하지 않음
 
+### dba (1차) — B 대신 `posts` 커버링 인덱스(0009) 권장
+- 원인 진단은 동의: 매칭된 수만 행마다 `posts` 클러스터드 행(평균 약 800B)을 PK로 읽는 조인이 병목. 추가로 측정 DB 버퍼 풀이 기본 128MB라 `posts`(81MB) + `post_search`(72MB)가 캐시에 다 안 들어감
+- B안을 `devfeed_perf` 복사 테이블로 직접 실험한 결과, **채택하지 않길 권함**
+  1. 마이그레이션 비용: FULLTEXT 테이블 컬럼 추가는 `ALGORITHM=COPY`만 가능(D-14). 10만 행에서 **277초**, 그동안 `post_search` 쓰기 잠금 (수집 중단). 이후 컬럼 추가도 매번 같은 비용
+  2. 성능: 비정규화 테이블이 기대만큼 빠르지 않았음 (아래 표). FULLTEXT 매칭 결과를 `FTS_DOC_ID`로 행 조회하는 비용이 그대로 남고, 행이 넓어진 만큼 캐시 효율이 떨어짐
+- 대안: `posts`에 좁은 커버링 인덱스 추가 — `db/migrations/0009_add_posts_search_filter_index.sql`
+  - `idx_posts_search_filter (id, published_at, source_id, source_type)`. 조인이 800B 행 대신 약 30B 인덱스 항목만 읽음 (10만 건 약 3MB, 항상 캐시)
+  - 생성 `ALGORITHM=INPLACE, LOCK=NONE`, 10만 행 **56ms**, 쓰기 잠금 없음. 서버 쓰기 경로 변경 없음 (비정규화 동기화 불필요)
+  - 주의: 옵티마이저가 기본으로 PRIMARY eq_ref를 고름 (힌트 없으면 215ms). 서버 쿼리에 `JOIN posts p FORCE INDEX (idx_posts_search_filter)` 필수
+- 측정 (DB 시간 p95 ms, 20회, `devfeed_perf`, server 측정 서버가 같은 DB에 붙어 있던 상태라 절대값은 흔들림. 상대 비교용)
+
+| 질의 | 현행 (posts 조인) | B안 (post_search 비정규화) | 0009 커버링 인덱스 |
+|---|---|---|---|
+| redux 관련도 + 1Y + 소스 5개 | 475 (관련도만) | 343 | 86 |
+| 인덱스 관련도 + 1Y + 소스 | 214 (관련도만) | 209 | 37 |
+| 코드 관련도 + 1Y + 소스 | 198 (관련도만) | 195 | 29 |
+| 자바스크립트 관련도 + 1Y + 소스 | 186 (관련도만) | 180 | 35 |
+| redux 최신순 | 310 | 306 | 46~224 |
+| 코드 최신순 | 179 | 182 | 28~32 |
+| 인덱스 최신순 | 184 | 188 | 33~68 |
+
+- 서버 구현 권장 형태 (`db/perf/measure_search.py`의 "권장" 쿼리)
+  - 필터·최신순 없음: `post_search`만으로 관련도 상위 20건 → id로 카드 조회 (조인 없음, p95 25~80ms)
+  - 기간·소스·유형 필터 또는 최신순: `JOIN posts p FORCE INDEX (idx_posts_search_filter)`
+  - 태그 필터: `JOIN post_tags pt ON pt.post_id = s.post_id AND pt.tag_id IN (...)` (p95 23~130ms). 태그 여러 개면 한 글이 중복될 수 있어 `DISTINCT` 또는 EXISTS 유지
+  - 관련도 동점 정렬은 `s.post_id DESC`로 대체 가능 (조인 없는 경우)
+- A(건수 상한 1,000) 동의: 측정에서도 1,001건 중단 COUNT 2~31ms
+- 참고(운영 설정): 버퍼 풀 128MB는 10만 건 규모에 작음. `innodb_buffer_pool_size`는 MariaDB 12에서 기동 시 상한이 정해져 런타임 증설 불가 → `db/conf/devfeed.cnf`에 512MB 설정 + 컨테이너 재시작 필요(사용자 승인 사항). 목표 판정은 현 설정으로도 충족 예상이라 필수는 아님
+- 0009는 `devfeed_perf`에만 적용·검증함 (up → down → up). `devfeed`에는 pm 결정 후 적용
+
 ## 결정 (pm)
 - 결정 (2026-11-19, dba 의견 전 pm 범위)
   - 판정 기준: 글 10만 건, c=1, API p95 300ms. c=10은 참고 지표로 기록
   - A 채택: `total` 최대 1,000 + `totalCapped` 추가 (호환 변경)
   - C 채택: 검색어·필터 기준 1분 캐시, 회원 플래그 제외, 측정 시 끔
   - B: dba 의견 후 확정
+- 결정 보충 (2026-11-19, dba 1차 반영)
+  - B 기각: FULLTEXT 테이블 컬럼 추가가 `ALGORITHM=COPY`라 10만 행 277초 쓰기 잠금(수집 중단), 성능 이득도 거의 없음(실측)
+  - 대안 채택: `0009` `posts` 커버링 인덱스 `idx_posts_search_filter (id, published_at, source_id, source_type)`. 온라인 생성 56ms, 쓰기 경로 변경 없음
+  - 서버 쿼리 형태는 dba 권장안 기준: 필터·최신순 없으면 `post_search`만, 있으면 `FORCE INDEX (idx_posts_search_filter)` 조인. 최종 형태는 server가 재측정으로 확정
+  - 버퍼 풀 512MB 증설: 이번에는 하지 않음. 현 설정으로 목표 충족 예상. M6 출시 환경 정리 때 다시 검토 (컨테이너 재시작은 사용자 승인 사항)
 - 근거: 1인 서비스의 실제 부하 수준과 측정 환경 한계를 반영, 50페이지 상한으로 정확한 총계의 효용 낮음
 - 후속 작업
   - pm - `02-features.md` v1.5 F-020·F-021·비기능, `03-screens.md` S-04 반영 (완료)
-  - dba - B(`post_search.published_at`, `source_id`) 판단·마이그레이션
-  - server - `openapi.yaml` A 반영 후 구현, A+B(+C 끔) 재측정해 이 문서에 기록
+  - dba - B 판단 (완료: 기각, 0009 대체). `0009`를 `devfeed`에 적용
+  - server - `openapi.yaml` A 반영 후 구현, A + 0009 커버링 인덱스(C 끔)로 `devfeed_perf` 재측정해 이 문서에 기록. c=1 p95 300ms 충족 시 M3 검색 성능 완료
   - client - `totalCapped`면 "1,000건 이상" 표시
