@@ -260,3 +260,17 @@
   - `sourceType=PERSONAL&field=FRONTEND` 200, 인기 `period=WEEK&field=AI` 200
   - `/security-news`·`/security-news/sources` 200, 지금 0건 (dba 시드 전). 화면은 빈 결과 안내 + 출처 칩 없음으로 정상 표시
 - 남은 것: dba 시드·수집 후 보안 뉴스 지역·출처 필터와 관리자 종류·지역 실서버 확인
+
+### server (3차) — 운영 첫 수집 확인
+- `003` 시드 6곳 첫 수집 모두 SUCCESS, 실패 0
+  | 출처 | 글 |
+  |---|---|
+  | 데일리시큐 | 50 |
+  | KISA 보호나라 보안공지 | 10 |
+  | AhnLab ASEC | 30 |
+  | The Hacker News | 50 |
+  | BleepingComputer | 15 |
+  | SecurityWeek | 10 |
+- 정합성: `kind` 불일치 0, `post_tags.kind` 불일치 0, 썸네일 0, 요약 150자 초과 0, 검색 색인 0
+- KISA 날짜만 있는 발행일 → KST 자정 저장 확인 (`2026-11-19` → `2026-11-18T15:00Z`). KISA는 RSS에 설명이 없어 요약 없음(10건) → 카드는 제목만 표시됨 (client 참고)
+- 운영 응답: `/posts` 50건·`/posts/popular?period=MONTH`에 뉴스 0건, `/security-news?region=DOMESTIC` 최신순·썸네일 null·`isPopular` false
