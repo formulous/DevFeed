@@ -274,3 +274,11 @@
 - 정합성: `kind` 불일치 0, `post_tags.kind` 불일치 0, 썸네일 0, 요약 150자 초과 0, 검색 색인 0
 - KISA 날짜만 있는 발행일 → KST 자정 저장 확인 (`2026-11-19` → `2026-11-18T15:00Z`). KISA는 RSS에 설명이 없어 요약 없음(10건) → 카드는 제목만 표시됨 (client 참고)
 - 운영 응답: `/posts` 50건·`/posts/popular?period=MONTH`에 뉴스 0건, `/security-news?region=DOMESTIC` 최신순·썸네일 null·`isPopular` false
+
+### dba (3차) — `003` 보안 뉴스 시드 운영 적용·첫 수집 확인 (2026-11-20)
+- `devfeed`에 6곳 등록 (id 75~80, 국내 3·해외 3, 주기 30분·KISA 60분). 블로그 36곳 변화 없음
+- 첫 수집: 6곳 모두 `SUCCESS`(200). 신규 165건 (데일리시큐 50, The Hacker News 50, ASEC 30, BleepingComputer 15, KISA 10, SecurityWeek 10), 태그 연결 199행
+- 수용 기준 데이터 확인: 요약 최대 150자 (KISA는 description 없어 NULL), 썸네일 0, `post_search` 행 0, kind 불일치 0 (`feed.sql` 검사 4항목 0)
+  - KISA 발행 시각이 `15:00 UTC` = KST 자정으로 저장됨 (server 파서 보완 확인)
+- 노출 확인: `/api/posts`(50)·`/api/posts/popular`·`/api/search?q=보안` 응답 98건 중 보안 뉴스 0건, `/api/security-news` 200·썸네일 0
+- dba 후속 작업 완료. 용량은 1주 뒤 수집량 실측으로 D-20 추정치(하루 35~55건) 재확인함

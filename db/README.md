@@ -43,7 +43,7 @@ db/scripts/seed.sh
 - `002_tags.sql`: 태그 153개(분류 16개), 동의어 266개. 동의어는 태그 간·태그명과 겹치지 않음
   - 오탐 우려로 뺀 짧은 동의어: `CD`, `ES`, `RN`, `PG`, `DW`, `Cursor`, `람다`, `Compose`
 - `003_security_news_sources.sql`: 보안 뉴스 국내 3곳(데일리시큐, KISA 보안공지, AhnLab ASEC) + 해외 3곳(The Hacker News, BleepingComputer, SecurityWeek). 주기 30분, KISA 60분 (021)
-  - 운영 `devfeed`에는 server의 뉴스 수집 규칙(요약 150자·썸네일 없음·검색 미색인) 배포 후 적용
+  - 운영 `devfeed` 적용 (2026-11-20, server 배포 후): 첫 수집 6곳 성공, 165건
 - 모두 `ON DUPLICATE KEY UPDATE`라 여러 번 실행해도 결과 같음
 
 ## 백업·복원
