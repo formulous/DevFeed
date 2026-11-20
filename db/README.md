@@ -9,7 +9,7 @@ db/
 ├── perf/                # 성능 측정용 대량 시드 생성기, 측정 스크립트
 ├── queries/            # feed.sql(007·021 분야·보안 뉴스·kind 정합성 검사), personal.sql·withdrawal-check.sql(012), recommendation.sql(013) 기준 쿼리
 ├── ops/                 # launchd 일일 백업 템플릿·설치 스크립트
-├── migrations/          # 0001~0010, -- migrate:up / -- migrate:down
+├── migrations/          # 0001~0011, -- migrate:up / -- migrate:down
 ├── scripts/migrate.sh   # 컨테이너에 마이그레이션 적용
 ├── scripts/seed.sh      # seeds/*.sql 순서대로 적용 (재실행 안전)
 ├── scripts/perf-seed.sh # 측정 DB(devfeed_perf)에 글 10만·회원 1만 생성
@@ -18,7 +18,7 @@ db/
 ├── scripts/restore.sh   # 백업을 지정 DB로 복원 (devfeed는 --force 필요)
 ├── scripts/tag-rename-impact.py # 태그 이름 변경안(JSON)의 자동 태깅 영향 시뮬레이션 (서버 tagger 규칙 포팅)
 ├── data/                # 023-tag-renames.json 태그 영어화 변경안 (023)
-└── seeds/               # 001 소스 36곳, 002 태그 153개·동의어 266개, 003 보안 뉴스 6곳
+└── seeds/               # 001 소스 36곳, 002 태그 153개(023 영어 표기)·동의어 279개, 003 보안 뉴스 6곳
 ```
 
 ## 서버 설정
@@ -42,7 +42,7 @@ db/scripts/seed.sh
 - `001_sources.sql`: 기업 33곳 + 개인 3곳. 2026-11-19에 피드 응답(200, RSS/Atom, 글 1건 이상) 확인한 곳만 포함
   - 제외: 네이버 D2·쏘카(404), 컬리·리디(403), 카카오페이·넷마블·삼성SDS(글 0건 또는 피드 아님), 마켓보로·카카오엔터 FE(404)
   - 1년 이상 새 글 없는 피드(직방, 쿠팡, 야놀자, 번개장터, 클래스101, 테코블 등)도 과거 글 아카이브용으로 포함
-- `002_tags.sql`: 태그 153개(분류 16개), 동의어 266개. 동의어는 태그 간·태그명과 겹치지 않음
+- `002_tags.sql`: 태그 153개(분류 16개, 기술 분류·용어는 영어 표기, 023), 동의어 279개. 영어로 바꾼 태그 47개는 옛 한글 이름을 동의어로 보존. 동의어는 태그 간·태그명과 겹치지 않음
   - 오탐 우려로 뺀 짧은 동의어: `CD`, `ES`, `RN`, `PG`, `DW`, `Cursor`, `람다`, `Compose`
 - `003_security_news_sources.sql`: 보안 뉴스 국내 3곳(데일리시큐, KISA 보안공지, AhnLab ASEC) + 해외 3곳(The Hacker News, BleepingComputer, SecurityWeek). 주기 30분, KISA 60분 (021)
   - 운영 `devfeed` 적용 (2026-11-20, server 배포 후): 첫 수집 6곳 성공, 165건
@@ -98,3 +98,8 @@ MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_field.py  # 분야·기업/�
 - `003` 시드 2회 실행 후 뉴스 6곳 유지 (국내 3·해외 3, 주기 30·60분)
 - `feed.sql` 전체 실행 오류 없음, kind 정합성 검사 4항목 0
 - `devfeed` 적용 (2026-11-20, 사용자 승인): 소스 36·글 2,387·태그 연결 2,826·검색 2,387 전후 동일, 전부 BLOG. kind 검사 4항목 0, 서버 `/api/health`·`/api/posts`·`/api/posts/popular` 200
+
+## 검증 기록 (2026-11-21, `0011`, 023)
+- `devfeed_perf` up → down → up, down 후 태그·동의어 내용 해시 원본 일치. 갱신 시드 재실행 결과와 up 결과 일치
+- 태깅 영향 (`scripts/tag-rename-impact.py`, 운영 글 2,588건): 손실 0, 추가 6건(정답), 순서 변경 2건
+- `devfeed` 적용: 적용 전후 해시가 perf 검증과 동일, 동의어 266 → 279, `post_tags` 변화 없음
