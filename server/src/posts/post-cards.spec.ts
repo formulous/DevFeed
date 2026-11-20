@@ -32,6 +32,12 @@ describe('assembleCards', () => {
     expect(withoutViewCount(card)).not.toHaveProperty('viewCount');
   });
 
+  it('인기 집합에 든 글만 isPopular true, 집합이 없으면 모두 false', () => {
+    const cards = assembleCards([1, 2], [row(1), row(2)], [], undefined, new Set([2]));
+    expect(cards.map((c) => c.isPopular)).toEqual([false, true]);
+    expect(assembleCards([1], [row(1)], [])[0].isPopular).toBe(false);
+  });
+
   it('사라진 글은 건너뜀', () => {
     expect(assembleCards([5], [], [])).toEqual([]);
   });

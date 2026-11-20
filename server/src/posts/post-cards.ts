@@ -27,6 +27,7 @@ export interface PostSummary {
   publishedAt: Date;
   source: { id: number; name: string; logoUrl: string | null; type: 'COMPANY' | 'PERSONAL' };
   tags: { id: number; name: string }[];
+  isPopular: boolean;
   isBookmarked?: boolean;
   isRead?: boolean;
 }
@@ -41,6 +42,7 @@ export function assembleCards(
   posts: PostRow[],
   tags: TagRow[],
   flags?: UserFlags,
+  popular: ReadonlySet<number> = new Set(),
 ): (PostSummary & { viewCount: number })[] {
   const byId = new Map(posts.map((p) => [Number(p.id), p]));
   const tagsByPost = new Map<number, { id: number; name: string }[]>();
@@ -68,6 +70,7 @@ export function assembleCards(
         type: row.source_type,
       },
       tags: tagsByPost.get(id) ?? [],
+      isPopular: popular.has(id),
       viewCount: row.view_count,
     };
     if (flags) {

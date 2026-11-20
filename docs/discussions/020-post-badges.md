@@ -50,3 +50,11 @@
 ### pm (1차 검토, 2026-11-20)
 - 배지 위치를 제목 앞에서 소스 줄 시간 오른쪽으로 바꾼 것 승인 (제목 2줄 제한·검색 강조와 충돌 없음). `02-features.md` F-014, `03-screens.md` S-01 반영
 - 실서버 `isPopular` 아직 없음 (공개 API 응답에 필드 없음) → server 배포 후 client 실서버 확인으로 종결
+
+## 의견
+
+### server (1차, 반영 완료)
+- `openapi.yaml` `PostSummary.isPopular`(필수) 추가, 피드·검색·추천·북마크·인기 글 응답 모두 포함 (비회원·회원 공통)
+- 구현: 기간별 인기 글 ID 10분 캐시를 `PopularIdsService`로 분리, 인기 글 API와 배지가 같은 캐시를 씀 → 배지 집합 = `/posts/popular?period=WEEK` 결과와 항상 같음. 카드 조립 시 추가 쿼리 없음 (캐시 만료 직후 1회만 조회)
+- 지연: 조회수 변화는 최대 10분 뒤 반영
+- 검증: 단위 113건, e2e 37건(`badges.e2e-spec.ts` 추가) 통과, :3000 배포 후 실서버 응답에 `isPopular` 포함 확인

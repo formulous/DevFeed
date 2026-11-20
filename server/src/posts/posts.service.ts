@@ -3,23 +3,23 @@ import { DataSource } from 'typeorm';
 import { decodeCursor, encodeCursor } from '../common/pagination/cursor';
 import { buildFeedQuery } from './feed-query';
 import { FeedQuery } from './dto/posts.dto';
-import { PopularPeriod, popularSince } from './period';
+import { PopularPeriod } from './period';
+import { PopularIdsService } from './popular-ids.service';
 import { PostCardsService } from './post-cards.service';
 import { PostSummary, withoutViewCount } from './post-cards';
 
 const DEFAULT_SIZE = 20;
-const POPULAR_LIMIT = 20;
-const POPULAR_TTL_MS = 10 * 60 * 1000;
 
 type PopularCard = Omit<PostSummary, 'isBookmarked' | 'isRead'> & { viewCount: number };
 
 @Injectable()
 export class PostsService {
-  private readonly popularCache = new Map<PopularPeriod, { at: number; cards: Promise<PopularCard[]> }>();
+  private readonly popularCache = new Map<PopularPeriod, { ids: number[]; cards: Promise<PopularCard[]> }>();
 
   constructor(
     private readonly dataSource: DataSource,
     private readonly cards: PostCardsService,
+    private readonly popularIds: PopularIdsService,
   ) {}
 
   async feed(query: FeedQuery, userId?: number) {
@@ -42,13 +42,14 @@ export class PostsService {
   }
 
   async popular(period: PopularPeriod, userId?: number, now = Date.now()) {
+    const ids = await this.popularIds.ids(period, now);
     let entry = this.popularCache.get(period);
-    if (!entry || now - entry.at > POPULAR_TTL_MS) {
-      const cards = this.loadPopular(period, new Date(now)).catch((error) => {
-        this.popularCache.delete(period);
+    if (!entry || entry.ids !== ids) {
+      const cards = this.cards.load(ids).catch((error) => {
+        if (this.popularCache.get(period)?.cards === cards) this.popularCache.delete(period);
         throw error;
       });
-      entry = { at: now, cards };
+      entry = { ids, cards };
       this.popularCache.set(period, entry);
     }
     const cached = await entry.cards;
@@ -61,14 +62,5 @@ export class PostsService {
         isRead: flags?.read.has(card.id) ?? false,
       })),
     };
-  }
-
-  private async loadPopular(period: PopularPeriod, now: Date): Promise<PopularCard[]> {
-    const rows = (await this.dataSource.query(
-      `SELECT id FROM posts WHERE published_at >= ? AND view_count > 0
-        ORDER BY view_count DESC, published_at DESC, id DESC LIMIT ?`,
-      [popularSince(period, now), POPULAR_LIMIT],
-    )) as { id: number | string }[];
-    return this.cards.load(rows.map((r) => Number(r.id)));
   }
 }

@@ -1,15 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { PopularIdsService } from './popular-ids.service';
 import { assembleCards, PostRow, TagRow, UserFlags } from './post-cards';
 
 @Injectable()
 export class PostCardsService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly popularIds: PopularIdsService,
+  ) {}
 
   async load(ids: number[], userId?: number) {
     if (!ids.length) return [];
     const marks = ids.map(() => '?').join(', ');
-    const [posts, tags, flags] = await Promise.all([
+    const [posts, tags, flags, popular] = await Promise.all([
       this.dataSource.query(
         `SELECT p.id, p.title, p.summary, p.url, p.thumbnail_url, p.published_at, p.view_count,
                 s.id AS source_id, s.name AS source_name, s.logo_url AS source_logo_url, s.source_type
@@ -23,8 +27,9 @@ export class PostCardsService {
         ids,
       ) as Promise<TagRow[]>,
       userId === undefined ? Promise.resolve(undefined) : this.flags(userId, ids),
+      this.popularIds.badgeSet(),
     ]);
-    return assembleCards(ids, posts, tags, flags);
+    return assembleCards(ids, posts, tags, flags, popular);
   }
 
   async flags(userId: number, ids: number[]): Promise<UserFlags> {

@@ -1138,7 +1138,7 @@ components:
 
     PostSummary:
       type: object
-      required: [id, title, summary, url, thumbnailUrl, publishedAt, source, tags]
+      required: [id, title, summary, url, thumbnailUrl, publishedAt, source, tags, isPopular]
       properties:
         id: { $ref: '#/components/schemas/Id' }
         title: { type: string }
@@ -1161,6 +1161,9 @@ components:
           maxItems: 5
           description: 제목 등장 우선 순서
           items: { $ref: '#/components/schemas/TagBrief' }
+        isPopular:
+          type: boolean
+          description: 최근 7일 인기 글 상위 20건(`/posts/popular?period=WEEK`과 같은 집합, 조회수 1 이상)에 들면 true. 10분 캐시라 최대 10분 늦게 반영됨 (020)
         isBookmarked:
           type: boolean
           description: 회원 요청일 때만 포함

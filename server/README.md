@@ -148,6 +148,9 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
 - 비교 기준 `LIKE '%검색어%'`: 결과 수와 무관하게 160~320ms. FULLTEXT는 드문 단어에서 100배 이상 빠름
 - 정확성: 개발 DB 13개 질의 정밀도 1.00, 재현율은 영문 합성어 3건 외 1.00
 
+- 글 카드 인기 배지 (020)
+  - 모든 `PostSummary`에 `isPopular`: 7일 인기 상위 20건(`/posts/popular?period=WEEK`) 포함 여부. `PopularIdsService`의 기간별 인기 ID 10분 캐시를 인기 글 API와 함께 써서 추가 쿼리 없음 (캐시 만료 직후 1회만 조회)
+
 ### 검증 중 발견해 고친 성능·안정성 문제
 - 동시 수집 데드락(M1): gap lock 충돌 → READ COMMITTED, `FOR UPDATE` 제거, 데드락 재시도. 이후 36곳 동시 수집 재발 0
 - 인기 글 조회수 0 노출(008): `view_count > 0` 조건
@@ -221,7 +224,7 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - `server/.env.test`가 있으면 그것을, 없으면 `.env`를 읽음. `.env`를 쓸 때는 `DB_DATABASE=devfeed_test npm run test:e2e`
   - 테스트가 실패해 데이터가 남으면 `db/scripts/test-db-reset.sh`(dba)로 초기화
 - 각 테스트가 소스·태그·글·회원을 직접 만들고 끝나면 지움 (실행 후 테스트 DB 0행 확인)
-- 현재 35건
+- 현재 37건
   - 탈퇴 잔존 (002 필수): `db/queries/withdrawal-check.sql`(dba)을 그대로 읽어 실행. 탈퇴 전 7개 테이블에 데이터가 있음을 확인한 뒤 탈퇴 → 7개 테이블 0건, 추천 로그 `user_id` NULL, 조회수 유지. 비밀번호 틀림 403, 탈퇴 후 로그인·리프레시·남은 토큰 거부
   - 회원 흐름: 가입 검증·중복 → 관심 태그(개수·없는 태그 검증) → 온보딩 완료 → 북마크(멱등·커서·태그 필터·피드 플래그·해제) → 조회 → 읽은 기록(순서·개별·전체 삭제) → 닉네임 변경, 온보딩 건너뛰기, 북마크 5,000건 제한
   - 인증: 리프레시 교체, 30초 이내 재사용 401, 30초 지난 재사용 시 계열 전체 폐기, 로그아웃, 5회 실패 잠금
@@ -231,4 +234,5 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - 피드: 필터 7조합 끝까지 스크롤 시 기대 순서와 일치·중복·누락 없음, 스크롤 중 새 글, 잘못된 커서·필터 400, 인기 글 조회수 1 이상·동점 최신순
   - 검색: 조사 붙은 단어 매칭, bigram 순서가 뒤섞인 글 제외(구문 매칭), 관련도·최신순, 기간·태그·소스 필터, 토큰 없는 검색어 0건, 길이·페이지 검증, 1,000건 초과 `totalCapped`
   - 소스 목록 `postCount`·`recentPostCount` (018, 019)
+  - 글 카드 `isPopular` (020): 7일 인기 상위 집합과 일치, 조회수 0·7일 지난 글 false, 회원 응답 포함
   - 스모크: `GET /api/sources`
