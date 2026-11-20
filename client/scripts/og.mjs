@@ -4,9 +4,9 @@ import { chromium } from 'playwright';
 const out = fileURLToPath(new URL('../public/og.png', import.meta.url));
 
 const rows = [
-  ['토스 기술블로그', '카프카 컨슈머 리밸런싱 줄이기'],
-  ['우아한형제들 기술블로그', '대규모 트래픽에서 Redis 캐시 전략'],
-  ['KISA 보호나라', '공유기 펌웨어 원격 코드 실행 취약점 보안 권고'],
+  ['기업 블로그', '카프카 컨슈머 리밸런싱 줄이기'],
+  ['개인 블로그', '대규모 트래픽에서 Redis 캐시 전략'],
+  ['보안 뉴스', '공유기 펌웨어 원격 코드 실행 취약점 보안 권고'],
 ];
 
 const html = `<!doctype html><html><head><meta charset="utf-8"><style>
@@ -21,7 +21,7 @@ p.lead{margin-top:18px;font-size:28px;color:#55555e;letter-spacing:-0.01em}
 .tabs b{color:#18181b}
 .list{margin-top:auto;border-top:1px solid #e8e8ec}
 .row{display:flex;gap:18px;align-items:baseline;padding:14px 0;border-bottom:1px solid #e8e8ec;font-size:21px}
-.row span{color:#84848d;width:270px;flex-shrink:0;font-size:18px}
+.row span{color:#84848d;width:180px;flex-shrink:0;font-size:18px}
 .row em{font-style:normal;font-weight:600}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#3d5a8f;margin-left:10px;vertical-align:middle}
 </style></head><body>
