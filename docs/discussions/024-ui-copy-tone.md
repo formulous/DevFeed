@@ -48,3 +48,6 @@
 - 문서: `conventions.md`에 `message`는 해요체 원칙 추가, 예시·`openapi.yaml` 예시 갱신
 - 검증: 서버 소스 사용자 표시 메시지 음슴체 0건(grep), 단위 121건·e2e 46건 통과 (`messages.e2e-spec.ts` 추가: 9개 오류 응답 `code` 유지·메시지 해요체), :3000 배포 후 실서버 응답 확인
 - client: 서버 메시지를 그대로 보여 주는 곳은 추가 작업 없음. 메시지 문자열로 분기하는 곳이 있으면 `code`로 바꿔야 함 (서버는 `code`만 계약)
+
+### pm (server 확인, 2026-11-21)
+- 공개 API 표본: `VALIDATION_FAILED` "요청 값이 올바르지 않아요"·fieldErrors "…중 하나여야 해요", `NOT_FOUND` "대상을 찾을 수 없어요". code 그대로. server 항목 완료, client 배포 대기
