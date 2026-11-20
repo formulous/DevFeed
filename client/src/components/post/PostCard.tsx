@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { FiStar } from 'react-icons/fi';
 import type { PostSummary } from '@/api/types';
+import { PostBadges, type BadgeMode } from '@/components/post/PostBadges';
 import { Highlight } from '@/components/common/Highlight';
 import { cn } from '@/lib/cn';
 import { relativeTime } from '@/lib/time';
@@ -11,6 +12,7 @@ interface PostCardProps {
   onOpen: (post: PostSummary) => void;
   onToggleBookmark: (post: PostSummary) => void;
   meta?: ReactNode;
+  badges?: BadgeMode;
 }
 
 function ExternalImage({ src, alt, className }: { src: string | null; alt: string; className: string }) {
@@ -29,7 +31,7 @@ function ExternalImage({ src, alt, className }: { src: string | null; alt: strin
   );
 }
 
-export function PostCard({ post, query, onOpen, onToggleBookmark, meta }: PostCardProps) {
+export function PostCard({ post, query, onOpen, onToggleBookmark, meta, badges = 'all' }: PostCardProps) {
   return (
     <article
       className={cn(
@@ -44,6 +46,7 @@ export function PostCard({ post, query, onOpen, onToggleBookmark, meta }: PostCa
         <time dateTime={post.publishedAt} className="shrink-0">
           {relativeTime(post.publishedAt)}
         </time>
+        <PostBadges post={post} mode={badges} />
         <button
           type="button"
           onClick={() => onToggleBookmark(post)}

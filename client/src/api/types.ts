@@ -29,6 +29,7 @@ export interface PostSummary {
   tags: TagRef[];
   isBookmarked?: boolean;
   isRead?: boolean;
+  isPopular?: boolean;
 }
 
 export interface PopularPost extends PostSummary {

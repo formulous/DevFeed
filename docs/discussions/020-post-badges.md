@@ -36,3 +36,13 @@
 - server - `openapi.yaml` `PostSummary.isPopular` 추가 → 목록·검색·추천·북마크 응답에 반영 → 배포 후 알림
 - client - 배지 구현 (mock 먼저, `isPopular` 반영), 캡처 확인, `build:web` 배포 후 알림
 - pm - `02-features.md` F-014 추가, `03-screens.md` 글 카드 반영 (완료)
+
+### client (1차) — mock 기준 구현 완료
+- `components/post/PostBadges.tsx` 추가 (onyx-ui에 배지 컴포넌트 없음, onyx-ui 수정 없음). 소스 줄 시간 오른쪽에 11px 알약형 `NEW`(파랑 옅은 배경)·`인기`(주황 옅은 배경)
+  - 제목 앞이 아니라 소스 줄에 둠: 제목 2줄 제한·검색 강조와 겹치지 않고, 360px에서 소스 이름만 말줄임됨
+- `NEW`: `publishedAt` 24시간 이내(미래 시각 제외). `인기`: `isPopular === true`일 때만. 없으면 생략
+- 적용: S-01·S-02·S-04·S-08 둘 다, S-03은 `NEW`만, S-09는 없음 (`PostCard` `badges` prop)
+- mock: 7일 조회수 상위 20건에 `isPopular: true`, 모든 목록 응답에 포함
+- 검증: 테스트 93건 통과(배지 5건 추가: 24h/25h 경계, 순서, 필드 없음, 화면별 모드, mock 피드), `build`·`build:web` 성공, 360·768·1280 캡처 가로 넘침 없음
+- 남은 것: server `isPopular` 배포 후 실서버 확인
+- 참고: client에 다크 모드가 없어 다크 대비는 해당 없음

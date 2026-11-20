@@ -92,6 +92,7 @@ export function PopularPage() {
               <div className="min-w-0 flex-1">
                 <PostCard
                   post={post}
+                  badges="new"
                   onOpen={openPost}
                   onToggleBookmark={toggleBookmark}
                   meta={`조회 ${formatNumber(post.viewCount)}`}

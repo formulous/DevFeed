@@ -111,7 +111,7 @@ export function HistoryPage() {
                 {g.items.map((post) => (
                   <li key={post.id} className="flex items-start gap-2">
                     <div className="min-w-0 flex-1">
-                      <PostCard post={{ ...post, isRead: false }} onOpen={openPost} onToggleBookmark={toggleBookmark} />
+                      <PostCard post={{ ...post, isRead: false }} badges="none" onOpen={openPost} onToggleBookmark={toggleBookmark} />
                     </div>
                     <button
                       type="button"

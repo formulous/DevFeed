@@ -64,8 +64,22 @@ function idList(value: string | null) {
   return value ? value.split(',').map(Number) : [];
 }
 
+export const mockViewCount = (id: number) => (id % 9 === 0 ? 0 : ((id * 37) % 500) + id);
+
+const POPULAR_WEEK_IDS = (() => {
+  const latest = Date.parse(mockPosts[0].publishedAt);
+  return new Set(
+    mockPosts
+      .filter((p) => latest - Date.parse(p.publishedAt) <= 7 * 86_400_000 && mockViewCount(p.id) >= 1)
+      .sort((a, b) => mockViewCount(b.id) - mockViewCount(a.id))
+      .slice(0, 20)
+      .map((p) => p.id),
+  );
+})();
+
 function decorate(post: PostSummary, member: boolean): PostSummary {
-  return member ? { ...post, isBookmarked: state.bookmarks.has(post.id), isRead: state.reads.has(post.id) } : post;
+  const base = { ...post, isPopular: POPULAR_WEEK_IDS.has(post.id) };
+  return member ? { ...base, isBookmarked: state.bookmarks.has(post.id), isRead: state.reads.has(post.id) } : base;
 }
 
 const error = (status: number, code: string, message: string) => HttpResponse.json({ code, message }, { status });
@@ -101,7 +115,7 @@ export const handlers = [
     const member = isMember(request);
     const items = mockPosts
       .filter((p) => latest - Date.parse(p.publishedAt) <= hours * 3_600_000)
-      .map((p) => ({ ...decorate(p, member), viewCount: p.id % 9 === 0 ? 0 : ((p.id * 37) % 500) + p.id }))
+      .map((p) => ({ ...decorate(p, member), viewCount: mockViewCount(p.id) }))
       .filter((p) => p.viewCount >= 1)
       .sort((a, b) => b.viewCount - a.viewCount)
       .slice(0, 20);

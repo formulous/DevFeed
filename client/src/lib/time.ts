@@ -2,6 +2,11 @@ const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
+export function isNewPost(iso: string, now: number = Date.now()) {
+  const diff = now - new Date(iso).getTime();
+  return diff >= 0 && diff < DAY;
+}
+
 export function relativeTime(iso: string, now: number = Date.now()) {
   const time = new Date(iso).getTime();
   const diff = now - time;

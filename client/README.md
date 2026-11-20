@@ -253,10 +253,14 @@ npm run capture    # 반응형 점검·README용 스크린샷 (Playwright, 최�
 - 광고(F-060)는 사용자 결정으로 제외 (`docs/discussions/016` decided). 관련 코드 없음
 - 비공개 화면 `meta robots noindex` (016, 사용자가 nginx `noindex` 해제): S-05~S-10, A-01~A-04 진입 시 `RouteTitle`이 `<meta name="robots" content="noindex">`를 붙이고, 공개 화면(S-01~S-04, S-11)으로 오면 뗌
 - 화면별 `<title>`: `components/layout/RouteTitle.tsx`의 경로 표 한 곳에서 관리 (예: "검색: 카프카 · DevFeed")
+- 글 카드 배지 (F-014, `docs/discussions/020`): 소스 줄 시간 옆에 `NEW`(발행 24시간 이내, client 계산)·`인기`(`PostSummary.isPopular`, 7일 인기 상위 20) 최대 2개
+  - `components/post/PostBadges.tsx`, `PostCard`의 `badges` prop: 기본 `all`, S-03 인기는 `new`(인기 배지 생략), S-09 기록은 `none`
+  - `isPopular`가 없는 응답이면 `인기`만 생략. mock은 7일 조회수 상위 20건에 `isPopular: true`
 - 반응형 점검: `npm run capture`가 dev 서버(MSW mock)를 띄워 15개 화면 × 360·768·1280px를 찍음
   - 결과: `screenshots/{폭}/{화면}.png`(전체), `.top.png`(첫 화면), `screenshots/overview-{폭}.png`(폭별 모음). git 제외
   - 가로 넘침(`scrollWidth > clientWidth`)을 자동 검사해 출력
   - 외부 이미지 요청은 막아서 결과가 매번 같음
+  - 브라우저 시각을 mock 기준(2026-11-19 12:00Z)으로 고정해 `NEW` 배지가 매번 같게 찍힘
   - README용 4장(S-01·S-02·S-04·A-01, 1280px 첫 화면)은 `docs/screens/`에 복사 → 커밋
 - 반응형 점검 결과 (2026-11-19): 15개 화면(S-11 포함) × 3폭 모두 가로 넘침 없음
   | 발견 | 폭 | 조치 |

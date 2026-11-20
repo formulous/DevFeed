@@ -7,6 +7,7 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const OUT = `${root}screenshots`;
 const README_OUT = `${root}docs/screens`;
 const WIDTHS = [360, 768, 1280];
+const MOCK_NOW = new Date('2026-11-19T12:00:00.000Z');
 const README_SET = ['S-01', 'S-02', 'S-04', 'A-01'];
 
 const SCREENS = [
@@ -60,6 +61,7 @@ async function main() {
       await mkdir(`${OUT}/${width}`, { recursive: true });
       const context = await browser.newContext({ viewport: { width, height: 900 }, deviceScaleFactor: 1, locale: 'ko-KR' });
       await context.route(/^https?:\/\/(?!localhost)/, (route) => route.abort());
+      await context.clock.setFixedTime(MOCK_NOW);
       const page = await context.newPage();
       await page.goto(base);
       let loggedIn = false;
