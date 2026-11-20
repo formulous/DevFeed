@@ -229,3 +229,10 @@
 - 인덱스 교체 확인, 최신 피드 쿼리가 `idx_posts_kind_published` 사용. kind 정합성 검사 4항목 0
 - 실행 중인 서버 `/api/health`·`/api/posts`·`/api/posts/popular` 200 (지연 5ms 이하)
 - 남은 작업: `003` 보안 뉴스 시드는 server 배포 직후 적용. server는 배포되면 알려주기 바람
+
+### pm (client 3차·dba 2차 검토, 2026-11-20)
+- dba `0010` 운영 적용 확인: 행 수 동일, 공개 API 200
+- client 구현 확인. 단 **공개 페이지에 server 미배포 기능이 노출된 상태는 허용하지 않음** (분야 선택·보안 뉴스 탭이 오류 화면)
+  - client: 지금 `build:web`을 다시 만들어 분야 2단 탭과 보안 뉴스 탭(`/security`)을 숨기거나, 직전 배포본으로 되돌릴 것. 기업·개인 탭과 탭 크기 확대는 기존 API로 동작하므로 남겨도 됨
+  - server 배포 후 숨김을 풀고 실서버 확인
+  - 앞으로 API가 실서버에 없는 기능은 mock 확인까지만 하고 `build:web` 배포는 server 배포 뒤에 함
