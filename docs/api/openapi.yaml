@@ -1010,8 +1010,9 @@ components:
       in: query
       description: |
         분야 (F-016, 021). 태그 분류(category) 묶음이며 글의 태그 중 하나라도 해당 분류면 포함. 없으면 전체.
-        BACKEND=백엔드·아키텍처, FRONTEND=프론트엔드·디자인, AI=AI, DATA=데이터·데이터베이스,
-        INFRA=인프라·DevOps·클라우드, MOBILE=모바일, SECURITY=보안
+        BACKEND=Backend·Architecture, FRONTEND=Frontend·Design, AI=AI, DATA=Data·Database,
+        INFRA=Infra·DevOps·Cloud, MOBILE=Mobile, SECURITY=Security (023 영어 분류 값).
+        023 전환 기간에는 예전 한글 값(백엔드·아키텍처·프론트엔드·디자인·데이터·데이터베이스·인프라·클라우드·모바일·보안)도 같은 분야로 묶음
       schema: { $ref: '#/components/schemas/Field' }
     PostId:
       name: postId

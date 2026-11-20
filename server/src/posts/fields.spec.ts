@@ -17,4 +17,21 @@ describe('groupTagsByField', () => {
     expect([...groups.values()].flat()).not.toContain(4);
     expect([...groups.keys()]).toEqual([...FIELDS]);
   });
+
+  it('023 전환 중에는 한글·영어 분류 값을 같은 분야로 묶음', () => {
+    const groups = groupTagsByField([
+      { id: 1, category: '백엔드' },
+      { id: 2, category: 'Backend' },
+      { id: 3, category: 'Architecture' },
+      { id: 4, category: 'Database' },
+      { id: 5, category: 'Cloud' },
+      { id: 6, category: 'Security' },
+      { id: 7, category: 'Language' },
+    ]);
+    expect(groups.get('BACKEND')).toEqual([1, 2, 3]);
+    expect(groups.get('DATA')).toEqual([4]);
+    expect(groups.get('INFRA')).toEqual([5]);
+    expect(groups.get('SECURITY')).toEqual([6]);
+    expect([...groups.values()].flat()).not.toContain(7);
+  });
 });

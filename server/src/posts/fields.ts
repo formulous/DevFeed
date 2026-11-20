@@ -3,13 +3,13 @@ export const FIELDS = ['BACKEND', 'FRONTEND', 'AI', 'DATA', 'INFRA', 'MOBILE', '
 export type Field = (typeof FIELDS)[number];
 
 export const FIELD_CATEGORIES: Record<Field, readonly string[]> = {
-  BACKEND: ['백엔드', '아키텍처'],
-  FRONTEND: ['프론트엔드', '디자인'],
+  BACKEND: ['Backend', 'Architecture', '백엔드', '아키텍처'],
+  FRONTEND: ['Frontend', 'Design', '프론트엔드', '디자인'],
   AI: ['AI'],
-  DATA: ['데이터', '데이터베이스'],
-  INFRA: ['인프라', 'DevOps', '클라우드'],
-  MOBILE: ['모바일'],
-  SECURITY: ['보안'],
+  DATA: ['Data', 'Database', '데이터', '데이터베이스'],
+  INFRA: ['Infra', 'DevOps', 'Cloud', '인프라', '클라우드'],
+  MOBILE: ['Mobile', '모바일'],
+  SECURITY: ['Security', '보안'],
 };
 
 export function groupTagsByField(tags: { id: number; category: string | null }[]): Map<Field, number[]> {

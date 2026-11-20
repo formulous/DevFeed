@@ -159,6 +159,10 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - `GET /api/security-news`(지역 → 출처 ID 목록으로 바꿔 소스 인덱스 사용), `GET /api/security-news/sources`(국내 → 해외, 이름순)
   - 관리자 소스: 목록 `?kind=`, 등록 시 `kind`·`region` 검증(뉴스는 `source_type = COMPANY`로 저장), 수정 시 `kind` 불가, 블로그 `region`·뉴스 `type` 400
   - 성능 (`devfeed_perf` 블로그 10만 + 뉴스, `perf/field-latency.js`, 페이지 21건 DB 시간): 분야 7개 단독 p95 0.5~2.9ms, 분야 + 개인 탭 최악 9.3ms, 최신 1.0ms, 보안 뉴스 0.4ms
+- 태그 영어 표기 (023)
+  - 태그 분류 값을 영어로 바꿈 (`Backend`·`Frontend`·`Data`·`Database`·`Infra`·`Cloud`·`Mobile`·`Security`·`Architecture`·`Design` 등). `posts/fields.ts`는 전환 기간 동안 한글·영어 값을 같은 분야로 묶음 → 서버 배포와 dba 데이터 변경 순서 무관
+  - 태그 ID 유지, 이름만 영어로 바꾸고 한글 이름은 동의어로 보존 → 자동 태깅·검색(`post_search`에 이름 + 동의어 색인) 결과 유지
+  - 태그 사전 캐시는 TTL이 없어 DB를 직접 바꾸면 서버 재시작 또는 관리자 재태깅 필요. 분야 태그 ID 캐시는 1분
 
 ### 검증 중 발견해 고친 성능·안정성 문제
 - 동시 수집 데드락(M1): gap lock 충돌 → READ COMMITTED, `FOR UPDATE` 제거, 데드락 재시도. 이후 36곳 동시 수집 재발 0
@@ -234,7 +238,7 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - `server/.env.test`가 있으면 그것을, 없으면 `.env`를 읽음. `.env`를 쓸 때는 `DB_DATABASE=devfeed_test npm run test:e2e`
   - 테스트가 실패해 데이터가 남으면 `db/scripts/test-db-reset.sh`(dba)로 초기화
 - 각 테스트가 소스·태그·글·회원을 직접 만들고 끝나면 지움 (실행 후 테스트 DB 0행 확인)
-- 현재 43건
+- 현재 45건
   - 탈퇴 잔존 (002 필수): `db/queries/withdrawal-check.sql`(dba)을 그대로 읽어 실행. 탈퇴 전 7개 테이블에 데이터가 있음을 확인한 뒤 탈퇴 → 7개 테이블 0건, 추천 로그 `user_id` NULL, 조회수 유지. 비밀번호 틀림 403, 탈퇴 후 로그인·리프레시·남은 토큰 거부
   - 회원 흐름: 가입 검증·중복 → 관심 태그(개수·없는 태그 검증) → 온보딩 완료 → 북마크(멱등·커서·태그 필터·피드 플래그·해제) → 조회 → 읽은 기록(순서·개별·전체 삭제) → 닉네임 변경, 온보딩 건너뛰기, 북마크 5,000건 제한
   - 인증: 리프레시 교체, 30초 이내 재사용 401, 30초 지난 재사용 시 계열 전체 폐기, 로그아웃, 5회 실패 잠금
@@ -247,4 +251,5 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - 글 카드 `isPopular` (020): 7일 인기 상위 집합과 일치, 조회수 0·7일 지난 글 false, 회원 응답 포함
   - 분야·보안 뉴스 (021): 최신·유형·태그·인기·추천에 뉴스 0건, 분야 단독·유형·태그·소스 AND, 잘못된 분야 400, 뉴스 목록 커서·지역·출처 필터, 출처 목록 순서, `/sources`·태그 글 수 뉴스 제외, 뉴스 북마크·읽음 플래그
   - 관리자 보안 뉴스 소스: 지역 누락·블로그 지역 400, 종류 변경 400, 지역 수정, `?kind=` 필터, 수집 시 요약 150자·썸네일 없음·검색 색인 없음·`post_tags.kind`·날짜만 있는 발행일
+  - 태그 영어화 (023): 한글 이름 → 영어 이름 + 한글 동의어로 바꾸고 재태깅해도 태그 글(제목·피드 카테고리 매칭)·한글 검색 결과 동일, 영어 검색 일치, 영어 분류 값도 같은 분야
   - 스모크: `GET /api/sources`
