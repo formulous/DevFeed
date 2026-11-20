@@ -31,7 +31,7 @@ function SearchBox() {
         onChange={(e) => setValue(e.target.value)}
         placeholder="기술 글 검색"
         aria-label="검색어"
-        className="h-9 w-full rounded-lg border border-line bg-white pl-3 pr-9 text-sm focus:border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-200/30"
+        className="h-9 w-full rounded-lg border border-line bg-white pl-3 pr-9 text-sm focus:border-brand-ring focus:outline-none focus:ring-2 focus:ring-brand-focus"
       />
       <button
         type="submit"

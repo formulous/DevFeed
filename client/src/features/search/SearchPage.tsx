@@ -88,7 +88,7 @@ export function SearchPage() {
                 aria-label="정렬"
                 value={state.sort}
                 onChange={(e) => setSort(e.target.value as SearchSort)}
-                className="h-8 rounded-lg border border-line bg-white px-2 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-200/40"
+                className="h-8 rounded-lg border border-line bg-white px-2 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-focus"
               >
                 {SORT_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>

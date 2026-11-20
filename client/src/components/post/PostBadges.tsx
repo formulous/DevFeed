@@ -12,7 +12,7 @@ export function PostBadges({ post, mode }: { post: PostSummary; mode: BadgeMode 
   if (!showNew && !showPopular) return null;
   return (
     <span className="flex shrink-0 items-center gap-1" data-testid="post-badges">
-      {showNew && <span className={`${BASE} bg-brand-soft text-blue-700`}>NEW</span>}
+      {showNew && <span className={`${BASE} bg-brand-soft text-brand-hover`}>NEW</span>}
       {showPopular && <span className={`${BASE} bg-orange-50 text-orange-700`}>인기</span>}
     </span>
   );

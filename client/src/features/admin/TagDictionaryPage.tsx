@@ -95,7 +95,7 @@ export function TagDictionaryPage() {
         maxLength={30}
         placeholder="태그명·동의어 검색"
         aria-label="태그 검색"
-        className="mb-3 h-9 w-full max-w-sm rounded-lg border border-line px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200/40"
+        className="mb-3 h-9 w-full max-w-sm rounded-lg border border-line px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-focus"
       />
 
       {tags.isPending ? (

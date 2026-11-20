@@ -8,7 +8,7 @@ const SOURCE: Record<SourceStatus, { label: string; className: string }> = {
 };
 
 const RUN: Record<CrawlResult, { label: string; className: string }> = {
-  RUNNING: { label: '진행 중', className: 'bg-blue-50 text-blue-700' },
+  RUNNING: { label: '진행 중', className: 'bg-brand-soft text-brand-hover' },
   SUCCESS: { label: '성공', className: 'bg-emerald-50 text-emerald-700' },
   NOT_MODIFIED: { label: '변경 없음', className: 'bg-slate-100 text-slate-600' },
   FAILURE: { label: '실패', className: 'bg-red-50 text-red-700' },

@@ -84,7 +84,7 @@ export function ForYouPage() {
       <InterestHeader />
 
       {fallback && (
-        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-[var(--radius-md)] border border-blue-100 bg-brand-soft p-4 text-sm">
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-[var(--radius-md)] border border-brand-line bg-brand-soft p-4 text-sm">
           <p className="mr-auto">
             아직 취향 정보가 없어서 인기 글을 보여주는 중임. 관심 태그를 고르면 더 정확해짐
           </p>

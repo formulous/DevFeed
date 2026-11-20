@@ -83,7 +83,7 @@ export function FeedTabs() {
       aria-label="피드"
       className={cn('scrollbar-none relative isolate flex items-center gap-1 overflow-x-auto px-3 py-2 lg:px-0', FADE)}
     >
-      <span aria-hidden className={cn(INDICATOR, '-z-10 rounded-full bg-brand-soft ring-1 ring-inset ring-blue-100')} style={style} />
+      <span aria-hidden className={cn(INDICATOR, '-z-10 rounded-full bg-brand-soft ring-1 ring-inset ring-brand-line')} style={style} />
       {FEED_TABS.map((tab) => (
         <NavLink
           key={tab.to}
@@ -92,7 +92,7 @@ export function FeedTabs() {
           className={({ isActive }) =>
             cn(
               'flex h-9 shrink-0 items-center whitespace-nowrap rounded-full px-4 text-sm transition-colors duration-200',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring',
               isActive ? 'font-semibold text-brand' : 'font-medium text-fg-secondary hover:bg-slate-100 hover:text-fg',
             )
           }
@@ -144,7 +144,7 @@ export function FieldTabs() {
             onClick={() => select(o.key)}
             className={cn(
               'h-7 shrink-0 whitespace-nowrap rounded-full px-3 text-[13px] transition-colors duration-200',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring',
               on ? 'font-semibold text-fg' : 'text-fg-secondary hover:text-fg',
             )}
           >

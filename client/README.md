@@ -100,6 +100,11 @@ App
         └ AdminLayout (lazy) → Admin*Pages
 ```
 
+## 테마 색상
+- `index.html` `<html data-theme="slate">` 한 줄로 전체 강조 색 지정 (onyx-ui `styles.css` 프리셋: blue·indigo·teal·violet·slate). 바꾸려면 이 값만 수정
+- 강조 색은 모두 onyx-ui 토큰을 씀 → tailwind `brand`(주 색)·`brand-hover`·`brand-soft`(옅은 배경)·`brand-line`(옅은 테두리)·`brand-ring`(포커스 테두리)·`brand-focus`(포커스 링). `blue-*` 같은 고정 색은 쓰지 않음
+- 파비콘·`theme-color` 메타는 정적 파일이라 테마를 바꾸면 함께 고쳐야 함 (지금 `#334155`). `og.png`는 기존 파랑 이미지 그대로
+
 ## 상태 관리 원칙
 - 서버 데이터는 모두 React Query 캐시. 컴포넌트 로컬 상태로 복사하지 않음
 - 필터·검색어·정렬·페이지·인기 기간은 URL 쿼리가 단일 출처

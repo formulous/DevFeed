@@ -41,7 +41,7 @@ export function TagPicker({ selected, max, onToggle }: TagPickerProps) {
         onChange={(e) => setKeyword(e.target.value)}
         placeholder="태그 검색"
         aria-label="태그 검색"
-        className="mb-3 h-9 w-full rounded-lg border border-line px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200/40"
+        className="mb-3 h-9 w-full rounded-lg border border-line px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-focus"
       />
       <div role="tablist" aria-label="분류" className="mb-3 flex flex-wrap gap-1">
         {categories.map((c) => (

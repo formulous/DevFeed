@@ -90,7 +90,7 @@ function PickerBody({ title, noun, items, groups, groupLabel, initial, max, onAp
             onChange={(e) => setKeyword(e.target.value)}
             placeholder={`${noun} 검색`}
             aria-label={`${noun} 검색`}
-            className="h-9 w-full rounded-lg border border-line px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200/40"
+            className="h-9 w-full rounded-lg border border-line px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-focus"
           />
           {groups.length > 0 && (
           <div role="tablist" aria-label={groupLabel} className="flex flex-wrap gap-1">

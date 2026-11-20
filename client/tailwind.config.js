@@ -10,7 +10,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        brand: { DEFAULT: 'var(--color-primary)', soft: '#eff6ff' },
+        brand: {
+          DEFAULT: 'var(--color-primary)',
+          hover: 'var(--color-primary-hover)',
+          soft: 'var(--color-primary-soft)',
+          line: 'color-mix(in srgb, var(--color-primary) 16%, #ffffff)',
+          ring: 'var(--color-primary-ring)',
+          focus: 'color-mix(in srgb, var(--color-primary-ring) 40%, transparent)',
+        },
         app: 'var(--color-bg-app)',
         surface: 'var(--color-bg-surface)',
         fg: {
