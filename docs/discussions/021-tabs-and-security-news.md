@@ -87,3 +87,30 @@
 - pm - `02-features.md` v1.11, `03-screens.md` 탭·S-13·S-14, `04-roadmap.md` M7, README 진행 현황 (완료)
 
 ## 의견
+
+### client (1차) — 경로 결정·API 요청
+- 경로 (pm은 03에 반영 요청)
+  | 탭 | 경로 | 분야 탭 |
+  |---|---|---|
+  | 최신 | `/` | O |
+  | 추천 | `/for-you` | X |
+  | 인기 | `/popular` (`?period=`) | O |
+  | 기업 블로그 | `/company` | O |
+  | 개인 블로그 | `/personal` | O |
+  | 보안 뉴스 | `/security` (`?region=domestic|overseas`, `?sourceIds=`) | X |
+  - 분야는 쿼리 `?field=backend|frontend|ai|data|infra|mobile|security`, 없으면 `전체`. 잘못된 값은 `전체`로 해석
+  - 탭을 옮길 때 분야는 유지, 태그·소스 필터는 초기화 (탭마다 소스 범위가 달라서)
+- client가 원하는 API 형태 (server 명세 기준으로 맞출 것이니 이름은 server가 정해도 됨)
+  - 분야: `GET /posts`, `GET /posts/popular`에 `field` 쿼리 (enum `BACKEND|FRONTEND|AI|DATA|INFRA|MOBILE|SECURITY`). 분야 목록·라벨·순서는 client 상수로 둠 (7개 고정이라 목록 API 불필요)
+  - 기업·개인 탭: 기존 `GET /posts?sourceType=` 그대로 사용 (변경 없음)
+  - 보안 뉴스 목록: 별도 경로 `GET /security-news?cursor&size&region&sourceIds` → `CursorPage<PostSummary>` 제안
+    - 카드 재사용을 위해 `PostSummary` 그대로 (`thumbnailUrl: null`, `isPopular: false` 고정)
+    - `region`: `DOMESTIC|OVERSEAS`, 없으면 전체
+  - 보안 뉴스 출처 목록: 사이드바 칩 6개용. `GET /sources`에 섞지 말고 `GET /security-news/sources` → `{ items: [{ id, name, logoUrl, region }] }` 제안. 기존 `/sources`(기술 블로그 전용)는 지금 응답 그대로 두면 client 변경 최소
+  - 북마크·읽은 기록 응답에 보안 뉴스 글이 섞여 나와도 됨 (카드 그대로 표시). 다만 썸네일 null 보장 요청
+- client 구현 계획 (mock 먼저)
+  - 헤더 1단 탭 6개: 16px·높이 48px·활성 굵게+밑줄 3px. 360px 가로 스크롤, 양끝 흐림, 활성 탭 자동 스크롤
+  - 2단 분야 탭: 14px 알약형, 최신·인기·기업·개인에서만
+  - `/company`·`/personal`: 홈 화면 재사용, 소스 유형 세그먼트 숨김, 소스 선택 창·빠른 소스 칩은 해당 유형만
+  - `/security` (S-14): 날짜 구분선, `[전체|국내|해외]` 세그먼트, 출처 6곳 칩 사이드바(모바일은 S-12 시트), 썸네일 없는 카드·요약 2줄·`인기` 배지 없음
+  - 관리자 A-01~A-03 종류·지역 표시·입력은 server 명세 나온 뒤 반영
