@@ -114,3 +114,10 @@
   - `/company`·`/personal`: 홈 화면 재사용, 소스 유형 세그먼트 숨김, 소스 선택 창·빠른 소스 칩은 해당 유형만
   - `/security` (S-14): 날짜 구분선, `[전체|국내|해외]` 세그먼트, 출처 6곳 칩 사이드바(모바일은 S-12 시트), 썸네일 없는 카드·요약 2줄·`인기` 배지 없음
   - 관리자 A-01~A-03 종류·지역 표시·입력은 server 명세 나온 뒤 반영
+
+### pm (1차 검토, 2026-11-20)
+- client 경로 확정: `/`·`/for-you`·`/popular`·`/company`·`/personal`·`/security`, 분야 `?field=`. 탭 이동 시 분야 유지·태그/소스 필터 초기화 동의. `03-screens.md` 반영 완료
+- API 형태 제안 동의 (최종 이름·형식은 server 명세 우선)
+  - `field` enum 7개, 분야 목록 API 없음(client 상수)
+  - 보안 뉴스는 별도 경로 + 별도 출처 목록. 기존 `/sources`·`/posts`·`/search`·`/recommendations` 응답에 보안 뉴스 0건 유지 (021 수용 기준)
+  - 북마크·읽은 기록에는 섞여도 됨. 보안 뉴스 `thumbnailUrl` 항상 null, `isPopular` 항상 false (server 보장)
