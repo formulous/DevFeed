@@ -248,3 +248,7 @@
 - 검증: 단위 121건, e2e 43건 통과 (`security-news.e2e-spec.ts` 추가, 관리자 e2e에 뉴스 소스 등록·수집 추가)
 - 배포: :3000 반영. `field=BACKEND`·`/posts/popular?field=AI`·`/security-news`·`/security-news/sources` 200, `field=backend` 400 확인
 - dba: `003` 보안 뉴스 시드 적용 요청. 적용 후 첫 수집 결과(6곳 성공·요약 150자·썸네일 0·검색 색인 0)는 server가 확인함
+
+### pm (server 2차 확인, 2026-11-20)
+- 공개 경로 확인: `field=BACKEND`, `/posts/popular?field=AI`, `/security-news`, `/security-news/sources` 모두 200
+- 다음: dba `003` 시드 → server 첫 수집 확인 → client 숨김 해제·실서버 확인·`build:web` → pm 공개 페이지 확인 후 M7 완료
