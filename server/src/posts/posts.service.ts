@@ -2,7 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { decodeCursor, encodeCursor } from '../common/pagination/cursor';
 import { buildFeedQuery } from './feed-query';
-import { FeedQuery } from './dto/posts.dto';
+import { FeedQuery, SecurityNewsQuery } from './dto/posts.dto';
+import { DirectoryService } from './directory.service';
+import type { Field } from './fields';
 import { PopularPeriod } from './period';
 import { PopularIdsService } from './popular-ids.service';
 import { PostCardsService } from './post-cards.service';
@@ -14,24 +16,61 @@ type PopularCard = Omit<PostSummary, 'isBookmarked' | 'isRead'> & { viewCount: n
 
 @Injectable()
 export class PostsService {
-  private readonly popularCache = new Map<PopularPeriod, { ids: number[]; cards: Promise<PopularCard[]> }>();
+  private readonly popularCache = new Map<string, { ids: number[]; cards: Promise<PopularCard[]> }>();
 
   constructor(
     private readonly dataSource: DataSource,
     private readonly cards: PostCardsService,
     private readonly popularIds: PopularIdsService,
+    private readonly directory: DirectoryService,
   ) {}
 
   async feed(query: FeedQuery, userId?: number) {
     const size = query.size ?? DEFAULT_SIZE;
     const cursor = query.cursor ? decodeCursor(query.cursor) : undefined;
+    const fieldTagIds = query.field ? await this.directory.fieldTagIds(query.field) : undefined;
+    const sourceIds = query.sourceIds?.length
+      ? await this.directory.keepSourcesOf('BLOG', query.sourceIds)
+      : undefined;
+    if ((fieldTagIds && !fieldTagIds.length) || (sourceIds && !sourceIds.length)) return { items: [], nextCursor: null };
     const { sql, params } = buildFeedQuery({
+      kind: 'BLOG',
       tagIds: query.tagIds,
-      sourceIds: query.sourceIds,
+      fieldTagIds,
+      sourceIds,
       sourceType: query.sourceType,
       cursor,
       limit: size + 1,
     });
+    return this.page(sql, params, size, userId);
+  }
+
+  async securityNews(query: SecurityNewsQuery, userId?: number) {
+    const size = query.size ?? DEFAULT_SIZE;
+    const cursor = query.cursor ? decodeCursor(query.cursor) : undefined;
+    let sourceIds: number[] | undefined;
+    if (query.region || query.sourceIds?.length) {
+      const wanted = query.sourceIds?.length ? new Set(query.sourceIds) : null;
+      sourceIds = (await this.directory.sourcesOf('SECURITY_NEWS'))
+        .filter((s) => (!query.region || s.region === query.region) && (!wanted || wanted.has(s.id)))
+        .map((s) => s.id);
+      if (!sourceIds.length) return { items: [], nextCursor: null };
+    }
+    const { sql, params } = buildFeedQuery({ kind: 'SECURITY_NEWS', sourceIds, cursor, limit: size + 1 });
+    return this.page(sql, params, size, userId);
+  }
+
+  async securityNewsSources() {
+    const order = { DOMESTIC: 0, OVERSEAS: 1 };
+    const sources = await this.directory.sourcesOf('SECURITY_NEWS');
+    return {
+      items: sources
+        .map((s) => ({ id: s.id, name: s.name, logoUrl: s.logoUrl, region: s.region ?? 'OVERSEAS' }))
+        .sort((a, b) => order[a.region] - order[b.region] || a.name.localeCompare(b.name) || a.id - b.id),
+    };
+  }
+
+  async page(sql: string, params: unknown[], size: number, userId?: number) {
     const rows = (await this.dataSource.query(sql, params)) as { id: number | string; published_at: Date }[];
     const page = rows.slice(0, size);
     const last = page[page.length - 1];
@@ -41,16 +80,17 @@ export class PostsService {
     return { items: items.map(withoutViewCount), nextCursor };
   }
 
-  async popular(period: PopularPeriod, userId?: number, now = Date.now()) {
-    const ids = await this.popularIds.ids(period, now);
-    let entry = this.popularCache.get(period);
+  async popular(period: PopularPeriod, field?: Field, userId?: number, now = Date.now()) {
+    const key = `${period}:${field ?? ''}`;
+    const ids = await this.popularIds.ids(period, field, now);
+    let entry = this.popularCache.get(key);
     if (!entry || entry.ids !== ids) {
       const cards = this.cards.load(ids).catch((error) => {
-        if (this.popularCache.get(period)?.cards === cards) this.popularCache.delete(period);
+        if (this.popularCache.get(key)?.cards === cards) this.popularCache.delete(key);
         throw error;
       });
       entry = { ids, cards };
-      this.popularCache.set(period, entry);
+      this.popularCache.set(key, entry);
     }
     const cached = await entry.cards;
     if (userId === undefined) return { items: cached };

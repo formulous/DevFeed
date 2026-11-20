@@ -1,6 +1,6 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 import { bigintNumber } from '../common/database/transformers';
-import type { SourceType } from './source.entity';
+import type { SourceKind, SourceType } from './source.entity';
 
 @Entity('posts')
 export class Post {
@@ -12,6 +12,9 @@ export class Post {
 
   @Column({ name: 'source_type', type: 'enum', enum: ['COMPANY', 'PERSONAL'] })
   sourceType: SourceType;
+
+  @Column({ type: 'enum', enum: ['BLOG', 'SECURITY_NEWS'], default: 'BLOG' })
+  kind: SourceKind;
 
   @Column({ type: 'varchar', length: 1024, nullable: true })
   guid: string | null;

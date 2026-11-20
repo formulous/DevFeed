@@ -58,7 +58,7 @@ export class CatalogService {
 
   private async loadSources() {
     const [rows, counts] = await Promise.all([
-      this.dataSource.query('SELECT id, name, logo_url, source_type FROM sources ORDER BY name, id') as Promise<
+      this.dataSource.query("SELECT id, name, logo_url, source_type FROM sources WHERE kind = 'BLOG' ORDER BY name, id") as Promise<
         { id: number | string; name: string; logo_url: string | null; source_type: string }[]
       >,
       this.dataSource.query(

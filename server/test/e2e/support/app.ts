@@ -114,8 +114,8 @@ export async function createFixtures(t: TestApp, postCount = 3) {
 export async function cleanup(t: TestApp): Promise<void> {
   const like = `e2e-${t.runId}-%`;
   await t.db.query('DELETE FROM users WHERE email LIKE ?', [like]);
-  const sources = (await t.db.query('SELECT id FROM sources WHERE feed_url = ?', [
-    `https://e2e-${t.runId}.test/feed.xml`,
+  const sources = (await t.db.query('SELECT id FROM sources WHERE feed_url LIKE ?', [
+    `https://e2e-${t.runId}.test/%`,
   ])) as { id: number }[];
   for (const { id } of sources) {
     await t.db.query(

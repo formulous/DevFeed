@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
 import { withDeadlockRetry } from '../common/database/deadlock-retry';
-import type { NormalizedItem } from '../ingest/item-normalizer';
+import type { ContentKind, NormalizedItem } from '../ingest/item-normalizer';
 import { joinCategories } from '../ingest/categories';
 import { TagMatch } from '../ingest/tagger';
 import { toTokenString } from '../ingest/tokenizer';
@@ -13,6 +13,7 @@ interface IngestSource {
   id: number;
   name: string;
   sourceType: string;
+  kind: ContentKind;
 }
 
 export interface IndexablePost {
@@ -20,6 +21,7 @@ export interface IndexablePost {
   title: string;
   summary: string | null;
   publishedAt: Date;
+  kind: ContentKind;
 }
 
 interface ExistingRow {
@@ -65,7 +67,7 @@ export class PostIngestService {
         ])) as { published_at: Date }[];
         await this.reindex(
           manager,
-          { id: Number(existing.id), title: item.title, summary: item.summary, publishedAt: row.published_at },
+          { id: Number(existing.id), title: item.title, summary: item.summary, publishedAt: row.published_at, kind: source.kind },
           source.name,
           loaded,
           item.categories,
@@ -75,12 +77,13 @@ export class PostIngestService {
 
       const result = (await manager.query(
         `INSERT INTO posts
-           (source_id, source_type, guid, url, title, summary, thumbnail_url, published_at, original_published_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+           (source_id, source_type, kind, guid, url, title, summary, thumbnail_url, published_at, original_published_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)`,
         [
           source.id,
           source.sourceType,
+          source.kind,
           item.guid,
           item.url,
           item.title,
@@ -94,7 +97,13 @@ export class PostIngestService {
 
       await this.reindex(
         manager,
-        { id: Number(result.insertId), title: item.title, summary: item.summary, publishedAt: item.publishedAt },
+        {
+          id: Number(result.insertId),
+          title: item.title,
+          summary: item.summary,
+          publishedAt: item.publishedAt,
+          kind: source.kind,
+        },
         source.name,
         loaded,
         item.categories,
@@ -115,12 +124,13 @@ export class PostIngestService {
     const matches = loaded.dictionary.extract({ title: post.title, summary: post.summary, categories });
     if (!isNew) await manager.query('DELETE FROM post_tags WHERE post_id = ?', [post.id]);
     if (matches.length) {
-      const placeholders = matches.map(() => '(?, ?, ?, ?)').join(', ');
+      const placeholders = matches.map(() => '(?, ?, ?, ?, ?)').join(', ');
       await manager.query(
-        `INSERT INTO post_tags (post_id, tag_id, tag_rank, published_at) VALUES ${placeholders}`,
-        matches.flatMap((m) => [post.id, m.tagId, m.rank, post.publishedAt]),
+        `INSERT INTO post_tags (post_id, tag_id, tag_rank, published_at, kind) VALUES ${placeholders}`,
+        matches.flatMap((m) => [post.id, m.tagId, m.rank, post.publishedAt, post.kind]),
       );
     }
+    if (post.kind !== 'BLOG') return matches;
     const tagTerms = matches.flatMap((m) => loaded.termsByTag.get(m.tagId) ?? []).join(' ');
     await manager.query(
       `INSERT INTO post_search (post_id, title_tokens, body_tokens, feed_categories) VALUES (?, ?, ?, ?)

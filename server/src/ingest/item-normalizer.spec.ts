@@ -43,6 +43,19 @@ describe('normalizeItem', () => {
     expect(normalizeItem({ ...base, title: '  ' }, { baseUrl: 'https://a.com', now })).toBeNull();
   });
 
+  it('보안 뉴스는 요약 150자로 자르고 썸네일을 버림', () => {
+    const long = '가'.repeat(400);
+    const item = normalizeItem(
+      { ...base, contentHtml: `<p>${long}</p>`, thumbnailUrl: 'https://img.a.com/x.png' },
+      { baseUrl: 'https://a.com', now, kind: 'SECURITY_NEWS' },
+    );
+    expect(Array.from(item!.summary!).length).toBeLessThanOrEqual(150);
+    expect(item!.thumbnailUrl).toBeNull();
+    const blog = normalizeItem({ ...base, contentHtml: `<p>${long}</p>`, thumbnailUrl: 'https://img.a.com/x.png' }, { baseUrl: 'https://a.com', now });
+    expect(Array.from(blog!.summary!).length).toBe(300);
+    expect(blog!.thumbnailUrl).toBe('https://img.a.com/x.png');
+  });
+
   it('너무 긴 guid는 버리고 URL로만 중복 판단함', () => {
     expect(normalizeItem({ ...base, guid: 'x'.repeat(1100) }, { baseUrl: 'https://a.com', now })?.guid).toBeNull();
   });

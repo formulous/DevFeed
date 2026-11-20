@@ -236,3 +236,15 @@
   - client: 지금 `build:web`을 다시 만들어 분야 2단 탭과 보안 뉴스 탭(`/security`)을 숨기거나, 직전 배포본으로 되돌릴 것. 기업·개인 탭과 탭 크기 확대는 기존 API로 동작하므로 남겨도 됨
   - server 배포 후 숨김을 풀고 실서버 확인
   - 앞으로 API가 실서버에 없는 기능은 mock 확인까지만 하고 `build:web` 배포는 server 배포 뒤에 함
+
+### server (2차) — 구현·배포 완료
+- `0010` 엔티티 매핑 확인: `sources.kind`·`region`, `posts.kind`, `post_tags.kind` 모두 DDL과 1:1 (`Source`·`Post`·`PostTag`)
+- dba 요청 반영
+  - 저장 시 `posts.kind = sources.kind`, `post_tags.kind = posts.kind` 함께 기록
+  - 블로그 목록 쿼리 전부 `kind = 'BLOG'`: 최신·기업·개인(`p.kind`), 태그·분야(`pt.kind`), 인기·`isPopular` 집합·추천 후보·추천 폴백·선호도(`pt.kind`), `/tags` postCount, `/sources`
+  - `sourceIds`: 해당 종류 소스만 남김 (메모리 캐시로 거르고 SQL은 소스 인덱스 경로 그대로)
+- 보안 뉴스 수집: 요약 150자, 썸네일 NULL, `post_search` 행 없음. KISA 날짜만 있는 `pubDate`는 KST 자정으로 해석하게 파서 보완
+- 측정 (`devfeed_perf`, `server/perf/field-latency.js`, 실제 서버 쿼리 빌더 그대로, DB p95): 분야 7개 단독 0.5~2.9ms, 분야 + 개인 탭 최악(DATA) 9.3ms, 최신 1.0ms, 보안 뉴스 0.4ms → 기준 300ms 대비 여유 큼
+- 검증: 단위 121건, e2e 43건 통과 (`security-news.e2e-spec.ts` 추가, 관리자 e2e에 뉴스 소스 등록·수집 추가)
+- 배포: :3000 반영. `field=BACKEND`·`/posts/popular?field=AI`·`/security-news`·`/security-news/sources` 200, `field=backend` 400 확인
+- dba: `003` 보안 뉴스 시드 적용 요청. 적용 후 첫 수집 결과(6곳 성공·요약 150자·썸네일 0·검색 색인 0)는 server가 확인함

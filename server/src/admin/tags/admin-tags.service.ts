@@ -5,6 +5,7 @@ import { Errors } from '../../common/errors/app.exception';
 import { PostIngestService } from '../../crawl/post-ingest.service';
 import { TagDictionaryService } from '../../crawl/tag-dictionary.service';
 import { splitCategories } from '../../ingest/categories';
+import type { ContentKind } from '../../ingest/item-normalizer';
 import { CreateTagDto, UpdateTagDto } from '../dto/tag.dto';
 import { JobsService } from '../jobs/jobs.service';
 import { TagCountsService } from '../../catalog/tag-counts.service';
@@ -150,7 +151,7 @@ export class AdminTagsService {
       let lastId = 0;
       for (;;) {
         const posts = (await this.dataSource.query(
-          `SELECT p.id, p.title, p.summary, p.published_at, s.name AS source_name, ps.feed_categories
+          `SELECT p.id, p.title, p.summary, p.published_at, p.kind, s.name AS source_name, ps.feed_categories
              FROM posts p JOIN sources s ON s.id = p.source_id
              LEFT JOIN post_search ps ON ps.post_id = p.id
             WHERE p.id > ? ORDER BY p.id LIMIT ?`,
@@ -160,6 +161,7 @@ export class AdminTagsService {
           title: string;
           summary: string | null;
           published_at: Date;
+          kind: ContentKind;
           source_name: string;
           feed_categories: string | null;
         }[];
@@ -168,7 +170,13 @@ export class AdminTagsService {
           for (const post of posts) {
             await this.ingest.reindex(
               manager,
-              { id: Number(post.id), title: post.title, summary: post.summary, publishedAt: post.published_at },
+              {
+                id: Number(post.id),
+                title: post.title,
+                summary: post.summary,
+                publishedAt: post.published_at,
+                kind: post.kind,
+              },
               post.source_name,
               loaded,
               splitCategories(post.feed_categories),

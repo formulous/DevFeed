@@ -73,7 +73,7 @@ src/
 ├── admin/             # 관리자 컨트롤러·서비스, 백그라운드 작업(재태깅)
 ├── me/                # GET /me
 ├── catalog/           # 공개 태그·소스 목록, 태그 글 수 캐시
-├── posts/             # 피드·인기 글·조회 기록, 카드 조립
+├── posts/             # 피드·분야·인기 글·보안 뉴스·조회 기록, 카드 조립
 └── scripts/           # 관리자 계정 생성, 개발용 토큰 발급
 ```
 
@@ -150,6 +150,15 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
 
 - 글 카드 인기 배지 (020)
   - 모든 `PostSummary`에 `isPopular`: 7일 인기 상위 20건(`/posts/popular?period=WEEK`) 포함 여부. `PopularIdsService`의 기간별 인기 ID 10분 캐시를 인기 글 API와 함께 써서 추가 쿼리 없음 (캐시 만료 직후 1회만 조회)
+- M7 분야 탭·보안 뉴스 (021, 스키마 `0010`)
+  - 소스 종류 `kind`(BLOG / SECURITY_NEWS)와 보안 뉴스 지역 `region`. `posts.kind`·`post_tags.kind`는 수집 시 소스 값으로 함께 기록 (비정규화, 종류는 등록 후 변경 불가)
+  - 보안 뉴스 수집 규칙: 요약 150자, 썸네일 저장 안 함, `post_search` 색인 안 함(검색 제외). 날짜만 있는 `pubDate`(KISA)는 KST 자정으로 해석
+  - 블로그 전용: 최신·기업·개인·태그·분야 피드, 인기 글(`isPopular` 집합 포함), 추천(후보·선호도·콜드 스타트), `/tags` postCount, `/sources`. 북마크·읽은 기록·조회 기록은 뉴스 포함
+  - 분야 `field`: 서버 상수 `posts/fields.ts`(분야 → 태그 분류). 분야 태그 ID·소스 종류는 `DirectoryService`가 1분 캐시. 분야만 있으면 분야 태그별 `post_tags` UNION, 태그·소스 필터가 있으면 그쪽이 드라이브하고 분야는 `EXISTS`
+  - `sourceIds`는 해당 종류 소스만 남기고 거름 (블로그 피드에 뉴스 출처 ID → 0건)
+  - `GET /api/security-news`(지역 → 출처 ID 목록으로 바꿔 소스 인덱스 사용), `GET /api/security-news/sources`(국내 → 해외, 이름순)
+  - 관리자 소스: 목록 `?kind=`, 등록 시 `kind`·`region` 검증(뉴스는 `source_type = COMPANY`로 저장), 수정 시 `kind` 불가, 블로그 `region`·뉴스 `type` 400
+  - 성능 (`devfeed_perf` 블로그 10만 + 뉴스, `perf/field-latency.js`, 페이지 21건 DB 시간): 분야 7개 단독 p95 0.5~2.9ms, 분야 + 개인 탭 최악 9.3ms, 최신 1.0ms, 보안 뉴스 0.4ms
 
 ### 검증 중 발견해 고친 성능·안정성 문제
 - 동시 수집 데드락(M1): gap lock 충돌 → READ COMMITTED, `FOR UPDATE` 제거, 데드락 재시도. 이후 36곳 동시 수집 재발 0
@@ -164,6 +173,7 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   node perf/recommendation-latency.js   # 추천 API (devfeed_perf에 노출 행 추가됨)
   node perf/search-profile.js           # 검색 쿼리 단계별 DB 시간
   node perf/search-accuracy.js          # 검색 정확성 (개발 서버 :3000 + devfeed, 읽기 전용)
+  node perf/field-latency.js            # 분야·유형·보안 뉴스 피드 쿼리 DB 시간 (빌드 필요)
   ```
 - 각 스크립트는 연결된 DB 이름을 확인하고 다르면 중단함 (`perf/_db.js`)
 
@@ -224,7 +234,7 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - `server/.env.test`가 있으면 그것을, 없으면 `.env`를 읽음. `.env`를 쓸 때는 `DB_DATABASE=devfeed_test npm run test:e2e`
   - 테스트가 실패해 데이터가 남으면 `db/scripts/test-db-reset.sh`(dba)로 초기화
 - 각 테스트가 소스·태그·글·회원을 직접 만들고 끝나면 지움 (실행 후 테스트 DB 0행 확인)
-- 현재 37건
+- 현재 43건
   - 탈퇴 잔존 (002 필수): `db/queries/withdrawal-check.sql`(dba)을 그대로 읽어 실행. 탈퇴 전 7개 테이블에 데이터가 있음을 확인한 뒤 탈퇴 → 7개 테이블 0건, 추천 로그 `user_id` NULL, 조회수 유지. 비밀번호 틀림 403, 탈퇴 후 로그인·리프레시·남은 토큰 거부
   - 회원 흐름: 가입 검증·중복 → 관심 태그(개수·없는 태그 검증) → 온보딩 완료 → 북마크(멱등·커서·태그 필터·피드 플래그·해제) → 조회 → 읽은 기록(순서·개별·전체 삭제) → 닉네임 변경, 온보딩 건너뛰기, 북마크 5,000건 제한
   - 인증: 리프레시 교체, 30초 이내 재사용 401, 30초 지난 재사용 시 계열 전체 폐기, 로그아웃, 5회 실패 잠금
@@ -235,4 +245,6 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - 검색: 조사 붙은 단어 매칭, bigram 순서가 뒤섞인 글 제외(구문 매칭), 관련도·최신순, 기간·태그·소스 필터, 토큰 없는 검색어 0건, 길이·페이지 검증, 1,000건 초과 `totalCapped`
   - 소스 목록 `postCount`·`recentPostCount` (018, 019)
   - 글 카드 `isPopular` (020): 7일 인기 상위 집합과 일치, 조회수 0·7일 지난 글 false, 회원 응답 포함
+  - 분야·보안 뉴스 (021): 최신·유형·태그·인기·추천에 뉴스 0건, 분야 단독·유형·태그·소스 AND, 잘못된 분야 400, 뉴스 목록 커서·지역·출처 필터, 출처 목록 순서, `/sources`·태그 글 수 뉴스 제외, 뉴스 북마크·읽음 플래그
+  - 관리자 보안 뉴스 소스: 지역 누락·블로그 지역 400, 종류 변경 400, 지역 수정, `?kind=` 필터, 수집 시 요약 150자·썸네일 없음·검색 색인 없음·`post_tags.kind`·날짜만 있는 발행일
   - 스모크: `GET /api/sources`

@@ -84,12 +84,12 @@ export class RecommendationsService {
       >,
       this.dataSource.query(
         `SELECT pt.tag_id, b.created_at AS at FROM bookmarks b JOIN post_tags pt ON pt.post_id = b.post_id
-          WHERE b.user_id = ? AND b.created_at >= ?`,
+          WHERE b.user_id = ? AND b.created_at >= ? AND pt.kind = 'BLOG'`,
         [userId, since],
       ) as Promise<{ tag_id: number | string; at: Date }[]>,
       this.dataSource.query(
         `SELECT pt.tag_id, h.last_read_at AS at FROM read_histories h JOIN post_tags pt ON pt.post_id = h.post_id
-          WHERE h.user_id = ? AND h.last_read_at >= ?`,
+          WHERE h.user_id = ? AND h.last_read_at >= ? AND pt.kind = 'BLOG'`,
         [userId, since],
       ) as Promise<{ tag_id: number | string; at: Date }[]>,
     ]);
@@ -105,7 +105,7 @@ export class RecommendationsService {
     const rows = (await this.dataSource.query(
       `SELECT pt.post_id, pt.tag_id, p.source_id, p.view_count, p.published_at
          FROM post_tags pt JOIN posts p ON p.id = pt.post_id
-        WHERE pt.tag_id IN (${tagIds.map(() => '?').join(', ')}) AND pt.published_at >= ?`,
+        WHERE pt.tag_id IN (${tagIds.map(() => '?').join(', ')}) AND pt.kind = 'BLOG' AND pt.published_at >= ?`,
       [...tagIds, since],
     )) as { post_id: number | string; tag_id: number | string; source_id: number | string; view_count: number; published_at: Date }[];
     const byPost = new Map<number, Candidate>();
@@ -132,7 +132,7 @@ export class RecommendationsService {
 
   private async coldCandidates(userId: number, since: Date): Promise<RankedItem[]> {
     const rows = (await this.dataSource.query(
-      `SELECT id, source_id FROM posts WHERE published_at >= ?
+      `SELECT id, source_id FROM posts WHERE kind = 'BLOG' AND published_at >= ?
         ORDER BY view_count DESC, published_at DESC, id DESC LIMIT ?`,
       [since, COLD_LIMIT],
     )) as { id: number | string; source_id: number | string }[];

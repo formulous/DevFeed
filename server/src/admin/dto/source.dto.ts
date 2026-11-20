@@ -1,6 +1,6 @@
 import { Transform } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, IsString, IsUrl, Length, Max, MaxLength, Min, ValidateIf } from 'class-validator';
-import type { SourceStatus, SourceType } from '../../entities/source.entity';
+import type { NewsRegion, SourceKind, SourceStatus, SourceType } from '../../entities/source.entity';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 const URL_OPTIONS = { protocols: ['http', 'https'], require_protocol: true, require_tld: false };
@@ -21,8 +21,17 @@ export class CreateSourceDto {
   @MaxLength(2048, { message: '최대 2048자임' })
   feedUrl: string;
 
+  @IsOptional()
+  @IsIn(['BLOG', 'SECURITY_NEWS'], { message: 'BLOG 또는 SECURITY_NEWS여야 함' })
+  kind?: SourceKind;
+
+  @ValidateIf((dto: CreateSourceDto) => dto.kind === 'SECURITY_NEWS' || dto.region !== undefined)
+  @IsIn(['DOMESTIC', 'OVERSEAS'], { message: 'DOMESTIC 또는 OVERSEAS여야 함' })
+  region?: NewsRegion;
+
+  @ValidateIf((dto: CreateSourceDto) => dto.kind !== 'SECURITY_NEWS')
   @IsIn(['COMPANY', 'PERSONAL'], { message: 'COMPANY 또는 PERSONAL이어야 함' })
-  type: SourceType;
+  type?: SourceType;
 
   @IsOptional()
   @Transform(trim)
@@ -62,6 +71,10 @@ export class UpdateSourceDto {
   type?: SourceType;
 
   @IsOptional()
+  @IsIn(['DOMESTIC', 'OVERSEAS'], { message: 'DOMESTIC 또는 OVERSEAS여야 함' })
+  region?: NewsRegion;
+
+  @IsOptional()
   @Transform(trim)
   @ValidateIf((_, value) => value !== null)
   @IsUrl(URL_OPTIONS, { message: 'http(s) URL이어야 함' })
@@ -90,6 +103,10 @@ export class ListSourcesQuery {
   @IsOptional()
   @IsIn(['ACTIVE', 'ERROR', 'INACTIVE'], { message: 'ACTIVE, ERROR, INACTIVE 중 하나여야 함' })
   status?: SourceStatus;
+
+  @IsOptional()
+  @IsIn(['BLOG', 'SECURITY_NEWS'], { message: 'BLOG 또는 SECURITY_NEWS여야 함' })
+  kind?: SourceKind;
 }
 
 export class RunsQuery {

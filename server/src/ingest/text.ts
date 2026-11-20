@@ -1,6 +1,7 @@
 import { decode } from 'html-entities';
 
 export const SUMMARY_MAX_LENGTH = 300;
+export const NEWS_SUMMARY_MAX_LENGTH = 150;
 export const TITLE_MAX_LENGTH = 500;
 const ELLIPSIS = '…';
 
@@ -26,9 +27,13 @@ export function truncateChars(text: string, max: number): string {
 }
 
 export function makeSummary(...candidates: (string | null | undefined)[]): string | null {
+  return makeSummaryWithin(SUMMARY_MAX_LENGTH, ...candidates);
+}
+
+export function makeSummaryWithin(max: number, ...candidates: (string | null | undefined)[]): string | null {
   for (const candidate of candidates) {
     const text = htmlToText(candidate);
-    if (text) return truncateChars(text, SUMMARY_MAX_LENGTH);
+    if (text) return truncateChars(text, max);
   }
   return null;
 }

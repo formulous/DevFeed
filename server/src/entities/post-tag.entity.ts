@@ -1,5 +1,6 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 import { bigintNumber } from '../common/database/transformers';
+import type { SourceKind } from './source.entity';
 
 @Entity('post_tags')
 export class PostTag {
@@ -14,4 +15,7 @@ export class PostTag {
 
   @Column({ name: 'published_at', type: 'datetime', precision: 3 })
   publishedAt: Date;
+
+  @Column({ type: 'enum', enum: ['BLOG', 'SECURITY_NEWS'], default: 'BLOG' })
+  kind: SourceKind;
 }

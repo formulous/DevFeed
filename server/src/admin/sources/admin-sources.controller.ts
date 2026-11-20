@@ -14,7 +14,7 @@ export class AdminSourcesController {
 
   @Get()
   list(@Query() query: ListSourcesQuery) {
-    return this.sources.list(query.status);
+    return this.sources.list(query.status, query.kind);
   }
 
   @Post()

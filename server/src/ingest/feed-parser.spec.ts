@@ -76,6 +76,12 @@ describe('parseFeed', () => {
     expect(entry.thumbnailUrl).toBe('https://atom.example.com/cover.png');
   });
 
+  it('날짜만 있는 pubDate는 KST 자정으로 해석함 (KISA)', () => {
+    const xml = `<rss><channel><title>k</title><item><title>a</title><link>https://k.kr/1</link>
+      <pubDate><![CDATA[ 2026-10-28 ]]></pubDate></item></channel></rss>`;
+    expect(parseFeed(xml).items[0].publishedAt?.toISOString()).toBe('2026-10-27T15:00:00.000Z');
+  });
+
   it('항목이 없어도 유효한 피드로 봄', () => {
     expect(parseFeed('<rss><channel><title>empty</title></channel></rss>').items).toEqual([]);
   });

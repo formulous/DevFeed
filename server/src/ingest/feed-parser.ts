@@ -68,11 +68,13 @@ function list(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [value];
 }
 
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
 function parseDate(...values: unknown[]): Date | null {
   for (const value of values) {
     const raw = text(value);
     if (!raw) continue;
-    const date = new Date(raw);
+    const date = new Date(DATE_ONLY.test(raw) ? `${raw}T00:00:00+09:00` : raw);
     if (!Number.isNaN(date.getTime())) return date;
   }
   return null;

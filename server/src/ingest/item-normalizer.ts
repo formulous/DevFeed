@@ -1,8 +1,10 @@
 import type { ParsedFeedItem } from './feed-parser';
-import { makeSummary, makeTitle } from './text';
+import { makeSummaryWithin, makeTitle, NEWS_SUMMARY_MAX_LENGTH, SUMMARY_MAX_LENGTH } from './text';
 import { normalizePostUrl } from './url-normalizer';
 
 export const GUID_MAX_LENGTH = 1024;
+
+export type ContentKind = 'BLOG' | 'SECURITY_NEWS';
 
 export interface NormalizedItem {
   guid: string | null;
@@ -17,13 +19,14 @@ export interface NormalizedItem {
 
 export function normalizeItem(
   item: ParsedFeedItem,
-  context: { baseUrl: string; now: Date },
+  context: { baseUrl: string; now: Date; kind?: ContentKind },
 ): NormalizedItem | null {
   const url = item.link ? normalizePostUrl(item.link, context.baseUrl) : null;
   if (!url) return null;
   const title = makeTitle(item.title);
   if (!title) return null;
 
+  const isNews = context.kind === 'SECURITY_NEWS';
   const guid = item.guid && item.guid.length <= GUID_MAX_LENGTH ? item.guid : null;
   const original = item.publishedAt;
   const publishedAt =
@@ -33,8 +36,8 @@ export function normalizeItem(
     guid,
     url,
     title,
-    summary: makeSummary(item.summaryHtml, item.contentHtml),
-    thumbnailUrl: item.thumbnailUrl,
+    summary: makeSummaryWithin(isNews ? NEWS_SUMMARY_MAX_LENGTH : SUMMARY_MAX_LENGTH, item.summaryHtml, item.contentHtml),
+    thumbnailUrl: isNews ? null : item.thumbnailUrl,
     publishedAt,
     originalPublishedAt: original,
     categories: item.categories,

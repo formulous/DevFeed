@@ -5,7 +5,7 @@ import { CrawlTrigger } from '../entities/crawl-run.entity';
 import { ERROR_THRESHOLD, nextIntervalMinutes } from '../ingest/backoff';
 import { FeedFetchError, fetchFeed } from '../ingest/feed-fetcher';
 import { FeedParseError, parseFeed } from '../ingest/feed-parser';
-import { NormalizedItem, normalizeItem } from '../ingest/item-normalizer';
+import { ContentKind, NormalizedItem, normalizeItem } from '../ingest/item-normalizer';
 import { PostIngestService } from './post-ingest.service';
 
 export const CRAWL_LOCK_MINUTES = 5;
@@ -17,6 +17,7 @@ interface SourceRow {
   feed_url: string;
   site_url: string;
   source_type: string;
+  kind: ContentKind;
   status: string;
   crawl_interval_min: number;
   consecutive_failures: number;
@@ -85,7 +86,7 @@ export class CrawlService {
 
   private async loadSource(sourceId: number): Promise<SourceRow> {
     const [row] = (await this.dataSource.query(
-      `SELECT id, name, feed_url, site_url, source_type, status, crawl_interval_min,
+      `SELECT id, name, feed_url, site_url, source_type, kind, status, crawl_interval_min,
               consecutive_failures, etag, last_modified
          FROM sources WHERE id = ?`,
       [sourceId],
@@ -117,10 +118,10 @@ export class CrawlService {
       fetched = feed.items.length;
       const baseUrl = feed.siteUrl ?? source.site_url ?? source.feed_url;
       const items = feed.items
-        .map((item) => normalizeItem(item, { baseUrl, now }))
+        .map((item) => normalizeItem(item, { baseUrl, now, kind: source.kind }))
         .filter((item): item is NormalizedItem => item !== null);
       const { newCount, updatedCount } = await this.ingest.upsertAll(
-        { id: source.id, name: source.name, sourceType: source.source_type },
+        { id: source.id, name: source.name, sourceType: source.source_type, kind: source.kind },
         items,
       );
       return {

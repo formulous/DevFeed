@@ -7,8 +7,9 @@ import { CrawlService } from '../../crawl/crawl.service';
 import { FeedValidatorService } from '../../crawl/feed-validator.service';
 import { PostIngestService } from '../../crawl/post-ingest.service';
 import { TagDictionaryService } from '../../crawl/tag-dictionary.service';
-import type { SourceStatus } from '../../entities/source.entity';
+import type { NewsRegion, SourceKind, SourceStatus } from '../../entities/source.entity';
 import { splitCategories } from '../../ingest/categories';
+import type { ContentKind } from '../../ingest/item-normalizer';
 import { normalizeFeedUrl } from '../../ingest/url-normalizer';
 import { CreateSourceDto, UpdateSourceDto } from '../dto/source.dto';
 
@@ -17,6 +18,8 @@ interface SourceRow {
   name: string;
   logo_url: string | null;
   source_type: 'COMPANY' | 'PERSONAL';
+  kind: SourceKind;
+  region: NewsRegion | null;
   status: SourceStatus;
   last_success_at: Date | null;
   consecutive_failures: number;
@@ -44,7 +47,7 @@ interface CrawlRunRow {
   error_message: string | null;
 }
 
-const SOURCE_COLUMNS = `s.id, s.name, s.logo_url, s.source_type, s.status, s.last_success_at,
+const SOURCE_COLUMNS = `s.id, s.name, s.logo_url, s.source_type, s.kind, s.region, s.status, s.last_success_at,
   s.consecutive_failures, s.site_url, s.feed_url, s.crawl_interval_min, s.next_crawl_at,
   s.last_crawled_at, s.created_at, s.updated_at,
   (SELECT COALESCE(SUM(r.new_post_count), 0) FROM crawl_runs r
@@ -58,6 +61,8 @@ function toListItem(row: SourceRow) {
     name: row.name,
     logoUrl: row.logo_url,
     type: row.source_type,
+    kind: row.kind,
+    region: row.region,
     status: row.status,
     lastSuccessAt: row.last_success_at,
     newPostCount7d: Number(row.new_post_count_7d ?? 0),
@@ -105,11 +110,20 @@ export class AdminSourcesService {
     private readonly tagDictionary: TagDictionaryService,
   ) {}
 
-  async list(status?: SourceStatus) {
-    const since = addDays(new Date(), -7);
+  async list(status?: SourceStatus, kind?: SourceKind) {
+    const where: string[] = [];
+    const params: unknown[] = [addDays(new Date(), -7)];
+    if (status) {
+      where.push('s.status = ?');
+      params.push(status);
+    }
+    if (kind) {
+      where.push('s.kind = ?');
+      params.push(kind);
+    }
     const rows = (await this.dataSource.query(
-      `SELECT ${SOURCE_COLUMNS} FROM sources s ${status ? 'WHERE s.status = ?' : ''} ORDER BY s.name, s.id`,
-      status ? [since, status] : [since],
+      `SELECT ${SOURCE_COLUMNS} FROM sources s ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY s.name, s.id`,
+      params,
     )) as SourceRow[];
     return { items: rows.map(toListItem) };
   }
@@ -164,14 +178,29 @@ export class AdminSourcesService {
   }
 
   async create(dto: CreateSourceDto) {
+    const kind = dto.kind ?? 'BLOG';
+    if (kind === 'BLOG' && dto.region !== undefined) {
+      throw Errors.validation([{ field: 'region', message: '보안 뉴스만 지정할 수 있음' }]);
+    }
     const feedUrl = this.canonicalFeedUrl(dto.feedUrl);
     if (await this.isDuplicateFeed(feedUrl)) throw Errors.sourceFeedDuplicated();
     await this.assertValidFeed(feedUrl);
     try {
       const result = (await this.dataSource.query(
-        `INSERT INTO sources (name, site_url, feed_url, source_type, logo_url, crawl_interval_min, next_crawl_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [dto.name, dto.siteUrl, feedUrl, dto.type, dto.logoUrl ?? null, dto.crawlIntervalMin ?? 60, new Date()],
+        `INSERT INTO sources
+           (name, site_url, feed_url, source_type, kind, region, logo_url, crawl_interval_min, next_crawl_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          dto.name,
+          dto.siteUrl,
+          feedUrl,
+          kind === 'BLOG' ? dto.type : 'COMPANY',
+          kind,
+          kind === 'BLOG' ? null : dto.region,
+          dto.logoUrl ?? null,
+          dto.crawlIntervalMin ?? 60,
+          new Date(),
+        ],
       )) as { insertId: number };
       return this.get(Number(result.insertId));
     } catch (error) {
@@ -182,6 +211,12 @@ export class AdminSourcesService {
 
   async update(id: number, dto: UpdateSourceDto) {
     const current = await this.findRow(id);
+    if (current.kind === 'BLOG' && dto.region !== undefined) {
+      throw Errors.validation([{ field: 'region', message: '보안 뉴스만 수정할 수 있음' }]);
+    }
+    if (current.kind !== 'BLOG' && dto.type !== undefined) {
+      throw Errors.validation([{ field: 'type', message: '기술 블로그만 수정할 수 있음' }]);
+    }
     const sets: string[] = [];
     const params: unknown[] = [];
     const set = (column: string, value: unknown) => {
@@ -202,6 +237,7 @@ export class AdminSourcesService {
     if (dto.name !== undefined) set('name', dto.name);
     if (dto.siteUrl !== undefined) set('site_url', dto.siteUrl);
     if (dto.type !== undefined) set('source_type', dto.type);
+    if (dto.region !== undefined) set('region', dto.region);
     if (dto.logoUrl !== undefined) set('logo_url', dto.logoUrl);
     if (dto.crawlIntervalMin !== undefined) set('crawl_interval_min', dto.crawlIntervalMin);
     if (dto.status === 'INACTIVE' && current.status !== 'INACTIVE') set('status', 'INACTIVE');
@@ -233,7 +269,7 @@ export class AdminSourcesService {
     let lastId = 0;
     for (;;) {
       const posts = (await this.dataSource.query(
-        `SELECT p.id, p.title, p.summary, p.published_at, ps.feed_categories FROM posts p
+        `SELECT p.id, p.title, p.summary, p.published_at, p.kind, ps.feed_categories FROM posts p
            LEFT JOIN post_search ps ON ps.post_id = p.id
           WHERE p.source_id = ? AND p.id > ? ORDER BY p.id LIMIT ?`,
         [sourceId, lastId, REINDEX_CHUNK],
@@ -242,6 +278,7 @@ export class AdminSourcesService {
         title: string;
         summary: string | null;
         published_at: Date;
+        kind: ContentKind;
         feed_categories: string | null;
       }[];
       if (!posts.length) return;
@@ -249,7 +286,7 @@ export class AdminSourcesService {
         for (const post of posts) {
           await this.ingest.reindex(
             manager,
-            { id: Number(post.id), title: post.title, summary: post.summary, publishedAt: post.published_at },
+            { id: Number(post.id), title: post.title, summary: post.summary, publishedAt: post.published_at, kind: post.kind },
             sourceName,
             loaded,
             splitCategories(post.feed_categories),
