@@ -1,3 +1,5 @@
+import { M7_API_READY } from './features';
+
 export type FieldKey = 'backend' | 'frontend' | 'ai' | 'data' | 'infra' | 'mobile' | 'security';
 export type ApiField = 'BACKEND' | 'FRONTEND' | 'AI' | 'DATA' | 'INFRA' | 'MOBILE' | 'SECURITY';
 
@@ -19,6 +21,7 @@ export const FIELDS: FieldDef[] = [
 ];
 
 export function parseField(value: string | null): FieldDef | null {
+  if (!M7_API_READY) return null;
   return FIELDS.find((f) => f.key === value) ?? null;
 }
 

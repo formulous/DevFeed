@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { NavLink, useLocation, useSearchParams } from 'react-router';
 import { cn } from '@/lib/cn';
+import { M7_API_READY } from '@/lib/features';
 import { FIELDS, parseField } from '@/lib/fields';
 
 interface TabDef {
@@ -9,7 +10,7 @@ interface TabDef {
   field: boolean;
 }
 
-export const FEED_TABS: TabDef[] = [
+const ALL_TABS: TabDef[] = [
   { to: '/', label: '최신', field: true },
   { to: '/for-you', label: '추천', field: false },
   { to: '/popular', label: '인기', field: true },
@@ -17,6 +18,8 @@ export const FEED_TABS: TabDef[] = [
   { to: '/personal', label: '개인 블로그', field: true },
   { to: '/security', label: '보안 뉴스', field: false },
 ];
+
+export const FEED_TABS = M7_API_READY ? ALL_TABS : ALL_TABS.filter((t) => t.to !== '/security');
 
 const FADE =
   '[mask-image:linear-gradient(to_right,transparent,#000_16px,#000_calc(100%-16px),transparent)] lg:[mask-image:none]';
@@ -31,7 +34,7 @@ function useRevealActive<T extends HTMLElement>(dep: string) {
 }
 
 export function isFieldTab(pathname: string) {
-  return FEED_TABS.some((t) => t.field && t.to === pathname);
+  return M7_API_READY && FEED_TABS.some((t) => t.field && t.to === pathname);
 }
 
 export function FeedTabs() {

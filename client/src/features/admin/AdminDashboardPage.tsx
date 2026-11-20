@@ -9,6 +9,7 @@ import { formatNumber } from '@/lib/format';
 import { relativeTime } from '@/lib/time';
 import { adminSourcesQuery, adminStatsQuery } from './queries';
 import { SourceStatusBadge } from './StatusBadge';
+import { M7_API_READY } from '@/lib/features';
 import { KIND_LABEL, parseKind, sourceKindLabel } from './sourceKind';
 
 const FILTERS: { value: SourceStatus | null; label: string }[] = [
@@ -79,7 +80,7 @@ const lastSuccess = (s: AdminSourceListItem) => (s.lastSuccessAt ? relativeTime(
 export function AdminDashboardPage() {
   const [params, setParams] = useSearchParams();
   const status = parseStatus(params.get('status'));
-  const kind = parseKind(params.get('kind'));
+  const kind = M7_API_READY ? parseKind(params.get('kind')) : null;
   const navigate = useNavigate();
   const stats = useQuery(adminStatsQuery);
   const sources = useQuery(adminSourcesQuery(status, kind));
@@ -112,7 +113,7 @@ export function AdminDashboardPage() {
 
       <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
         <FilterGroup label="상태 필터" options={FILTERS} value={status} onChange={(v) => setParam('status', v)} />
-        <FilterGroup label="종류 필터" options={KIND_FILTERS} value={kind} onChange={(v) => setParam('kind', v)} />
+        {M7_API_READY && <FilterGroup label="종류 필터" options={KIND_FILTERS} value={kind} onChange={(v) => setParam('kind', v)} />}
       </div>
 
       {sources.isPending ? (

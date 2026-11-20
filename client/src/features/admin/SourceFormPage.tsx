@@ -11,6 +11,7 @@ import { FullPageSpinner } from '@/components/common/FullPageSpinner';
 import { errorMessage, fieldErrorMap } from '@/lib/errors';
 import { isHttpUrl } from '@/lib/format';
 import { ADMIN_KEY, adminSourceQuery } from './queries';
+import { M7_API_READY } from '@/lib/features';
 import { KIND_LABEL, REGION_LABEL, TYPE_LABEL } from './sourceKind';
 
 export const INTERVAL_MIN = 30;
@@ -44,7 +45,7 @@ function toValues(s: AdminSource): FormValues {
     siteUrl: s.siteUrl,
     feedUrl: s.feedUrl,
     type: s.type,
-    kind: s.kind,
+    kind: s.kind ?? 'BLOG',
     region: s.region ?? 'DOMESTIC',
     logoUrl: s.logoUrl ?? '',
     crawlIntervalMin: String(s.crawlIntervalMin),
@@ -52,7 +53,7 @@ function toValues(s: AdminSource): FormValues {
 }
 
 function toInput(v: FormValues): SourceInput {
-  return {
+  const base = {
     name: v.name.trim(),
     siteUrl: v.siteUrl.trim(),
     feedUrl: v.feedUrl.trim(),
@@ -62,6 +63,9 @@ function toInput(v: FormValues): SourceInput {
     logoUrl: v.logoUrl.trim() || null,
     crawlIntervalMin: Number(v.crawlIntervalMin),
   };
+  if (M7_API_READY) return base;
+  const { kind: _kind, region: _region, ...legacy } = base;
+  return legacy;
 }
 
 export function validateForm(v: FormValues): Partial<Record<keyof FormValues, string>> {
@@ -228,7 +232,7 @@ function SourceForm({ source }: { source?: AdminSource }) {
           ) : null}
         </div>
       </div>
-      {isNew ? (
+      {!M7_API_READY ? null : isNew ? (
         <RadioRow
           legend="종류"
           name="kind"

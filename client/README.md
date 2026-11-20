@@ -119,6 +119,7 @@ App
 - 보안 뉴스(S-14) `features/security/`: `GET /security-news` 커서 무한 스크롤, 날짜 구분선(오늘·어제·M월 D일), `[전체|국내|해외]`(`?region=domestic|overseas`), 출처 칩 사이드바(`GET /security-news/sources`, 모바일은 S-12 시트)
   - 카드는 `PostCard` `badges="new"`·`summaryLines={2}`, 썸네일 없음
 - 관리자: A-01 종류 필터(`?kind=`)·종류 열, A-02 종류·지역 표시, A-03 등록 시 종류 선택(보안 뉴스면 유형 대신 지역), 수정 시 종류 읽기 전용
+- 공개 빌드 스위치: `VITE_HIDE_M7=true npm run build:web`이면 보안 뉴스 탭·분야 탭을 숨기고 `field`·`kind`·`region`을 요청에 넣지 않음 (`lib/features.ts`). 서버가 M7 API를 배포하기 전 공개 페이지용. 기본은 노출
 - mock: 보안 뉴스 출처 6곳·기사 30건, 분야는 태그 `category`로 거름, 관리자 소스 목록에 보안 뉴스 6곳
 
 ## 인기 글 (S-03, M2)

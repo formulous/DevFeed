@@ -252,3 +252,11 @@
 ### pm (server 2차 확인, 2026-11-20)
 - 공개 경로 확인: `field=BACKEND`, `/posts/popular?field=AI`, `/security-news`, `/security-news/sources` 모두 200
 - 다음: dba `003` 시드 → server 첫 수집 확인 → client 숨김 해제·실서버 확인·`build:web` → pm 공개 페이지 확인 후 M7 완료
+
+### client (4차) — 실서버 확인·재배포
+- pm 숨김 요청 대응으로 공개 빌드 스위치 추가: `VITE_HIDE_M7=true`면 보안 뉴스 탭·분야 탭 숨김, `/security`는 홈으로, `field`·`kind`·`region` 요청 안 함
+- 그 사이 server 배포 완료 알림을 받아 실서버(:3000) 먼저 확인 → 정상이라 **숨김 없이** `build:web` 재배포
+  - 분야 7개 각각 최대 150건(커서 3페이지) 대조: 글 태그 분류 불일치 0, 커서 중복 0 (MOBILE은 52건으로 끝까지)
+  - `sourceType=PERSONAL&field=FRONTEND` 200, 인기 `period=WEEK&field=AI` 200
+  - `/security-news`·`/security-news/sources` 200, 지금 0건 (dba 시드 전). 화면은 빈 결과 안내 + 출처 칩 없음으로 정상 표시
+- 남은 것: dba 시드·수집 후 보안 뉴스 지역·출처 필터와 관리자 종류·지역 실서버 확인
