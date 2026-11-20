@@ -176,3 +176,34 @@
 - server 명세 초안(`c0b25ba`) 확정. client·pm 이견 없음
 - client 구현 착수 승인: 사용자가 이번 기능을 직접 요청했으므로 별도 사용자 승인 없이 mock 기준으로 바로 진행
 - 남은 순서: dba 마이그레이션 → server 구현·배포 → client 실서버 연동 → pm 공개 페이지 확인 후 M7 완료
+
+### dba (1차) — 스키마 `0010`·시드·분야 측정
+- server 요청대로 반영함. `db/migrations/0010_add_source_kind_and_news_region.sql`
+  | 테이블 | 변경 |
+  |---|---|
+  | `sources` | `kind ENUM('BLOG','SECURITY_NEWS') NOT NULL DEFAULT 'BLOG'`, `region ENUM('DOMESTIC','OVERSEAS') NULL`, CHECK `ck_sources_kind_region` (뉴스만 region 필수, 블로그는 NULL) |
+  | `posts` | `kind` 비정규화. `idx_posts_published` → `idx_posts_kind_published (kind, published_at, id)`, `idx_posts_type_published` → `idx_posts_kind_type_published (kind, source_type, published_at, id)` |
+  | `post_tags` | `kind` 비정규화. `idx_post_tags_tag_published` → `idx_post_tags_tag_kind_published (tag_id, kind, published_at, post_id)` |
+  - 보안 뉴스 `source_type = 'COMPANY'` (NOT NULL 유지) 동의. `idx_posts_search_filter`(검색)는 변경 없음 (뉴스는 `post_search` 행이 없어 조인 대상 아님)
+  - 기존 인덱스는 같은 마이그레이션에서 제거함. `kind` 조건 없는 옛 쿼리는 filesort로 바뀌지만 운영 2.4천 건이라 영향 없음
+- 시드 `db/seeds/003_security_news_sources.sql`: 6곳 (국내 3·해외 3), 주기 30분·KISA 60분. KISA `B0000127` 제외 동의 (직접 확인: "보고서/가이드" 게시판)
+- 검증: `devfeed_perf`(10만)·`devfeed_test` up → down → up 통과, 10만 건 1초. CHECK 거부 2건 확인. 시드 2회 실행 멱등
+- 분야 측정 (`db/perf/measure_field.py`, 블로그 10만 + 합성 보안 뉴스 4만, DB 시간 p95): server 쿼리 계획(분야 태그 `UNION` / 다른 필터가 드라이브 + 분야 `EXISTS`) 그대로 측정
+  | 쿼리 | p95 |
+  |---|---|
+  | 분야 7개 단독 (태그 6~28개) | 0.07~0.29ms |
+  | 분야 BACKEND + 개인 탭 (최악, 2만 행) | 5.9ms |
+  | 분야 + 태그 / + 개인 소스 2개 | 0.11 / 0.38ms |
+  | 인기 MONTH + 분야 / YEAR + 분야 | 4.3 / 3.6ms |
+  | 보안 뉴스 전체 / 국내(출처 3곳 UNION ALL) | 0.01 / 0.03ms |
+  | 추천 후보 14일 (태그 30개, `pt.kind='BLOG'`) | 0.88ms |
+  | 태그별 글 수 (`WHERE kind='BLOG' GROUP BY tag_id`) | 18.7ms |
+  - p95 300ms 기준 대비 여유 큼. 분야 묶음 서버 상수 동의 → DB 테이블 없음 (decisions D-19)
+- server 요청 (구현 시)
+  - 글 저장 시 `posts.kind = sources.kind`, `post_tags.kind = posts.kind`로 함께 기록 (`published_at`과 같은 위치)
+  - 블로그 목록 쿼리 전부 `kind = 'BLOG'` 추가: 최신·기업·개인(`p.kind`), 태그·분야(`pt.kind`), 인기·`isPopular` 집합·추천 후보·추천 폴백, `/tags` postCount. 선호도 계산은 `post_tags` 조인에 `pt.kind = 'BLOG'`
+  - 소스 필터(`sourceIds`)는 블로그 소스만 받도록 검증 (소스 인덱스 경로라 `kind` 조건 불필요)
+  - 정합성 검사: `db/queries/feed.sql` 끝의 쿼리(kind 불일치·뉴스 검색 색인·뉴스 썸네일/150자 초과) 4항목 0 → e2e에 넣어도 됨
+  - 참고: 뉴스는 `post_search` 행이 없어 `feed_categories`도 저장 안 됨 → 재태깅 시 제목·요약만 사용 (뉴스 태그는 표시용이라 허용으로 판단, D-20)
+- 용량 (pm 참고): RSS 실측 하루 약 35~55건 → 연 2만 건 이하, 약 30MB. 지금 보관 기한 불필요. 버퍼 풀 기준 또는 뉴스 10만 건 도달 시 보관 기한 재검토
+- 운영 `devfeed` 적용 순서: `0010` 적용은 사용자 확인 후 진행 (적용해도 현재 서버 동작 영향 없음). `003` 시드는 server 뉴스 수집 규칙 배포 후 넣음 — 먼저 넣으면 현 서버가 블로그 규칙(썸네일·300자·검색 색인)으로 수집함. server 배포 준비되면 알려주기 바람

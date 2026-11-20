@@ -1,7 +1,7 @@
 # 스키마 결정 기록
 
 - 작성: dba
-- 상태: 확정 v1 (M6, 2026-11-19). 각 결정의 합의 discussion 번호를 본문에 표기
+- 상태: v1.1 (M7, 2026-11-20). 각 결정의 합의 discussion 번호를 본문에 표기. D-18~D-20 추가 (021)
 - 기준 문서: `docs/spec/01~04`
 
 ## D-01. 공통 규칙
@@ -92,6 +92,7 @@
   - 비용: 글 `published_at` 변경 시 `post_tags`도 같은 트랜잭션에서 갱신해야 함 (수집 시 발행일 변경은 드묾)
   - 태그 복수(OR) 필터: 태그별 `LIMIT 20` 서브쿼리를 `UNION`한 뒤 상위 20건 (태그 최대 개수는 API에서 제한 권장, 예: 10개)
   - 소스 복수 필터: `IN`은 `idx_posts_published` 순회 계획이 선택돼 위험함. 소스별 서브쿼리 `UNION ALL` 사용
+- `0010`에서 세 인덱스 모두 `kind`를 앞(태그는 `tag_id` 다음)에 넣은 인덱스로 교체 (D-18)
   - 실측 (discussion 007): 글 10만 건에서 서버 피드 쿼리 15종 DB p95 최대 6.2ms (최악 조합 인기 태그 × 희소 유형). 단일 필터·커서는 깊이와 무관하게 21행. 인덱스 추가 불필요
 
 ## D-08. 조회수와 24시간 중복 제외 (F-012, F-013)
@@ -149,7 +150,7 @@
 - `crawl_runs` 보관 90일 > 7일이라 값 손실 없음
 
 ## D-11. 태그 사용 글 수 (A-04, 인기 태그)
-- `tags`에 카운트 컬럼 두지 않음. `post_tags`의 `idx_post_tags_tag_published` 선두 컬럼으로 `GROUP BY tag_id` 계산
+- `tags`에 카운트 컬럼 두지 않음. `post_tags`의 `idx_post_tags_tag_kind_published` 선두 컬럼으로 `GROUP BY tag_id` 계산 (`0010` 이후 블로그만 셀 때 `WHERE kind = 'BLOG'`, 10만+4만 건 18ms)
 - 이유: 글 저장마다 태그 행 갱신이 생기면 인기 태그 행에 락 경합. 관리자 화면·결과 없음 화면 용도라 서버 캐시로 충분
 
 ## D-12. 예상 데이터 규모 (설계 기준)
@@ -207,3 +208,39 @@
 - 개인정보: 탈퇴 회원 데이터가 백업에 최대 14일 남음 (개인정보 안내에 명시 필요, pm)
 - 버퍼 풀: **128MB 유지 확정** (014, pm). `devfeed` 6MB라 증설 효과 없음. 기준: `posts`+`post_search`가 버퍼 풀의 70%를 넘으면 재검토
 
+
+## D-18. 소스 종류·지역과 `kind` 비정규화 (`0010`, 021)
+- `sources.kind ENUM('BLOG','SECURITY_NEWS')`, `sources.region ENUM('DOMESTIC','OVERSEAS')` (뉴스만, CHECK로 강제)
+- `posts.kind`, `post_tags.kind` 비정규화 (`source_type`·`published_at`과 같은 방식). `kind`는 등록 후 변경 불가라 동기화 갱신 없음. 정합성은 `db/queries/feed.sql` 끝의 검사 쿼리로 확인
+  - 이유: 보안 뉴스가 블로그보다 빨리 쌓임 (RSS 실측 하루 약 35~55건, 블로그 수 건). 블로그 목록에서 뉴스를 조인으로 거르면 LIMIT 21을 채우려고 뉴스 행을 계속 건너뜀. 특히 `보안` 분류 태그는 뉴스 비중이 80% 이상이 됨
+  - 복합 FK `(source_id, kind) → sources(id, kind)`는 기각: 인덱스 2개 추가 대비 이득 작음 (kind 불변)
+- 인덱스 교체: `idx_posts_published` → `idx_posts_kind_published (kind, published_at, id)`, `idx_posts_type_published` → `idx_posts_kind_type_published (kind, source_type, published_at, id)`, `idx_post_tags_tag_published` → `idx_post_tags_tag_kind_published (tag_id, kind, published_at, post_id)`
+  - 기존 인덱스는 같은 마이그레이션에서 제거. `kind` 조건 없는 옛 쿼리는 filesort로 바뀌지만 운영 규모(2.4천 건)에선 영향 없음 → server 배포와 같은 시점에 적용
+- 보안 뉴스 `source_type`은 `COMPANY`로 저장 (NOT NULL 유지, server 제안). 기업 탭은 `kind = 'BLOG'` 조건이 함께 있어 섞이지 않음
+- 지역 필터는 `posts`에 `region` 두지 않음. 출처 6곳이라 지역 → 출처 ID 목록 → 소스별 `UNION ALL` (D-07 방식)
+- 적용 비용 (`devfeed_perf` 10만 건): 컬럼 `INSTANT`, 인덱스 교체 `INPLACE, LOCK=NONE` 합계 1초. up → down → up 통과
+
+## D-19. 분야(field) 필터: 테이블 없이 태그 분해 (021)
+- 분야 → 분류 묶음은 서버 상수 (server 결정). DB에 `fields`·`post_fields` 테이블 두지 않음
+  - `post_fields` 비정규화 검토했으나 기각: 태그 분해만으로 충분히 빠르고, 분류 변경·재태깅 때 갱신할 테이블이 늘어남
+- 쿼리: 분야 태그마다 `post_tags` 범위 스캔 `LIMIT 21`을 `UNION` → 정렬. 다른 필터(태그·소스·인기)가 있으면 그쪽이 드라이브하고 분야는 `EXISTS (post_tags PK)`
+- 측정 (`devfeed_perf` 블로그 10만 + 합성 보안 뉴스 4만, `db/perf/measure_field.py`, DB 시간 p95)
+  | 쿼리 | p95 | 읽은 행 |
+  |---|---|---|
+  | 분야 7개 단독 (태그 6~28개) | 0.07~0.29ms | 248~1,142 |
+  | 분야 BACKEND + 개인 탭 (최악) | 5.9ms | 20,084 |
+  | 분야 + 태그 / + 개인 소스 2개 | 0.11 / 0.38ms | 463 / 1,869 |
+  | 인기 MONTH + 분야 / YEAR + 분야 | 4.3 / 3.6ms | 5,746 / 11,184 |
+  | 인기 YEAR (분야 없음) | 40.6ms | 55,514 (기존과 같은 기간 스캔, 서버 캐시) |
+  | 보안 뉴스 전체 / 국내 / 출처 1곳 | 0.01 / 0.03 / 0.01ms | 21 / 126 / 21 |
+  | 추천 후보 14일 (태그 30개) | 0.88ms | 3,572 |
+  - 수용 기준 p95 300ms 대비 여유 큼. API 측정은 server 구현 후 `server/perf/`에서 함께 확인
+- 주의: 분야 태그 수가 크게 늘면(분야당 100개+) `UNION` 서브쿼리 수만큼 비용 증가 → 그때 `post_fields` 재검토
+
+## D-20. 보안 뉴스 저장 규칙과 용량 (021)
+- 저장 (server 수집 단계에서 보장): 요약 150자 이하, `thumbnail_url` NULL, `post_search` 행 만들지 않음 → 검색 제외가 쿼리 조건 없이 보장됨. Next에서 검색 포함 시 재색인으로 채움
+  - 영향: 뉴스는 `post_search.feed_categories`도 없어서 재태깅 시 제목·요약만 씀 (005 손실과 같은 성격, 뉴스 태그는 표시용이라 허용)
+- 용량: RSS 실측 하루 약 35~55건 → 연 1.3만~2만 건, 행+인덱스 약 1.5KB → 연 30MB 이하. `post_search`가 없어 블로그 글보다 가벼움
+  - 보관 기한은 지금 두지 않음. D-17 버퍼 풀 기준(`posts`+`post_search` 70%)이나 뉴스 10만 건 도달 시 pm과 보관 기한 재검토 (북마크된 글은 남기는 방식 후보)
+- 시드: `db/seeds/003_security_news_sources.sql` 6곳 (국내 3·해외 3, 주기 30분, KISA 60분). KISA `B0000127`(보고서/가이드)은 제외 (server 의견 동의: 갱신 수 주 단위, description 없음)
+  - 운영 `devfeed` 시드 등록은 server의 뉴스 수집 규칙 배포 후. 먼저 넣으면 현재 서버가 블로그 규칙(썸네일·300자)으로 수집함

@@ -7,16 +7,16 @@
 db/
 ├── conf/devfeed.cnf     # MariaDB 서버 설정 (FULLTEXT 토큰 2자, stopword 끔, UTC)
 ├── perf/                # 성능 측정용 대량 시드 생성기, 측정 스크립트
-├── queries/            # feed.sql(007), personal.sql·withdrawal-check.sql(012), recommendation.sql(013) 기준 쿼리
+├── queries/            # feed.sql(007·021 분야·보안 뉴스·kind 정합성 검사), personal.sql·withdrawal-check.sql(012), recommendation.sql(013) 기준 쿼리
 ├── ops/                 # launchd 일일 백업 템플릿·설치 스크립트
-├── migrations/          # 0001~0009, -- migrate:up / -- migrate:down
+├── migrations/          # 0001~0010, -- migrate:up / -- migrate:down
 ├── scripts/migrate.sh   # 컨테이너에 마이그레이션 적용
 ├── scripts/seed.sh      # seeds/*.sql 순서대로 적용 (재실행 안전)
 ├── scripts/perf-seed.sh # 측정 DB(devfeed_perf)에 글 10만·회원 1만 생성
 ├── scripts/test-db-reset.sh # e2e DB(devfeed_test) 재생성 + 전체 마이그레이션
 ├── scripts/backup.sh    # devfeed 덤프 → ~/backups/devfeed, 14일 보관
 ├── scripts/restore.sh   # 백업을 지정 DB로 복원 (devfeed는 --force 필요)
-└── seeds/               # 001 소스 36곳, 002 태그 153개·동의어 266개
+└── seeds/               # 001 소스 36곳, 002 태그 153개·동의어 266개, 003 보안 뉴스 6곳
 ```
 
 ## 서버 설정
@@ -42,6 +42,8 @@ db/scripts/seed.sh
   - 1년 이상 새 글 없는 피드(직방, 쿠팡, 야놀자, 번개장터, 클래스101, 테코블 등)도 과거 글 아카이브용으로 포함
 - `002_tags.sql`: 태그 153개(분류 16개), 동의어 266개. 동의어는 태그 간·태그명과 겹치지 않음
   - 오탐 우려로 뺀 짧은 동의어: `CD`, `ES`, `RN`, `PG`, `DW`, `Cursor`, `람다`, `Compose`
+- `003_security_news_sources.sql`: 보안 뉴스 국내 3곳(데일리시큐, KISA 보안공지, AhnLab ASEC) + 해외 3곳(The Hacker News, BleepingComputer, SecurityWeek). 주기 30분, KISA 60분 (021)
+  - 운영 `devfeed`에는 server의 뉴스 수집 규칙(요약 150자·썸네일 없음·검색 미색인) 배포 후 적용
 - 모두 `ON DUPLICATE KEY UPDATE`라 여러 번 실행해도 결과 같음
 
 ## 백업·복원
@@ -68,11 +70,13 @@ db/scripts/perf-seed.sh                    # devfeed_perf 비어 있어야 함, 
 MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_feed.py   # 피드 쿼리 p50/p95
 MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_search.py # 검색 쿼리 p50/p95 (현행·권장·LIKE 기준선)
 MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_recommendation.py # 추천 선호도·후보 쿼리 p50/p95
+MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_field.py  # 분야·기업/개인·보안 뉴스 쿼리 p50/p95 (021)
 ```
 - DB `devfeed_perf`는 미리 생성 (`utf8mb4_unicode_ci`). 개발 DB `devfeed`와 분리해 합성 글이 섞이지 않게 함
 - 글 10만, post_tags 약 20만, 회원 1만, 북마크 약 50만, 읽은 기록 약 190만. 디스크 약 800MB
 - 글 텍스트는 `devfeed` 실제 글 단어를 재조합. 토큰은 서버 `tokenizer.ts`와 같은 규칙 (`perf/generate_posts.py`)
-- 고정 시드라 재생성해도 같은 분포. 측정 결과는 discussion 007 (피드), 010 (검색), 013 (추천)
+- 보안 뉴스 합성 4만 건(2년 분포, `보안` 태그 + 원본 1순위 태그): `003` 시드 후 `perf/news.sql` 실행
+- 고정 시드라 재생성해도 같은 분포. 측정 결과는 discussion 007 (피드), 010 (검색), 013 (추천), 021 (분야·보안 뉴스, `decisions.md` D-19)
 
 ## 검증 기록 (2026-11-19, MariaDB 12.1.2)
 - 설정 반영 확인: `innodb_ft_min_token_size=2`, `innodb_ft_enable_stopword=OFF`, `time_zone=+00:00`
@@ -85,3 +89,10 @@ MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_recommendation.py # 추천 �
   - 수집 선점 UPDATE: 1차 1, 2차 0
   - 피드·태그 커서 쿼리 EXPLAIN: `idx_posts_published`, `idx_post_tags_tag_published` range + Using index (filesort 없음)
 - 설정 파일은 `docker cp`로 넣었음. 컨테이너를 다시 만들면 사라지므로 `-v <repo>/db/conf:/etc/mysql/conf.d:ro` 마운트 필요
+
+## 검증 기록 (2026-11-20, `0010`, 021)
+- `devfeed_perf`(10만 건)·`devfeed_test`에서 up → down → up 통과. 10만 건 적용 1초 (컬럼 INSTANT, 인덱스 INPLACE)
+- `ck_sources_kind_region`: 뉴스인데 region 없음 / 블로그인데 region 있음 모두 거부
+- `003` 시드 2회 실행 후 뉴스 6곳 유지 (국내 3·해외 3, 주기 30·60분)
+- `feed.sql` 전체 실행 오류 없음, kind 정합성 검사 4항목 0
+- `devfeed` 적용은 사용자 확인 대기

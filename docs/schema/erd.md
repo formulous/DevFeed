@@ -1,9 +1,9 @@
 # ERD — 데브피드
 
 - 작성: dba
-- 상태: 확정 v1 (M6, 2026-11-19). 마이그레이션 0001~0009 기준, `devfeed` 실제 스키마와 대조 완료
+- 상태: v1.1 (M7, 2026-11-20). 마이그레이션 0001~0010 기준
 - DB: `devfeed` (MariaDB 12.1, InnoDB, utf8mb4_unicode_ci)
-- DDL: `db/migrations/0001~0009`, 컬럼 상세: `tables.md`, 결정 근거: `decisions.md`
+- DDL: `db/migrations/0001~0010`, 컬럼 상세: `tables.md`, 결정 근거: `decisions.md`
 
 ```mermaid
 erDiagram
@@ -30,6 +30,8 @@ erDiagram
         varchar feed_url
         binary feed_url_hash UK "생성 컬럼"
         enum source_type "COMPANY|PERSONAL"
+        enum kind "BLOG|SECURITY_NEWS"
+        enum region "DOMESTIC|OVERSEAS, 뉴스만"
         enum status "ACTIVE|ERROR|INACTIVE"
         smallint crawl_interval_min
         datetime next_crawl_at
@@ -47,6 +49,7 @@ erDiagram
         bigint id PK
         bigint source_id FK
         enum source_type "비정규화"
+        enum kind "비정규화"
         varchar url
         binary url_hash UK "생성 컬럼"
         binary guid_hash "UK(source_id, guid_hash)"
@@ -66,6 +69,7 @@ erDiagram
         bigint tag_id PK, FK
         tinyint tag_rank "1~5"
         datetime published_at "비정규화"
+        enum kind "비정규화"
     }
     tags {
         bigint id PK
@@ -131,9 +135,9 @@ erDiagram
 ## 테이블 요약
 | 영역 | 테이블 | 설명 | 기능 |
 |---|---|---|---|
-| 수집 | `sources` | 수집 대상 블로그. 스케줄링·선점·조건부 요청 상태 포함 | F-001, F-002, F-006 |
+| 수집 | `sources` | 수집 대상 블로그·보안 뉴스 (`kind`, 뉴스는 `region`). 스케줄링·선점·조건부 요청 상태 포함 | F-001, F-002, F-006, F-070 |
 | 수집 | `crawl_runs` | 소스별 수집 실행 1회 결과. 90일 보관 | F-002, F-006 |
-| 글 | `posts` | 수집한 글 메타데이터. 본문 미저장 | F-003, F-004, F-010~F-013 |
+| 글 | `posts` | 수집한 글·보안 뉴스 메타데이터. 본문 미저장 | F-003, F-004, F-010~F-016, F-071 |
 | 글 | `post_search` | 검색용 bigram 토큰 (1:1) | F-020~F-022 |
 | 태그 | `tags`, `tag_synonyms` | 태그 사전과 동의어 | F-005, A-04 |
 | 태그 | `post_tags` | 글-태그 연결, 노출 순서, 태그 필터용 정렬 키 | F-005, F-011 |

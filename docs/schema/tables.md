@@ -1,7 +1,7 @@
 # 테이블 명세
 
 - 작성: dba
-- 상태: 확정 v1 (M6, 2026-11-19). 마이그레이션 0001~0009 기준, `devfeed` 실제 스키마와 대조 완료
+- 상태: v1.1 (M7, 2026-11-20). 마이그레이션 0001~0010 기준. `0010`은 `devfeed_perf`·`devfeed_test` 적용, `devfeed` 적용 대기
 - 공통: InnoDB, utf8mb4_unicode_ci, 시간은 `DATETIME(3)` UTC, PK `BIGINT UNSIGNED AUTO_INCREMENT` (D-01)
 - 결정 번호(D-xx)는 `decisions.md` 참고
 
@@ -13,7 +13,9 @@
 | site_url | VARCHAR(2048) | NOT NULL | 블로그 URL |
 | feed_url | VARCHAR(2048) | NOT NULL | RSS/Atom URL |
 | feed_url_hash | BINARY(32) | STORED 생성, UK | `UNHEX(SHA2(feed_url,256))`. 중복 등록 방지. 서버는 쓰지 않음 (D-05) |
-| source_type | ENUM('COMPANY','PERSONAL') | NOT NULL | |
+| source_type | ENUM('COMPANY','PERSONAL') | NOT NULL | 보안 뉴스는 `COMPANY` 고정 저장, 화면에서 안 씀 (021) |
+| kind | ENUM('BLOG','SECURITY_NEWS') | NOT NULL, 기본 BLOG | `0010`. 등록 후 변경 불가 (서버 보장). 기존 36곳 BLOG (D-18) |
+| region | ENUM('DOMESTIC','OVERSEAS') | NULL | `0010`. 보안 뉴스만 필수, 블로그는 NULL (`ck_sources_kind_region`) |
 | logo_url | VARCHAR(2048) | NULL | |
 | crawl_interval_min | SMALLINT UNSIGNED | NOT NULL, 기본 60, CHECK ≥ 30 | F-001 |
 | status | ENUM('ACTIVE','ERROR','INACTIVE') | NOT NULL, 기본 ACTIVE | 삭제 대신 INACTIVE (D-02) |
@@ -29,6 +31,9 @@
 인덱스
 - `uk_sources_feed_url_hash (feed_url_hash)`
 - `idx_sources_status_next_crawl (status, next_crawl_at)`: 스케줄러 1분 tick 조회
+
+제약
+- `ck_sources_kind_region`: `(kind = 'BLOG' AND region IS NULL) OR (kind = 'SECURITY_NEWS' AND region IS NOT NULL)`
 
 ## crawl_runs — `0001`
 | 컬럼 | 타입 | 제약 | 설명·이유 |
@@ -75,13 +80,14 @@
 | id | BIGINT UNSIGNED | PK | 커서 동률 해소 키 |
 | source_id | BIGINT UNSIGNED | FK → sources | |
 | source_type | ENUM('COMPANY','PERSONAL') | NOT NULL | 비정규화. 유형 필터 + 커서 (D-07) |
+| kind | ENUM('BLOG','SECURITY_NEWS') | NOT NULL, 기본 BLOG | `0010`. `sources.kind` 비정규화. 블로그 전용 목록과 보안 뉴스 탭 분리 (D-18) |
 | guid | VARCHAR(1024) | NULL | 피드 guid/id |
 | guid_hash | BINARY(32) | STORED 생성 | guid NULL이면 NULL (D-05) |
 | url | VARCHAR(2048) | NOT NULL | 서버가 정규화한 원문 URL |
 | url_hash | BINARY(32) | STORED 생성, UK | 중복 판단 1순위 키 |
 | title | VARCHAR(500) | NOT NULL | |
-| summary | VARCHAR(300) | NULL | 말줄임표 포함 300자 이하. 본문 미저장 (F-004) |
-| thumbnail_url | VARCHAR(2048) | NULL | |
+| summary | VARCHAR(300) | NULL | 말줄임표 포함 300자 이하. 본문 미저장 (F-004). 보안 뉴스는 150자 이하 (D-20) |
+| thumbnail_url | VARCHAR(2048) | NULL | 보안 뉴스는 항상 NULL (D-20) |
 | published_at | DATETIME(3) | NOT NULL | 없음·미래면 수집 시각으로 대체해 저장 |
 | original_published_at | DATETIME(3) | NULL | 피드 원래 발행일 |
 | view_count | INT UNSIGNED | NOT NULL, 기본 0 | 24시간 중복 제외 후 +1 (D-08) |
@@ -90,9 +96,9 @@
 
 인덱스
 - `uk_posts_url_hash (url_hash)`, `uk_posts_source_guid_hash (source_id, guid_hash)`: 중복 0건 보장
-- `idx_posts_published (published_at, id)`: 최신 피드 커서, 인기 글 기간 범위
+- `idx_posts_kind_published (kind, published_at, id)`: `0010`. 최신 피드·보안 뉴스 탭 커서, 인기 글 기간 범위 (기존 `idx_posts_published` 대체)
 - `idx_posts_source_published (source_id, published_at, id)`: 소스 필터 커서. FK 인덱스 겸용
-- `idx_posts_type_published (source_type, published_at, id)`: 소스 유형 필터 커서
+- `idx_posts_kind_type_published (kind, source_type, published_at, id)`: `0010`. 기업·개인 탭 커서 (기존 `idx_posts_type_published` 대체)
 - `idx_posts_search_filter (id, published_at, source_id, source_type)`: `0009`. 검색 FULLTEXT 결과 조인 시 커버링 인덱스로 필터·최신순 처리. `FORCE INDEX` 필요 (D-15)
 
 ## post_tags — `0003`
@@ -102,12 +108,15 @@
 | tag_id | BIGINT UNSIGNED | PK, FK → tags CASCADE | 태그 삭제 시 연결만 삭제 |
 | tag_rank | TINYINT UNSIGNED | NOT NULL, CHECK 1~5 | 카드 태그 노출 순서, 제목 등장 우선 (F-005). `rank`는 예약어 |
 | published_at | DATETIME(3) | NOT NULL | `posts.published_at` 비정규화 (D-07) |
+| kind | ENUM('BLOG','SECURITY_NEWS') | NOT NULL, 기본 BLOG | `0010`. `posts.kind` 비정규화. 태그·분야 필터에서 보안 뉴스 건너뛰기 방지 (D-18) |
 
 인덱스
 - PK `(post_id, tag_id)`: 글의 태그 조회 (카드 렌더링)
-- `idx_post_tags_tag_published (tag_id, published_at, post_id)`: 태그 필터 커서, 태그별 사용 글 수 (D-11)
+- `idx_post_tags_tag_kind_published (tag_id, kind, published_at, post_id)`: `0010`. 태그·분야 필터 커서, 태그별 사용 글 수, 추천 후보 (D-11, D-19). 기존 `idx_post_tags_tag_published` 대체
 
 ## post_search — `0003`
+- 보안 뉴스 글은 행을 만들지 않음 → 검색에서 쿼리 조건 없이 제외 (D-20)
+
 | 컬럼 | 타입 | 제약 | 설명·이유 |
 |---|---|---|---|
 | post_id | BIGINT UNSIGNED | PK, FK → posts CASCADE | 1:1 |
