@@ -130,7 +130,7 @@ App
   - 탭 이동 시 분야(`?field=`)는 유지, 태그·소스 필터는 초기화
 - 2단 분야 탭 `FieldTabs`: 13px 글자 탭, `·`으로 구분하고 1단과 같은 색 규칙. 항목: 전체·백엔드·프론트엔드·AI·데이터·인프라·모바일·보안 (`lib/fields.ts`, API `field=BACKEND` 등)
   - 최신·인기·기업·개인에서만 보임. 잘못된 `field` 값은 전체로 해석해 요청에 넣지 않음 (서버는 400)
-  - hero 안에 있어 스크롤하면 사라짐. sticky 헤더는 56px라 사이드바 높이에 여유가 있음 (1280×720 최대 선택에서도 사이드바 스크롤 없음)
+  - 위치: 1단 탭 아래 1px 구분선 밑, 본문(`main`) 맨 위 줄 (022 후속). 구분선은 탭 화면 6개 모두 1단 탭 바로 아래이고, 분야 탭과 본문 사이는 여백으로만 나눔. 스크롤하면 사라짐. sticky 헤더는 56px라 사이드바 높이에 여유가 있음 (1280×720 최대 선택에서도 사이드바 스크롤 없음)
   - sticky 헤더 높이는 `--header-h` CSS 변수로 측정해 사이드바 `top`·`max-height`에 씀
 - 기업·개인 탭(S-13): `HomePage`에 `sourceType` 고정. 유형 세그먼트 숨김, 소스 선택 창·빠른 소스 칩은 해당 유형만 (`FilterBindings.sourceScope`), URL `sourceType`은 무시
 - 보안 뉴스(S-14) `features/security/`: `GET /security-news` 커서 무한 스크롤, 날짜 구분선(오늘·어제·M월 D일), `[전체|국내|해외]`(`?region=domestic|overseas`), 출처 칩 사이드바(`GET /security-news/sources`, 모바일은 S-12 시트)

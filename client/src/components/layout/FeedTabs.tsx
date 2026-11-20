@@ -140,17 +140,15 @@ export function FieldTabs() {
 }
 
 export function PageHero({ title }: { title: string }) {
-  const { pathname } = useLocation();
   return (
     <div className="border-b border-line">
-      <div className="mx-auto max-w-[1200px] px-4 pb-4 pt-5 lg:pt-12">
+      <div className="mx-auto max-w-[1200px] px-4 pb-3 pt-5 lg:pt-12">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <SearchBox className="w-full lg:order-last lg:w-80" />
           <h1 className="text-[28px] font-bold leading-tight tracking-[-0.02em] text-fg lg:text-[40px]">{title}</h1>
         </div>
-        <div className="mt-3 space-y-1 lg:mt-5">
+        <div className="mt-3 lg:mt-5">
           <FeedTabs />
-          {isFieldTab(pathname) && <FieldTabs />}
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@ import { Outlet, useLocation } from 'react-router';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { AppFooter } from './AppFooter';
 import { AppHeader } from './AppHeader';
-import { heroTitle, PageHero } from './FeedTabs';
+import { FieldTabs, heroTitle, isFieldTab, PageHero } from './FeedTabs';
 
 export function AppLayout() {
   const { pathname } = useLocation();
@@ -12,6 +12,11 @@ export function AppLayout() {
       <AppHeader showSearchLink={!title} />
       {title && <PageHero title={title} />}
       <main className="mx-auto w-full max-w-[1200px] flex-1 px-4 py-6 lg:py-8">
+        {isFieldTab(pathname) && (
+          <div className="-mt-2 mb-5 lg:-mt-3 lg:mb-6">
+            <FieldTabs />
+          </div>
+        )}
         <ErrorBoundary resetKey={pathname}>
           <Outlet />
         </ErrorBoundary>
