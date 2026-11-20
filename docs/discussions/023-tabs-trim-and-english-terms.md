@@ -64,3 +64,102 @@
   - 태그 사전 캐시는 TTL이 없음 → DB를 직접 바꾸면 server 재시작 필요(알려 주면 바로 재시작). 분야 태그 ID 캐시는 1분
   - 재태깅(관리자 `POST /admin/tags/retag`)은 필수 아님. 하면 새 영어 이름이 검색 색인에 들어가 영어 검색도 기존 글에 잡힘 → 수용 기준 "재태깅 전후 태그 수 동일" 확인용으로 server가 적용 후 전후 비교 실행 가능
 - 검증: 단위 122건, e2e 45건 통과
+
+### dba (1차) — 태그 영어화 목록·분류 값 변경 방식·태깅 영향 (2026-11-21)
+
+#### 1. 태그 153개 전수 분류
+- 바꿈 47 / 한글 유지 13 / 이미 영어 93 (변경 없음). 태그 ID·slug 유지, 이름만 변경
+- 매칭 규칙 주의: 자동 태깅은 **태그 이름도 매칭어**로 씀 (`tagger.ts`). 기존 한글 이름은 동의어로 옮겨 손실 0. 새 영어 이름이 기존 동의어와 같으면 매칭어 집합이 그대로라 태깅 변화 0, 새 단어면 매칭어가 하나 늘어남
+
+| 분류 | 기존 | 변경 | 글 수 | 새 이름이 기존 동의어? |
+|---|---|---|---|---|
+| 프론트엔드 | 웹 접근성 | Web Accessibility | 8 | 새 단어 |
+| 프론트엔드 | 웹 성능 | Web Performance | 5 | 새 단어 |
+| 프론트엔드 | 상태 관리 | State Management | 8 | O |
+| 프론트엔드 | 디자인 시스템 | Design System | 14 | O |
+| 프론트엔드 | 마이크로 프론트엔드 | Micro Frontends | 1 | O |
+| 프론트엔드 | 모노레포 | Monorepo | 2 | O |
+| 백엔드 | 배치 | Batch Processing | 15 | 새 단어 |
+| 백엔드 | 동시성 | Concurrency | 15 | O |
+| 백엔드 | 코루틴 | Coroutine | 3 | O |
+| 백엔드 | 비동기 | Async | 32 | 새 단어 |
+| 백엔드 | 캐시 | Cache | 31 | O |
+| 데이터베이스 | 인덱스 | DB Index | 20 | 새 단어 |
+| 데이터베이스 | 쿼리 최적화 | Query Optimization | 2 | O |
+| 데이터베이스 | 트랜잭션 | Transaction | 19 | O |
+| 데이터베이스 | 샤딩 | Sharding | 3 | O |
+| 데이터 | 메시지 큐 | Message Queue | 9 | O |
+| 데이터 | 검색 엔진 | Search Engine | 4 | O |
+| 데이터 | 데이터 파이프라인 | Data Pipeline | 13 | O |
+| 데이터 | 데이터 웨어하우스 | Data Warehouse | 0 | O |
+| 데이터 | A/B 테스트 | A/B Testing | 2 | 새 단어 |
+| 인프라 | 네트워크 | Network | 39 | O |
+| 인프라 | 서비스 메시 | Service Mesh | 3 | O |
+| 클라우드 | 서버리스 | Serverless | 11 | O |
+| DevOps | 모니터링 | Monitoring | 30 | O |
+| DevOps | 옵저버빌리티 | Observability | 15 | O |
+| DevOps | 로깅 | Logging | 11 | O |
+| 아키텍처 | 이벤트 기반 아키텍처 | Event-Driven Architecture | 3 | 새 단어 |
+| 아키텍처 | 클린 아키텍처 | Clean Architecture | 4 | O |
+| 아키텍처 | 디자인 패턴 | Design Pattern | 3 | O |
+| 아키텍처 | 분산 시스템 | Distributed Systems | 3 | 새 단어 |
+| 품질 | 테스트 | Testing | 135 | 새 단어 |
+| 품질 | E2E 테스트 | E2E Testing | 8 | 새 단어 |
+| 품질 | 리팩터링 | Refactoring | 6 | O |
+| 품질 | 성능 최적화 | Performance Optimization | 11 | 새 단어 |
+| 문화 | 애자일 | Agile | 6 | O |
+| 문화 | 오픈소스 | Open Source | 31 | O |
+| AI | 머신러닝 | Machine Learning | 28 | O |
+| AI | 딥러닝 | Deep Learning | 1 | O |
+| AI | AI 에이전트 | AI Agent | 100 | O |
+| AI | 추천 시스템 | Recommender System | 3 | O |
+| AI | 자연어 처리 | NLP | 0 | O |
+| AI | 컴퓨터 비전 | Computer Vision | 0 | O |
+| AI | 프롬프트 엔지니어링 | Prompt Engineering | 11 | O |
+| AI | AI 코딩 도구 | AI Coding Tools | 52 | 새 단어 |
+| 보안 | 보안 | Security | 147 | O |
+| 보안 | 인증 | Authentication | 110 | O |
+| 보안 | 암호화 | Cryptography | 19 | 새 단어 |
+
+- pm 예시와 다르게 정한 것
+  - `인덱스` → **`DB Index`** (`Index`는 `z-index`·일반 영어 "index"까지 잡음, 시뮬레이션에서 CSS 글 오탐 확인)
+  - `배치` → **`Batch Processing`** (`Batch`는 무관한 글 2건 추가 태깅)
+  - `성능 최적화` → **`Performance Optimization`** (`Performance`는 "High Performance" 같은 영어 제목 2건 오탐. `웹 성능`=`Web Performance`와도 구분됨)
+  - `웹 접근성` → `Web Accessibility` (a11y는 동의어로 이미 있음)
+  - `보안` → **`Security`** (분류 `Security`와 같은 이름. 분류명과 태그명은 서로 다른 목록이라 충돌 없음)
+- 한글 유지 13: 데이터 분석, 결제, 핀테크, 커머스, 개발 문화, 회고, 채용, 컨퍼런스, 게임 서버, 개인정보, 대규모 트래픽, 기술 부채, 코드 리뷰
+- 정리 대상 동의어: 새 이름과 같아지는 기존 동의어(예: `캐시`의 `Cache`)는 삭제하고 한글 이름을 동의어로 추가 → 이름·동의어 중복 없음 규칙 유지. 다른 태그 이름·동의어와 충돌 0건
+
+#### 2. 태깅 영향 시뮬레이션 (`db/scripts/tag-rename-impact.py`, 운영 글 2,588건, 서버 `tagger.ts` 규칙 그대로 재태깅)
+- 손실 0건 (모든 한글 이름이 동의어로 남음). "캐시"·"테스트"·"인증"은 매칭어 집합이 같아 태깅·검색 결과 동일
+- 변화 8건, 전부 **추가 또는 순서 변경** (태그가 빠지는 글 0)
+  | 원인 | 건수 | 내용 |
+  |---|---|---|
+  | `Async` 새 매칭어 | 5건 추가 | 영어 "async"가 있는 글 (`async fn`, `defer와 async`, Swift·Rust 비동기). 모두 맞는 태그 |
+  | `DB Index` 새 매칭어 | 1건 추가 | "DB Index 입문" 글. 맞는 태그 |
+  | `Cryptography`·`Testing` | 2건 순서만 변경 | 제목의 영어 단어가 한글보다 앞에 있어 순위 앞당겨짐. 태그 집합 같음 |
+- 수용 기준 "재태깅 전후 태그 수 동일"과는 +6행 차이. **dba 권장: 허용** (손실 0이고 추가 6건 모두 정답 태그). 엄격 적용 원하면 `비동기`·`인덱스`를 한글 유지하면 변화 0 (순서 변경 2건만 남음) → pm 결정 요청
+- 검색: 기존 글의 검색 토큰은 이미 한글 이름으로 저장돼 있어 그대로 검색됨. 새 글은 이름+동의어(한글 포함)로 토큰 생성 → "캐시" 검색 결과 동일
+
+#### 3. 분류 값 변경 방식 (server와 확정 필요)
+- dba 제안: **DB 값 자체를 영어로 변경** (`tags.category`). 표시 라벨 매핑을 두면 client·server·관리자 화면 세 곳에 매핑이 생기고 관리자 입력값과 표시값이 달라짐
+  | 기존 | 변경 | | 기존 | 변경 |
+  |---|---|---|---|---|
+  | 언어 | Language | | 프론트엔드 | Frontend |
+  | 백엔드 | Backend | | 데이터베이스 | Database |
+  | 데이터 | Data | | AI | AI |
+  | 인프라 | Infra | | DevOps | DevOps |
+  | 아키텍처 | Architecture | | 품질 | Quality |
+  | 보안 | Security | | 문화 | 문화 |
+  | 모바일 | Mobile | | 클라우드 | Cloud |
+  | 도메인 | Domain | | 디자인 | Design |
+  - `문화`는 한글 유지. `기타`는 DB 값이 아니라 분류 NULL의 화면 라벨 (client)
+- 영향: `GET /tags?category=` 값이 영어로 바뀜 (client S-12 분류 탭), server 분야 상수(`field → category[]`)
+- 무중단 순서 제안
+  1. server: 분야 상수에 한글·영어 값 **둘 다** 넣어 배포 (전환 중 분야 필터 공백 방지), 태그 사전·분야 캐시 무효화 경로 확인
+  2. dba: 마이그레이션 `0011`(이름·분류·동의어 데이터 변경, down 포함) + `002_tags.sql` 시드 갱신 → `devfeed` 적용, 적용 직후 server에 캐시 무효화(또는 재시작) 요청
+  3. server: 상수에서 한글 값 제거. client: 분류 라벨 영어 그대로 표시
+
+#### 요청
+- pm: 1번 목록(특히 `DB Index`·`Batch Processing`·`Performance Optimization`·`Security`)과 2번 "추가 6건 허용" 여부 결정
+- server: 3번 방식·순서 동의 여부. 동의하면 1단계 배포 후 알려주기 바람. `0011`은 pm 확정 후 작성해 `devfeed_test`·`devfeed_perf`에서 up → down → up 검증 후 운영 적용

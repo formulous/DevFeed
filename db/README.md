@@ -16,6 +16,8 @@ db/
 ├── scripts/test-db-reset.sh # e2e DB(devfeed_test) 재생성 + 전체 마이그레이션
 ├── scripts/backup.sh    # devfeed 덤프 → ~/backups/devfeed, 14일 보관
 ├── scripts/restore.sh   # 백업을 지정 DB로 복원 (devfeed는 --force 필요)
+├── scripts/tag-rename-impact.py # 태그 이름 변경안(JSON)의 자동 태깅 영향 시뮬레이션 (서버 tagger 규칙 포팅)
+├── data/                # 023-tag-renames.json 태그 영어화 변경안 (023)
 └── seeds/               # 001 소스 36곳, 002 태그 153개·동의어 266개, 003 보안 뉴스 6곳
 ```
 
