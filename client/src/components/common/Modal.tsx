@@ -34,14 +34,14 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} aria-hidden />
+      <div className="absolute inset-0 bg-overlay" onClick={onClose} aria-hidden />
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className="relative w-full max-w-sm rounded-[var(--radius-lg)] bg-surface p-5 shadow-2xl outline-none"
+        className="relative w-full max-w-sm rounded-[var(--radius-lg)] border border-line bg-surface p-5 shadow-pop outline-none"
       >
         <div className="mb-3 flex items-center justify-between">
           <h2 id={titleId} className="text-lg font-semibold">

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { Button } from '@onyx/components/button/button';
-import { TextField } from '@onyx/components/input/text-field';
+import { TextInput } from '@/components/common/TextInput';
 import { ApiError } from '@/api/http';
 import type { SignupInput } from '@/api/types';
 import { useAuth } from '@/auth/AuthProvider';
@@ -63,11 +63,11 @@ export function SignupPage() {
       <h1 className="mb-6 text-xl font-bold">회원가입</h1>
       <form onSubmit={submit} noValidate className="space-y-4">
         <div>
-          <TextField label="이메일" autoComplete="email" inputMode="email" value={values.email} onChange={set('email')} className="h-10" />
+          <TextInput label="이메일" autoComplete="email" inputMode="email" value={values.email} onChange={set('email')} className="h-10" />
           <FieldError message={show('email')} />
         </div>
         <div>
-          <TextField
+          <TextInput
             label="비밀번호"
             type="password"
             autoComplete="new-password"
@@ -80,7 +80,7 @@ export function SignupPage() {
           {!show('password') && <p className="mt-1 text-xs text-fg-muted">8~64자, 영문·숫자 포함 (공백·한글 불가)</p>}
         </div>
         <div>
-          <TextField
+          <TextInput
             label="비밀번호 확인"
             type="password"
             autoComplete="new-password"
@@ -92,11 +92,11 @@ export function SignupPage() {
           <FieldError message={show('passwordConfirm')} />
         </div>
         <div>
-          <TextField label="닉네임" autoComplete="nickname" maxLength={20} value={values.nickname} onChange={set('nickname')} className="h-10" />
+          <TextInput label="닉네임" autoComplete="nickname" maxLength={20} value={values.nickname} onChange={set('nickname')} className="h-10" />
           <FieldError message={show('nickname')} />
         </div>
         {formError && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-danger">
             {formError}
           </p>
         )}
@@ -104,7 +104,7 @@ export function SignupPage() {
           type="submit"
           height={40}
           disabled={pending}
-          className="bg-brand text-sm text-white"
+          className="rounded-full bg-inverse text-sm text-on-inverse"
           content={pending ? '가입 중' : '가입하기'}
         />
       </form>

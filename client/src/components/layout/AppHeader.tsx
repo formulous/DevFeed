@@ -2,12 +2,15 @@ import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 're
 import { FiSearch } from 'react-icons/fi';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '@/auth/AuthProvider';
-import { FeedTabs } from './FeedTabs';
+import { cn } from '@/lib/cn';
+import { ThemeToggle } from './ThemeToggle';
 
 export const SEARCH_MIN = 2;
 export const SEARCH_MAX = 50;
 
-function SearchBox() {
+const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring';
+
+export function SearchBox({ className }: { className?: string }) {
   const [params] = useSearchParams();
   const urlQuery = params.get('q') ?? '';
   const [value, setValue] = useState(urlQuery);
@@ -23,25 +26,25 @@ function SearchBox() {
   };
 
   return (
-    <form role="search" onSubmit={submit} className="relative w-full max-w-md">
+    <form role="search" onSubmit={submit} className={cn('relative', className)}>
+      <button
+        type="submit"
+        disabled={!valid}
+        aria-label="검색"
+        className="absolute left-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-fg-secondary disabled:text-fg-muted"
+      >
+        <FiSearch size={15} aria-hidden />
+      </button>
       <input
         type="search"
         value={value}
         maxLength={SEARCH_MAX}
         onChange={(e) => setValue(e.target.value)}
-        placeholder="기술 글 검색"
+        placeholder="기술 글 검색…"
         aria-label="검색어"
-        className="h-9 w-full rounded-lg border border-line bg-white pl-3 pr-9 text-sm focus:border-brand-ring focus:outline-none focus:ring-2 focus:ring-brand-focus"
+        className="h-10 w-full rounded-full border border-line bg-input pl-9 pr-4 text-sm text-fg placeholder:text-fg-muted transition-colors focus:border-line-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-focus"
       />
-      <button
-        type="submit"
-        disabled={!valid}
-        aria-label="검색"
-        className="absolute right-2 top-1/2 -translate-y-1/2 text-fg-secondary disabled:text-fg-muted"
-      >
-        <FiSearch size={16} />
-      </button>
-      {trimmed.length === 1 && <p className="absolute mt-1 text-xs text-fg-muted">2자 이상 입력해야 함</p>}
+      {trimmed.length === 1 && <p className="absolute left-4 mt-1 text-xs text-fg-muted">2자 이상 입력해야 함</p>}
     </form>
   );
 }
@@ -51,23 +54,29 @@ function ProfileMenu() {
   if (status === 'loading') return <div className="h-8 w-16" />;
   if (status === 'guest') {
     return (
-      <Link to="/login" className="shrink-0 text-sm font-medium text-fg-secondary hover:text-brand">
+      <Link
+        to="/login"
+        className={cn('flex h-8 shrink-0 items-center rounded-full bg-inverse px-3.5 text-sm font-medium text-on-inverse hover:opacity-90', FOCUS)}
+      >
         로그인
       </Link>
     );
   }
+  const item = 'block px-3 py-2 hover:bg-hover';
   return (
     <details className="relative shrink-0">
-      <summary className="max-w-[8rem] cursor-pointer list-none truncate text-sm font-medium">{me?.nickname} ▾</summary>
-      <ul className="absolute right-0 z-20 mt-2 w-36 rounded-lg border border-line bg-surface py-1 text-sm shadow-lg">
-        <li><Link className="block px-3 py-2 hover:bg-slate-50" to="/me/bookmarks">북마크</Link></li>
-        <li><Link className="block px-3 py-2 hover:bg-slate-50" to="/me/history">읽은 기록</Link></li>
-        <li><Link className="block px-3 py-2 hover:bg-slate-50" to="/me/settings">설정</Link></li>
+      <summary className="flex h-8 max-w-[9rem] cursor-pointer list-none items-center truncate rounded-full px-2 text-sm font-medium text-fg-secondary hover:text-fg">
+        {me?.nickname} ▾
+      </summary>
+      <ul className="absolute right-0 z-20 mt-2 w-36 rounded-lg border border-line bg-surface py-1 text-sm shadow-pop">
+        <li><Link className={item} to="/me/bookmarks">북마크</Link></li>
+        <li><Link className={item} to="/me/history">읽은 기록</Link></li>
+        <li><Link className={item} to="/me/settings">설정</Link></li>
         {me?.role === 'ADMIN' && (
-          <li><Link className="block px-3 py-2 hover:bg-slate-50" to="/admin">관리자</Link></li>
+          <li><Link className={item} to="/admin">관리자</Link></li>
         )}
         <li>
-          <button type="button" className="block w-full px-3 py-2 text-left hover:bg-slate-50" onClick={() => logout()}>
+          <button type="button" className={cn(item, 'w-full text-left')} onClick={() => logout()}>
             로그아웃
           </button>
         </li>
@@ -91,21 +100,25 @@ function useHeaderHeightVar() {
   return ref;
 }
 
-export function AppHeader() {
+export function AppHeader({ showSearchLink = false }: { showSearchLink?: boolean }) {
   const ref = useHeaderHeightVar();
   return (
-    <header ref={ref} className="sticky top-0 z-30 bg-surface/95 shadow-[inset_0_-1px_0_var(--color-border)] backdrop-blur">
-      <div className="mx-auto flex max-w-[1200px] items-center gap-4 px-4 pt-3">
-        <Link to="/" className="shrink-0 text-lg font-bold text-brand">
+    <header ref={ref} className="sticky top-0 z-30 border-b border-line bg-[color:color-mix(in_srgb,var(--color-bg-app)_85%,transparent)] backdrop-blur-md">
+      <div className="mx-auto flex h-14 max-w-[1200px] items-center gap-2 px-4">
+        <Link to="/" className={cn('mr-auto shrink-0 rounded text-lg font-semibold tracking-tight text-fg', FOCUS)}>
           DevFeed
         </Link>
-        <SearchBox />
-        <div className="ml-auto shrink-0 whitespace-nowrap">
-          <ProfileMenu />
-        </div>
-      </div>
-      <div className="mx-auto max-w-[1200px] lg:px-4">
-        <FeedTabs />
+        {showSearchLink && (
+          <Link
+            to="/search"
+            aria-label="검색으로 이동"
+            className={cn('flex h-8 w-8 items-center justify-center rounded-full text-fg-secondary hover:bg-hover hover:text-fg', FOCUS)}
+          >
+            <FiSearch size={16} aria-hidden />
+          </Link>
+        )}
+        <ThemeToggle />
+        <ProfileMenu />
       </div>
     </header>
   );

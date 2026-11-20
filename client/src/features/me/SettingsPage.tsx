@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { FiX } from 'react-icons/fi';
 import { Button } from '@onyx/components/button/button';
-import { TextField } from '@onyx/components/input/text-field';
+import { TextInput } from '@/components/common/TextInput';
 import { ApiError } from '@/api/http';
 import { INTEREST_MAX, INTEREST_MIN, saveInterestTags, updateNickname, withdraw } from '@/api/me';
 import { useAuth } from '@/auth/AuthProvider';
@@ -44,14 +44,14 @@ function NicknameForm() {
   return (
     <form onSubmit={submit} noValidate className="flex items-start gap-2">
       <div className="max-w-xs flex-1">
-        <TextField label="닉네임" value={value} maxLength={20} onChange={(e) => setValue(e.target.value)} className="h-9" />
+        <TextInput label="닉네임" value={value} maxLength={20} onChange={(e) => setValue(e.target.value)} className="h-9" />
         <FieldError message={(value !== me?.nickname ? local : undefined) ?? serverError} />
       </div>
       <Button
         type="submit"
         width={64}
         height={36}
-        className="mt-5 bg-brand text-white"
+        className="mt-5 rounded-full bg-inverse text-on-inverse"
         content="저장"
         disabled={!!local || trimmed === me?.nickname || save.isPending}
       />
@@ -110,7 +110,7 @@ function InterestTags() {
             </li>
           ))}
           <li>
-            <button type="button" onClick={openPicker} className="rounded-full border border-dashed border-line px-3 py-1 text-sm text-fg-secondary hover:border-brand hover:text-brand">
+            <button type="button" onClick={openPicker} className="rounded-full border border-dashed border-line px-3 py-1 text-sm text-fg-secondary hover:border-line-strong hover:text-brand">
               {current.length === 0 ? '+ 관심 태그 고르기' : '+ 추가·변경'}
             </button>
           </li>
@@ -134,7 +134,7 @@ function InterestTags() {
           <Button
             width={64}
             height={36}
-            className="bg-brand text-white"
+            className="rounded-full bg-inverse text-on-inverse"
             content="저장"
             disabled={draft.length < INTEREST_MIN || save.isPending}
             onClick={() => save.mutate(draft)}
@@ -184,7 +184,7 @@ function WithdrawModal({ open, onClose }: { open: boolean; onClose: () => void }
           <li>북마크, 읽은 기록, 관심 태그</li>
         </ul>
         <p className="mb-4 text-xs text-fg-muted">글 조회수 같은 집계 수치는 개인을 알 수 없는 형태로 남음.</p>
-        <TextField
+        <TextInput
           label="비밀번호 확인"
           type="password"
           autoComplete="current-password"
@@ -199,7 +199,7 @@ function WithdrawModal({ open, onClose }: { open: boolean; onClose: () => void }
             type="submit"
             width={72}
             height={36}
-            className="bg-red-600 text-white"
+            className="rounded-full bg-danger text-on-danger"
             content={run.isPending ? '처리 중' : '탈퇴하기'}
             disabled={!password || run.isPending}
           />
@@ -229,7 +229,7 @@ export function SettingsPage() {
             variant="outlined"
             width={80}
             height={36}
-            className="border-red-200 text-red-600"
+            className="border-danger-line text-danger"
             content="회원 탈퇴"
             onClick={() => setWithdrawOpen(true)}
           />

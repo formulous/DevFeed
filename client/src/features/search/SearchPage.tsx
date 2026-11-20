@@ -74,7 +74,7 @@ export function SearchPage() {
         ) : (
           <>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-              <h1 className="min-w-0 text-base">
+              <h2 className="min-w-0 text-base">
                 <strong className="break-all">"{state.q}"</strong> 검색 결과{' '}
                 {search.data && (
                   <span className="text-fg-secondary">
@@ -83,12 +83,12 @@ export function SearchPage() {
                       : `${formatNumber(search.data.total)}건`}
                   </span>
                 )}
-              </h1>
+              </h2>
               <select
                 aria-label="정렬"
                 value={state.sort}
                 onChange={(e) => setSort(e.target.value as SearchSort)}
-                className="h-8 rounded-lg border border-line bg-white px-2 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-focus"
+                className="h-8 rounded-lg border border-line bg-input px-2 text-xs font-bold text-fg focus:outline-none focus:ring-2 focus:ring-brand-focus"
               >
                 {SORT_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -99,7 +99,7 @@ export function SearchPage() {
             </div>
 
             {search.isPending ? (
-              <div className="space-y-3">
+              <div>
                 {Array.from({ length: 5 }, (_, i) => (
                   <PostCardSkeleton key={i} />
                 ))}
@@ -125,7 +125,7 @@ export function SearchPage() {
               />
             ) : (
               <>
-                <ul className={cn('space-y-3', search.isPlaceholderData && 'opacity-60')}>
+                <ul className={cn('divide-y divide-line', search.isPlaceholderData && 'opacity-60')}>
                   {search.data.items.map((post) => (
                     <li key={post.id}>
                       <PostCard post={post} query={state.q} onOpen={openPost} onToggleBookmark={toggleBookmark} />

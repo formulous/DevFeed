@@ -38,14 +38,14 @@ function RetagProgress({ jobId }: { jobId: string }) {
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={pct}
-        className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"
+        className="mt-2 h-2 overflow-hidden rounded-full bg-subtle"
       >
         <div
-          className={status === 'FAILED' ? 'h-full bg-red-500' : 'h-full bg-brand transition-[width]'}
+          className={status === 'FAILED' ? 'h-full bg-danger' : 'h-full bg-inverse transition-[width]'}
           style={{ width: `${pct}%` }}
         />
       </div>
-      {jobError && <p className="mt-2 text-red-600">{jobError}</p>}
+      {jobError && <p className="mt-2 text-danger">{jobError}</p>}
     </div>
   );
 }
@@ -78,13 +78,13 @@ export function TagDictionaryPage() {
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <h1 className="text-xl font-bold">태그 사전</h1>
         <div className="ml-auto flex gap-2">
-          <Button width={88} height={34} className="bg-brand text-white" content="+ 태그 추가" onClick={() => setEditing(null)} />
+          <Button width={88} height={34} className="rounded-full bg-inverse text-on-inverse" content="+ 태그 추가" onClick={() => setEditing(null)} />
           <Button width={120} height={34} variant="outlined" content="전체 재태깅 실행" onClick={() => setConfirmRetag(true)} />
         </div>
       </div>
 
       <div className="mb-3 space-y-2">
-        {retag.isError && <p className="text-sm text-red-600">{errorMessage(retag.error)}</p>}
+        {retag.isError && <p className="text-sm text-danger">{errorMessage(retag.error)}</p>}
         {jobId && <RetagProgress jobId={jobId} />}
       </div>
 
@@ -107,7 +107,7 @@ export function TagDictionaryPage() {
       ) : (
         <div className="overflow-x-auto rounded-[var(--radius-md)] border border-line bg-surface">
           <table className="w-full min-w-[560px] text-sm">
-            <thead className="bg-slate-50 text-left text-xs text-fg-secondary">
+            <thead className="bg-hover text-left text-xs text-fg-secondary">
               <tr>
                 <th className="px-3 py-2 font-medium">태그</th>
                 <th className="px-3 py-2 font-medium">분류</th>

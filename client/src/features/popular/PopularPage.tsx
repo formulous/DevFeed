@@ -47,8 +47,8 @@ export function PopularPage() {
   return (
     <section className="mx-auto max-w-3xl">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-bold">인기 글{field && <span className="ml-1.5 text-base font-semibold text-fg-secondary">· {field.label}</span>}</h1>
-        <div role="radiogroup" aria-label="기간" className="flex rounded-full bg-surface p-1 shadow-[var(--shadow-sm)]">
+        <h2 className="text-base font-semibold">인기 글{field && <span className="ml-1.5 font-medium text-fg-secondary">· {field.label}</span>}</h2>
+        <div role="radiogroup" aria-label="기간" className="flex rounded-full border border-line p-0.5">
           {PERIODS.map((p) => (
             <button
               key={p.value}
@@ -58,7 +58,7 @@ export function PopularPage() {
               onClick={() => select(p.value)}
               className={cn(
                 'rounded-full px-3 py-1 text-sm',
-                period === p.value ? 'bg-brand text-white' : 'text-fg-secondary hover:text-fg',
+                period === p.value ? 'bg-inverse text-on-inverse' : 'text-fg-secondary hover:text-fg',
               )}
             >
               {p.label}
@@ -69,7 +69,7 @@ export function PopularPage() {
       <p className="mb-3 text-xs text-fg-muted">최근 {PERIODS.find((p) => p.value === period)?.label} 동안 발행된 글 중 많이 읽힌 순 · 최대 10분 지연</p>
 
       {popular.isPending ? (
-        <div className="space-y-3">
+        <div>
           {Array.from({ length: 5 }, (_, i) => (
             <PostCardSkeleton key={i} />
           ))}
@@ -87,13 +87,13 @@ export function PopularPage() {
           }
         />
       ) : (
-        <ol className="space-y-3" aria-label="인기 글 순위">
+        <ol className="divide-y divide-line" aria-label="인기 글 순위">
           {popular.data.items.map((post, i) => (
             <li key={post.id} className="flex gap-3">
               <span
                 className={cn(
-                  'w-6 shrink-0 pt-4 text-right text-lg font-bold tabular-nums',
-                  i < 3 ? 'text-brand' : 'text-fg-muted',
+                  'w-6 shrink-0 pt-[18px] text-right text-lg font-bold tabular-nums',
+                  i < 3 ? 'text-fg' : 'text-fg-muted',
                 )}
                 aria-hidden
               >

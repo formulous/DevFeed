@@ -73,7 +73,7 @@ export function OnboardingPage() {
         <Button
           width={72}
           height={36}
-          className="bg-brand text-white"
+          className="rounded-full bg-inverse text-on-inverse"
           content={save.isPending ? '저장 중' : '완료'}
           disabled={picked.length < INTEREST_MIN || save.isPending || skip.isPending}
           onClick={() => save.mutate()}

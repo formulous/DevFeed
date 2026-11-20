@@ -14,11 +14,12 @@ interface PostCardProps {
   meta?: ReactNode;
   badges?: BadgeMode;
   summaryLines?: 2 | 3;
+  kicker?: ReactNode;
 }
 
 function ExternalImage({ src, alt, className }: { src: string | null; alt: string; className: string }) {
   const [failed, setFailed] = useState(false);
-  if (!src || failed) return <div className={cn(className, 'bg-slate-100')} aria-hidden />;
+  if (!src || failed) return <div className={cn(className, 'bg-subtle')} aria-hidden />;
   return (
     <img
       src={src}
@@ -32,14 +33,15 @@ function ExternalImage({ src, alt, className }: { src: string | null; alt: strin
   );
 }
 
-export function PostCard({ post, query, onOpen, onToggleBookmark, meta, badges = 'all', summaryLines = 3 }: PostCardProps) {
+export function PostCard({ post, query, onOpen, onToggleBookmark, meta, badges = 'all', summaryLines = 3, kicker }: PostCardProps) {
   return (
     <article
       className={cn(
-        'relative rounded-[var(--radius-md)] border border-line bg-surface p-4 shadow-[var(--shadow-sm)] transition-shadow hover:shadow-[var(--shadow-md)]',
+        'relative px-3 py-5 transition-colors duration-150 hover:bg-hover sm:px-4',
         post.isRead && 'opacity-60',
       )}
     >
+      {kicker}
       <div className="flex items-center gap-2 text-xs text-fg-secondary">
         {post.source.logoUrl && <ExternalImage src={post.source.logoUrl} alt="" className="h-5 w-5 shrink-0 rounded" />}
         <span className="truncate font-medium">{post.source.name}</span>
@@ -54,8 +56,8 @@ export function PostCard({ post, query, onOpen, onToggleBookmark, meta, badges =
           aria-pressed={!!post.isBookmarked}
           aria-label={post.isBookmarked ? '북마크 해제' : '북마크'}
           className={cn(
-            'relative z-10 ml-auto rounded p-1 hover:bg-slate-100',
-            post.isBookmarked ? 'text-amber-500' : 'text-fg-muted',
+            'relative z-10 ml-auto rounded p-1 hover:bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring',
+            post.isBookmarked ? 'text-warn' : 'text-fg-muted',
           )}
         >
           <FiStar size={18} fill={post.isBookmarked ? 'currentColor' : 'none'} />
@@ -64,7 +66,7 @@ export function PostCard({ post, query, onOpen, onToggleBookmark, meta, badges =
 
       <div className="mt-2 flex gap-4">
         <div className="min-w-0 flex-1">
-          <h3 className="line-clamp-2 text-base font-semibold leading-snug">
+          <h3 className="line-clamp-2 text-base font-semibold leading-snug tracking-[-0.01em] text-fg">
             <a
               href={post.url}
               target="_blank"
@@ -77,7 +79,7 @@ export function PostCard({ post, query, onOpen, onToggleBookmark, meta, badges =
             </a>
           </h3>
           {post.summary && (
-            <p className={cn('mt-1 text-sm text-fg-secondary', summaryLines === 2 ? 'line-clamp-2' : 'line-clamp-3')}>
+            <p className={cn('mt-1.5 text-sm leading-relaxed text-fg-secondary', summaryLines === 2 ? 'line-clamp-2' : 'line-clamp-3')}>
               <Highlight text={post.summary} query={query} />
             </p>
           )}

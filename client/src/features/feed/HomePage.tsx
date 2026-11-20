@@ -32,10 +32,8 @@ export function HomePage({ sourceType = null }: { sourceType?: SourceType | null
   return (
     <FilterLayout b={bindings}>
       <section className="min-w-0 flex-1" aria-label={label}>
-        <h1 className="sr-only">{label}</h1>
-
         {feed.isPending ? (
-          <div className="space-y-3">
+          <div>
             {Array.from({ length: 5 }, (_, i) => (
               <PostCardSkeleton key={i} />
             ))}
@@ -48,7 +46,7 @@ export function HomePage({ sourceType = null }: { sourceType?: SourceType | null
             action={<Button variant="outlined" width={96} height={36} content="필터 초기화" onClick={reset} />}
           />
         ) : (
-          <ul className="space-y-3">
+          <ul className="divide-y divide-line">
             {posts.map((post) => (
               <li key={post.id}>
                 <PostCard post={post} onOpen={openPost} onToggleBookmark={toggleBookmark} />
@@ -59,7 +57,7 @@ export function HomePage({ sourceType = null }: { sourceType?: SourceType | null
 
         <div ref={sentinelRef} />
         {feed.isFetchingNextPage && (
-          <div className="mt-3">
+          <div>
             <PostCardSkeleton />
           </div>
         )}

@@ -27,7 +27,7 @@ export function Pagination({ page, totalPages, onChange, window = 5 }: Paginatio
         aria-label="이전 페이지"
         disabled={page <= 1}
         onClick={() => onChange(page - 1)}
-        className={cn(btn, 'text-fg-secondary hover:bg-slate-100 disabled:opacity-40')}
+        className={cn(btn, 'text-fg-secondary hover:bg-subtle disabled:opacity-40')}
       >
         <FiChevronLeft />
       </button>
@@ -37,7 +37,7 @@ export function Pagination({ page, totalPages, onChange, window = 5 }: Paginatio
           type="button"
           aria-current={p === page ? 'page' : undefined}
           onClick={() => onChange(p)}
-          className={cn(btn, p === page ? 'bg-brand font-semibold text-white' : 'text-fg-secondary hover:bg-slate-100')}
+          className={cn(btn, p === page ? 'bg-inverse font-semibold text-on-inverse' : 'text-fg-secondary hover:bg-subtle')}
         >
           {p}
         </button>
@@ -47,7 +47,7 @@ export function Pagination({ page, totalPages, onChange, window = 5 }: Paginatio
         aria-label="다음 페이지"
         disabled={page >= totalPages}
         onClick={() => onChange(page + 1)}
-        className={cn(btn, 'text-fg-secondary hover:bg-slate-100 disabled:opacity-40')}
+        className={cn(btn, 'text-fg-secondary hover:bg-subtle disabled:opacity-40')}
       >
         <FiChevronRight />
       </button>

@@ -23,7 +23,7 @@ export function ConfirmModal({ open, title, children, confirmLabel, danger, pend
           width={88}
           height={36}
           disabled={pending}
-          className={danger ? 'bg-red-600 text-white' : 'bg-brand text-white'}
+          className={danger ? 'rounded-full bg-danger text-on-danger' : 'rounded-full bg-inverse text-on-inverse'}
           content={confirmLabel}
           onClick={onConfirm}
         />

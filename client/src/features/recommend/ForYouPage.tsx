@@ -26,7 +26,7 @@ function InterestHeader() {
 
   return (
     <div className="mb-4 flex flex-wrap items-center gap-2">
-      <h1 className="w-full text-xl font-bold sm:mr-auto sm:w-auto">나를 위한 추천</h1>
+      <h2 className="w-full text-base font-semibold sm:mr-auto sm:w-auto">나를 위한 추천</h2>
       {hasTags ? (
         <>
           <span className="text-sm text-fg-secondary">관심 태그:</span>
@@ -84,18 +84,18 @@ export function ForYouPage() {
       <InterestHeader />
 
       {fallback && (
-        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-[var(--radius-md)] border border-brand-line bg-brand-soft p-4 text-sm">
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-[var(--radius-md)] border border-line bg-surface p-4 text-sm">
           <p className="mr-auto">
             아직 취향 정보가 없어서 인기 글을 보여주는 중임. 관심 태그를 고르면 더 정확해짐
           </p>
-          <Link to={ONBOARDING_LINK} className="rounded-md bg-brand px-3 py-1.5 font-medium text-white">
+          <Link to={ONBOARDING_LINK} className="rounded-full bg-inverse px-3.5 py-1.5 font-medium text-on-inverse hover:opacity-90">
             관심 태그 고르기
           </Link>
         </div>
       )}
 
       {list.isPending || expired ? (
-        <div className="space-y-3">
+        <div>
           {Array.from({ length: 4 }, (_, i) => (
             <PostCardSkeleton key={i} />
           ))}
@@ -113,19 +113,21 @@ export function ForYouPage() {
           }
         />
       ) : (
-        <ul className="space-y-4">
+        <ul className="divide-y divide-line">
           {entries.map(({ post, recommendationId }) => {
             const why = reasonText(post.reasons);
             return (
               <li key={post.id}>
-                {why && (
-                  <p className="mb-1.5 flex items-center gap-1 text-xs text-fg-secondary">
-                    <FiZap size={12} className="text-amber-500" aria-hidden />
-                    <span>추천 이유: {why}</span>
-                  </p>
-                )}
                 <PostCard
                   post={post}
+                  kicker={
+                    why && (
+                      <p className="mb-2 flex items-center gap-1 text-xs text-fg-secondary">
+                        <FiZap size={12} className="text-warn" aria-hidden />
+                        <span>추천 이유: {why}</span>
+                      </p>
+                    )
+                  }
                   onOpen={(p) => openPost(p, recommendationId)}
                   onToggleBookmark={toggleBookmark}
                 />
@@ -136,7 +138,7 @@ export function ForYouPage() {
       )}
       <div ref={sentinel} />
       {list.isFetchingNextPage && (
-        <div className="mt-3">
+        <div>
           <PostCardSkeleton />
         </div>
       )}

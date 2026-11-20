@@ -10,7 +10,7 @@ interface SegmentProps {
 
 export function Segment({ legend, options, value, onChange }: SegmentProps) {
   return (
-    <div role="radiogroup" aria-label={legend} className="flex rounded-lg bg-slate-100 p-0.5">
+    <div role="radiogroup" aria-label={legend} className="flex rounded-full border border-line p-0.5">
       {options.map((o) => (
         <button
           key={o.label}
@@ -19,8 +19,8 @@ export function Segment({ legend, options, value, onChange }: SegmentProps) {
           aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
           className={cn(
-            'h-7 flex-1 rounded-md text-xs transition-colors',
-            value === o.value ? 'bg-surface font-semibold text-fg shadow-sm' : 'text-fg-secondary hover:text-fg',
+            'h-7 flex-1 rounded-full text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring',
+            value === o.value ? 'bg-subtle-strong font-semibold text-fg' : 'text-fg-secondary hover:text-fg',
           )}
         >
           {o.label}

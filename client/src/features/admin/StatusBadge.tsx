@@ -2,16 +2,16 @@ import type { CrawlResult, SourceStatus } from '@/api/types';
 import { cn } from '@/lib/cn';
 
 const SOURCE: Record<SourceStatus, { label: string; className: string }> = {
-  ACTIVE: { label: '정상', className: 'bg-emerald-50 text-emerald-700' },
-  ERROR: { label: '오류', className: 'bg-red-50 text-red-700' },
-  INACTIVE: { label: '비활성', className: 'bg-slate-100 text-slate-600' },
+  ACTIVE: { label: '정상', className: 'bg-success-soft text-success' },
+  ERROR: { label: '오류', className: 'bg-danger-soft text-danger' },
+  INACTIVE: { label: '비활성', className: 'bg-subtle text-fg-secondary' },
 };
 
 const RUN: Record<CrawlResult, { label: string; className: string }> = {
   RUNNING: { label: '진행 중', className: 'bg-brand-soft text-brand-hover' },
-  SUCCESS: { label: '성공', className: 'bg-emerald-50 text-emerald-700' },
-  NOT_MODIFIED: { label: '변경 없음', className: 'bg-slate-100 text-slate-600' },
-  FAILURE: { label: '실패', className: 'bg-red-50 text-red-700' },
+  SUCCESS: { label: '성공', className: 'bg-success-soft text-success' },
+  NOT_MODIFIED: { label: '변경 없음', className: 'bg-subtle text-fg-secondary' },
+  FAILURE: { label: '실패', className: 'bg-danger-soft text-danger' },
 };
 
 function Badge({ label, className }: { label: string; className: string }) {

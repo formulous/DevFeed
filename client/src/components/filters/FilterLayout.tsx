@@ -22,10 +22,10 @@ export function BarButton({ label, count, onClick }: { label: string; count: num
       type="button"
       onClick={onClick}
       aria-haspopup="dialog"
-      className="flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-line bg-surface px-3 text-xs font-medium text-fg-secondary"
+      className="flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-line px-3 text-xs font-medium text-fg-secondary"
     >
       {label}
-      {count > 0 && <span className="text-brand">{count}</span>}
+      {count > 0 && <span className="font-semibold text-fg">{count}</span>}
       <FiChevronDown size={12} aria-hidden />
     </button>
   );

@@ -34,7 +34,7 @@ export function LoginPromptProvider({ children }: { children: ReactNode }) {
           <Button
             width={88}
             height={36}
-            className="bg-brand text-white"
+            className="rounded-full bg-inverse text-on-inverse"
             content="로그인"
             onClick={() => goTo('/login')}
           />

@@ -4,7 +4,8 @@ import { chromium } from 'playwright';
 import { createServer } from 'vite';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-const OUT = `${root}screenshots`;
+const SCHEME = process.env.SCHEME === 'dark' ? 'dark' : 'light';
+const OUT = SCHEME === 'dark' ? `${root}screenshots/dark` : `${root}screenshots`;
 const README_OUT = `${root}docs/screens`;
 const WIDTHS = [360, 768, 1280];
 const MOCK_NOW = new Date('2026-11-19T12:00:00.000Z');
@@ -61,7 +62,7 @@ async function main() {
   try {
     for (const width of WIDTHS) {
       await mkdir(`${OUT}/${width}`, { recursive: true });
-      const context = await browser.newContext({ viewport: { width, height: 900 }, deviceScaleFactor: 1, locale: 'ko-KR' });
+      const context = await browser.newContext({ viewport: { width, height: 900 }, deviceScaleFactor: 1, locale: 'ko-KR', colorScheme: SCHEME });
       await context.route(/^https?:\/\/(?!localhost)/, (route) => route.abort());
       await context.clock.setFixedTime(MOCK_NOW);
       const page = await context.newPage();
@@ -102,7 +103,7 @@ async function main() {
     const maxTags = [1, 2, 3, 4, 5, 6, 100, 101, 102, 103].join(',');
     const maxSources = [1, 2, 3, 4, 5, 6, 7, 8, ...Array.from({ length: 12 }, (_, i) => 100 + i)].join(',');
     for (const [w, h] of [[1280, 720], [1440, 900]]) {
-      const context = await browser.newContext({ viewport: { width: w, height: h }, locale: 'ko-KR' });
+      const context = await browser.newContext({ viewport: { width: w, height: h }, locale: 'ko-KR', colorScheme: SCHEME });
       await context.route(/^https?:\/\/(?!localhost)/, (route) => route.abort());
       const page = await context.newPage();
       for (const [label, path] of [['default', '/'], ['max', `/?tagIds=${maxTags}&sourceIds=${maxSources}&sourceType=COMPANY`]]) {
@@ -130,7 +131,7 @@ async function main() {
       await context.close();
     }
     {
-      const context = await browser.newContext({ viewport: { width: 360, height: 740 }, locale: 'ko-KR' });
+      const context = await browser.newContext({ viewport: { width: 360, height: 740 }, locale: 'ko-KR', colorScheme: SCHEME });
       await context.route(/^https?:\/\/(?!localhost)/, (route) => route.abort());
       const page = await context.newPage();
       await page.goto(`${base}/?tagIds=1,5&sourceType=PERSONAL`);
@@ -146,7 +147,7 @@ async function main() {
       await context.close();
     }
     for (const [w, h] of [[360, 740], [1280, 800]]) {
-      const context = await browser.newContext({ viewport: { width: w, height: h }, locale: 'ko-KR' });
+      const context = await browser.newContext({ viewport: { width: w, height: h }, locale: 'ko-KR', colorScheme: SCHEME });
       await context.route(/^https?:\/\/(?!localhost)/, (route) => route.abort());
       const page = await context.newPage();
       await page.goto(`${base}/security`);
@@ -172,8 +173,8 @@ async function main() {
       await context.close();
     }
     console.log(sidebarChecks.join('\n'));
-    await mkdir(README_OUT, { recursive: true });
-    for (const id of README_SET) await copyFile(`${OUT}/1280/${id}.top.png`, `${README_OUT}/${id}.png`);
+    if (SCHEME === 'light') await mkdir(README_OUT, { recursive: true });
+    if (SCHEME === 'light') for (const id of README_SET) await copyFile(`${OUT}/1280/${id}.top.png`, `${README_OUT}/${id}.png`);
   } finally {
     await browser.close();
     await server.close();

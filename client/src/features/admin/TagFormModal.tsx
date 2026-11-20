@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { Button } from '@onyx/components/button/button';
-import { TextField } from '@onyx/components/input/text-field';
+import { TextInput } from '@/components/common/TextInput';
 import { createTag, updateTag } from '@/api/admin';
 import type { AdminTag, TagInput } from '@/api/types';
 import { FieldError } from '@/components/common/FieldError';
@@ -59,7 +59,7 @@ function TagForm({ tag, onClose, onSaved }: Omit<TagFormModalProps, 'open'>) {
   return (
     <form onSubmit={submit} noValidate className="space-y-3">
       <div>
-        <TextField
+        <TextInput
           label="태그 이름"
           value={name}
           maxLength={50}
@@ -72,7 +72,7 @@ function TagForm({ tag, onClose, onSaved }: Omit<TagFormModalProps, 'open'>) {
         <FieldError message={show('name')} />
       </div>
       <div>
-        <TextField
+        <TextInput
           label="slug"
           value={slug}
           maxLength={60}
@@ -84,9 +84,9 @@ function TagForm({ tag, onClose, onSaved }: Omit<TagFormModalProps, 'open'>) {
         />
         <FieldError message={show('slug')} />
       </div>
-      <TextField label="분류 (선택)" value={category} maxLength={30} onChange={(e) => setCategory(e.target.value)} className="h-9" />
+      <TextInput label="분류 (선택)" value={category} maxLength={30} onChange={(e) => setCategory(e.target.value)} className="h-9" />
       <div>
-        <TextField
+        <TextInput
           label="동의어 (쉼표로 구분)"
           value={synonyms}
           onChange={(e) => setSynonyms(e.target.value)}
@@ -97,7 +97,7 @@ function TagForm({ tag, onClose, onSaved }: Omit<TagFormModalProps, 'open'>) {
       </div>
       {tag === null && <p className="text-xs text-fg-muted">기존 글에는 전체 재태깅을 실행해야 반영됨</p>}
       {save.isError && Object.keys(server).length === 0 && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-danger">
           {errorMessage(save.error)}
         </p>
       )}
@@ -107,7 +107,7 @@ function TagForm({ tag, onClose, onSaved }: Omit<TagFormModalProps, 'open'>) {
           type="submit"
           width={72}
           height={36}
-          className="bg-brand text-white"
+          className="rounded-full bg-inverse text-on-inverse"
           disabled={save.isPending}
           content={save.isPending ? '저장 중' : '저장'}
         />

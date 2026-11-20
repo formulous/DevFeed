@@ -1,8 +1,9 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
+import { Fragment, useEffect, useRef, type RefObject } from 'react';
 import { NavLink, useLocation, useSearchParams } from 'react-router';
 import { cn } from '@/lib/cn';
 import { M7_API_READY } from '@/lib/features';
 import { FIELDS, parseField } from '@/lib/fields';
+import { SearchBox } from './AppHeader';
 
 interface TabDef {
   to: string;
@@ -21,46 +22,21 @@ const ALL_TABS: TabDef[] = [
 
 export const FEED_TABS = M7_API_READY ? ALL_TABS : ALL_TABS.filter((t) => t.to !== '/security');
 
+const HERO_TITLES: Record<string, string> = {
+  ...Object.fromEntries(FEED_TABS.map((t) => [t.to, t.label])),
+  '/search': '검색',
+};
+
+export function heroTitle(pathname: string): string | null {
+  return HERO_TITLES[pathname] ?? null;
+}
+
 const FADE =
-  '[mask-image:linear-gradient(to_right,transparent,#000_16px,#000_calc(100%-16px),transparent)] lg:[mask-image:none]';
+  '[mask-image:linear-gradient(to_right,transparent,#000_12px,#000_calc(100%-16px),transparent)] lg:[mask-image:none]';
+
+const FOCUS = 'rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring';
 
 const ACTIVE = '[aria-current="page"], [aria-checked="true"]';
-
-function useSlidingIndicator<T extends HTMLElement>(dep: string) {
-  const ref = useRef<T>(null);
-  const [style, setStyle] = useState<CSSProperties>({ opacity: 0 });
-  const placed = useRef(false);
-
-  useLayoutEffect(() => {
-    const box = ref.current;
-    if (!box) return;
-    const place = () => {
-      const el = box.querySelector<HTMLElement>(ACTIVE);
-      if (!el) {
-        placed.current = false;
-        setStyle({ opacity: 0 });
-        return;
-      }
-      setStyle({
-        opacity: 1,
-        width: el.offsetWidth,
-        height: el.offsetHeight,
-        transform: `translate(${el.offsetLeft}px, ${el.offsetTop}px)`,
-        transitionProperty: placed.current ? 'transform, width, opacity' : 'none',
-      });
-      placed.current = true;
-    };
-    place();
-    if (typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(place);
-    ro.observe(box);
-    return () => ro.disconnect();
-  }, [dep]);
-
-  useScrollActiveIntoView(ref, dep);
-
-  return { ref, style };
-}
 
 function useScrollActiveIntoView(ref: RefObject<HTMLElement | null>, dep: string) {
   useEffect(() => {
@@ -69,8 +45,6 @@ function useScrollActiveIntoView(ref: RefObject<HTMLElement | null>, dep: string
   }, [ref, dep]);
 }
 
-const INDICATOR = 'pointer-events-none absolute left-0 top-0 duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] motion-reduce:duration-0';
-
 export function isFieldTab(pathname: string) {
   return M7_API_READY && FEED_TABS.some((t) => t.field && t.to === pathname);
 }
@@ -78,8 +52,7 @@ export function isFieldTab(pathname: string) {
 export function FeedTabs() {
   const { pathname } = useLocation();
   const [params] = useSearchParams();
-  const fieldTab = isFieldTab(pathname);
-  const field = fieldTab ? parseField(params.get('field')) : null;
+  const field = isFieldTab(pathname) ? parseField(params.get('field')) : null;
   const ref = useRef<HTMLElement>(null);
   useScrollActiveIntoView(ref, pathname);
 
@@ -87,7 +60,7 @@ export function FeedTabs() {
     <nav
       ref={ref}
       aria-label="피드"
-      className={cn('scrollbar-none flex items-end gap-1 overflow-x-auto px-3 pt-2 lg:px-0', FADE)}
+      className={cn('scrollbar-none -mx-4 flex items-center gap-5 overflow-x-auto px-4 py-1 lg:mx-0 lg:px-0', FADE)}
     >
       {FEED_TABS.map((tab) => (
         <NavLink
@@ -96,11 +69,9 @@ export function FeedTabs() {
           end={tab.to === '/'}
           className={({ isActive }) =>
             cn(
-              'flex h-10 shrink-0 items-center whitespace-nowrap rounded-t-lg border border-b-0 px-4 text-sm transition-colors duration-200',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-ring',
-              isActive
-                ? cn('border-line font-semibold text-fg', fieldTab ? 'bg-surface' : 'bg-app')
-                : 'border-transparent font-medium text-fg-secondary hover:bg-slate-50 hover:text-fg',
+              'shrink-0 whitespace-nowrap py-1 text-[15px] transition-colors duration-150',
+              FOCUS,
+              isActive ? 'font-semibold text-fg' : 'font-medium text-fg-secondary hover:text-fg',
             )
           }
         >
@@ -115,7 +86,8 @@ export function FieldTabs() {
   const { pathname } = useLocation();
   const [params, setParams] = useSearchParams();
   const current = parseField(params.get('field'));
-  const { ref, style } = useSlidingIndicator<HTMLDivElement>(`${pathname}:${current?.key ?? ''}`);
+  const ref = useRef<HTMLDivElement>(null);
+  useScrollActiveIntoView(ref, `${pathname}:${current?.key ?? ''}`);
   if (!isFieldTab(pathname)) return null;
 
   const select = (key: string | null) =>
@@ -136,29 +108,50 @@ export function FieldTabs() {
       ref={ref}
       role="radiogroup"
       aria-label="분야"
-      className={cn('scrollbar-none overflow-x-auto px-4 py-2 lg:px-0', FADE)}
+      className={cn('scrollbar-none -mx-4 flex items-center gap-2 overflow-x-auto px-4 py-1 lg:mx-0 lg:px-0', FADE)}
     >
-      <div className="relative isolate inline-flex gap-0.5 rounded-full bg-slate-100 p-1">
-        <span aria-hidden className={cn(INDICATOR, '-z-10 rounded-full bg-surface shadow-sm ring-1 ring-black/5')} style={style} />
-      {options.map((o) => {
+      {options.map((o, i) => {
         const on = (current?.key ?? null) === o.key;
         return (
-          <button
-            key={o.label}
-            type="button"
-            role="radio"
-            aria-checked={on}
-            onClick={() => select(o.key)}
-            className={cn(
-              'h-7 shrink-0 whitespace-nowrap rounded-full px-3 text-[13px] transition-colors duration-200',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring',
-              on ? 'font-semibold text-fg' : 'text-fg-secondary hover:text-fg',
+          <Fragment key={o.label}>
+            {i > 0 && (
+              <span aria-hidden className="shrink-0 select-none text-[13px] text-fg-muted">
+                ·
+              </span>
             )}
-          >
-            {o.label}
-          </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={on}
+              onClick={() => select(o.key)}
+              className={cn(
+                'shrink-0 whitespace-nowrap py-0.5 text-[13px] transition-colors duration-150',
+                FOCUS,
+                on ? 'font-semibold text-fg' : 'text-fg-secondary hover:text-fg',
+              )}
+            >
+              {o.label}
+            </button>
+          </Fragment>
         );
       })}
+    </div>
+  );
+}
+
+export function PageHero({ title }: { title: string }) {
+  const { pathname } = useLocation();
+  return (
+    <div className="border-b border-line">
+      <div className="mx-auto max-w-[1200px] px-4 pb-4 pt-5 lg:pt-12">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <SearchBox className="w-full lg:order-last lg:w-80" />
+          <h1 className="text-[28px] font-bold leading-tight tracking-[-0.02em] text-fg lg:text-[40px]">{title}</h1>
+        </div>
+        <div className="mt-3 space-y-1 lg:mt-5">
+          <FeedTabs />
+          {isFieldTab(pathname) && <FieldTabs />}
+        </div>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { Button } from '@onyx/components/button/button';
-import { TextField } from '@onyx/components/input/text-field';
+import { TextInput } from '@/components/common/TextInput';
 import { createSource, updateSource, validateFeed } from '@/api/admin';
 import type { AdminSource, FeedValidationResult, NewsRegion, SourceInput, SourceKind, SourceType, UpdateSourceInput } from '@/api/types';
 import { ErrorState } from '@/components/common/ErrorState';
@@ -93,11 +93,11 @@ function diff(initial: SourceInput, next: SourceInput): UpdateSourceInput {
 
 function ValidationPanel({ result }: { result: FeedValidationResult }) {
   if (!result.valid) {
-    return <p className="text-sm text-red-600">유효하지 않은 피드임: {result.reason ?? '알 수 없는 오류'}</p>;
+    return <p className="text-sm text-danger">유효하지 않은 피드임: {result.reason ?? '알 수 없는 오류'}</p>;
   }
-  if (result.duplicated) return <p className="text-sm text-red-600">같은 피드 URL로 등록된 소스가 이미 있음</p>;
+  if (result.duplicated) return <p className="text-sm text-danger">같은 피드 URL로 등록된 소스가 이미 있음</p>;
   return (
-    <div className="text-sm text-emerald-700">
+    <div className="text-sm text-success">
       <p>
         유효한 {result.format}임 · {result.feedTitle} · 최근 글 {result.itemCount}건 확인
       </p>
@@ -194,16 +194,16 @@ function SourceForm({ source }: { source?: AdminSource }) {
   return (
     <form onSubmit={submit} noValidate className="space-y-4 rounded-[var(--radius-md)] border border-line bg-surface p-5">
       <div>
-        <TextField label="이름" value={values.name} onChange={set('name')} maxLength={100} className="h-9" />
+        <TextInput label="이름" value={values.name} onChange={set('name')} maxLength={100} className="h-9" />
         <FieldError message={errorOf('name')} />
       </div>
       <div>
-        <TextField label={values.kind === 'SECURITY_NEWS' ? '사이트 URL' : '블로그 URL'} value={values.siteUrl} onChange={set('siteUrl')} inputMode="url" className="h-9" />
+        <TextInput label={values.kind === 'SECURITY_NEWS' ? '사이트 URL' : '블로그 URL'} value={values.siteUrl} onChange={set('siteUrl')} inputMode="url" className="h-9" />
         <FieldError message={errorOf('siteUrl')} />
       </div>
       <div>
         <div className="flex items-end gap-2">
-          <TextField
+          <TextInput
             label="피드 URL (RSS/Atom)"
             value={values.feedUrl}
             onChange={set('feedUrl')}
@@ -224,7 +224,7 @@ function SourceForm({ source }: { source?: AdminSource }) {
         <FieldError message={errorOf('feedUrl')} />
         <div className="mt-2" aria-live="polite">
           {validate.isError ? (
-            <p className="text-sm text-red-600">{errorMessage(validate.error)}</p>
+            <p className="text-sm text-danger">{errorMessage(validate.error)}</p>
           ) : checked && checked.url === feedUrl ? (
             <ValidationPanel result={checked.result} />
           ) : feedChanged && isHttpUrl(feedUrl) ? (
@@ -266,11 +266,11 @@ function SourceForm({ source }: { source?: AdminSource }) {
         />
       )}
       <div>
-        <TextField label="로고 URL (선택)" value={values.logoUrl} onChange={set('logoUrl')} inputMode="url" className="h-9" />
+        <TextInput label="로고 URL (선택)" value={values.logoUrl} onChange={set('logoUrl')} inputMode="url" className="h-9" />
         <FieldError message={errorOf('logoUrl')} />
       </div>
       <div className="max-w-[200px]">
-        <TextField
+        <TextInput
           label="수집 주기"
           value={values.crawlIntervalMin}
           onChange={set('crawlIntervalMin')}
@@ -282,7 +282,7 @@ function SourceForm({ source }: { source?: AdminSource }) {
       </div>
 
       {save.isError && Object.keys(serverErrors).length === 0 && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-danger">
           {errorMessage(save.error)}
         </p>
       )}
@@ -298,7 +298,7 @@ function SourceForm({ source }: { source?: AdminSource }) {
           type="submit"
           width={72}
           height={36}
-          className="bg-brand text-white"
+          className="rounded-full bg-inverse text-on-inverse"
           content={save.isPending ? '저장 중' : '저장'}
           disabled={save.isPending || !feedVerified || unchanged}
         />

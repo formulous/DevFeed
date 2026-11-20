@@ -1,11 +1,20 @@
 <!doctype html>
-<html lang="ko" data-theme="slate">
+<html lang="ko" data-color-scheme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DevFeed</title>
     <meta name="description" content="국내 기술 블로그 글을 모아 한글로 검색하고, 관심 태그와 읽은 기록으로 글을 추천하는 개발자용 리더" />
-    <meta name="theme-color" content="#334155" />
+    <meta name="theme-color" content="#fbfbfc" />
+    <script>
+      (function () {
+        var s = null;
+        try { s = localStorage.getItem('devfeed-color-scheme'); } catch (e) {}
+        var d = s === 'dark' || s === 'light' ? s : window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-color-scheme', d);
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', d === 'dark' ? '#0b0b0d' : '#fbfbfc');
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="DevFeed" />

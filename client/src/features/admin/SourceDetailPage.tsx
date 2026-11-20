@@ -88,7 +88,7 @@ export function SourceDetailPage() {
           <Button
             width={88}
             height={34}
-            className="bg-brand text-white"
+            className="rounded-full bg-inverse text-on-inverse"
             content={running ? '수집 중' : '지금 수집'}
             disabled={inactive || running || crawl.isPending}
             onClick={() => crawl.mutate()}
@@ -110,7 +110,7 @@ export function SourceDetailPage() {
       </div>
 
       {notice && (
-        <p role="status" className={notice.tone === 'ok' ? 'mt-3 text-sm text-emerald-700' : 'mt-3 text-sm text-red-600'}>
+        <p role="status" className={notice.tone === 'ok' ? 'mt-3 text-sm text-success' : 'mt-3 text-sm text-danger'}>
           {notice.text}
         </p>
       )}
@@ -148,7 +148,7 @@ export function SourceDetailPage() {
       ) : (
         <div className="overflow-x-auto rounded-[var(--radius-md)] border border-line bg-surface">
           <table className="w-full min-w-[560px] text-sm">
-            <thead className="bg-slate-50 text-left text-xs text-fg-secondary">
+            <thead className="bg-hover text-left text-xs text-fg-secondary">
               <tr>
                 <th className="px-3 py-2 font-medium">시작</th>
                 <th className="px-3 py-2 font-medium">구분</th>
@@ -168,7 +168,7 @@ export function SourceDetailPage() {
                     <RunResultBadge result={r.result} />
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums">{r.newPostCount}</td>
-                  <td className="max-w-[240px] truncate px-3 py-2 text-red-600" title={r.errorMessage ?? undefined}>
+                  <td className="max-w-[240px] truncate px-3 py-2 text-danger" title={r.errorMessage ?? undefined}>
                     {r.errorMessage ?? '-'}
                   </td>
                 </tr>

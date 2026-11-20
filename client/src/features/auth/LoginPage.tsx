@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { Button } from '@onyx/components/button/button';
-import { TextField } from '@onyx/components/input/text-field';
+import { TextInput } from '@/components/common/TextInput';
 import { ApiError } from '@/api/http';
 import { useAuth } from '@/auth/AuthProvider';
 import { FieldError } from '@/components/common/FieldError';
@@ -53,7 +53,7 @@ export function LoginPage() {
       <h1 className="mb-6 text-xl font-bold">로그인</h1>
       <form onSubmit={submit} className="space-y-4" noValidate>
         <div>
-          <TextField
+          <TextInput
             label="이메일"
             name="email"
             autoComplete="email"
@@ -65,7 +65,7 @@ export function LoginPage() {
           <FieldError message={fields.email} />
         </div>
         <div>
-          <TextField
+          <TextInput
             label="비밀번호"
             name="password"
             type="password"
@@ -77,12 +77,12 @@ export function LoginPage() {
           <FieldError message={fields.password} />
         </div>
         {locked ? (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-danger">
             로그인 시도가 많아 잠겼음. {Math.floor(lockLeft / 60)}분 {lockLeft % 60}초 후 다시 시도
           </p>
         ) : (
           formError && (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="text-sm text-danger">
               {formError}
             </p>
           )
@@ -91,7 +91,7 @@ export function LoginPage() {
           type="submit"
           height={40}
           disabled={pending || locked || !email.trim() || !password}
-          className="bg-brand text-sm text-white"
+          className="rounded-full bg-inverse text-sm text-on-inverse"
           content={pending ? '로그인 중' : '로그인'}
         />
       </form>

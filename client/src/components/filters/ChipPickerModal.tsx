@@ -67,14 +67,14 @@ function PickerBody({ title, noun, items, groups, groupLabel, initial, max, onAp
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center lg:items-center lg:p-4">
-      <div className="absolute inset-0 bg-black/45" onClick={onClose} aria-hidden />
+      <div className="absolute inset-0 bg-overlay" onClick={onClose} aria-hidden />
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label={title}
         onKeyDown={trapFocus}
-        className="relative flex h-[100dvh] w-full flex-col bg-surface shadow-2xl lg:h-auto lg:max-h-[80vh] lg:max-w-[640px] lg:rounded-[var(--radius-lg)]"
+        className="relative flex h-[100dvh] w-full flex-col bg-surface shadow-pop lg:border lg:border-line lg:h-auto lg:max-h-[80vh] lg:max-w-[640px] lg:rounded-[var(--radius-lg)]"
       >
         <div className="flex items-center justify-between border-b border-line px-5 py-3">
           <h2 className="text-base font-semibold">{title}</h2>
@@ -103,7 +103,7 @@ function PickerBody({ title, noun, items, groups, groupLabel, initial, max, onAp
                 onClick={() => setGroup(g)}
                 className={cn(
                   'rounded-full px-2.5 py-1 text-xs',
-                  group === g ? 'bg-slate-800 text-white' : 'bg-slate-100 text-fg-secondary hover:bg-slate-200',
+                  group === g ? 'bg-inverse text-on-inverse' : 'bg-subtle text-fg-secondary hover:bg-subtle-strong',
                 )}
               >
                 {g}
@@ -127,11 +127,11 @@ function PickerBody({ title, noun, items, groups, groupLabel, initial, max, onAp
                   onClick={() => toggle(item.id)}
                   className={cn(
                     'rounded-full border px-3 py-1.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40',
-                    on ? 'border-brand bg-brand text-white' : 'border-line hover:border-brand',
+                    on ? 'border-inverse bg-inverse text-on-inverse' : 'border-line hover:border-line-strong',
                   )}
                 >
                   {item.name}
-                  {item.count !== undefined && <span className={cn('ml-1 text-xs', on ? 'text-white/80' : 'text-fg-muted')}>{item.count}</span>}
+                  {item.count !== undefined && <span className={cn('ml-1 text-xs', on ? 'opacity-80' : 'text-fg-muted')}>{item.count}</span>}
                   {on && ' ✓'}
                 </button>
               </li>
@@ -149,7 +149,7 @@ function PickerBody({ title, noun, items, groups, groupLabel, initial, max, onAp
           <button
             type="button"
             onClick={() => onApply(draft)}
-            className="h-9 rounded-lg bg-brand px-5 text-sm font-medium text-white"
+            className="h-9 rounded-full bg-inverse px-5 text-sm font-medium text-on-inverse hover:opacity-90"
           >
             적용
           </button>

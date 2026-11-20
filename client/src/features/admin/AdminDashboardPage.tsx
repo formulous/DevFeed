@@ -50,7 +50,7 @@ function FilterGroup<T extends string>({
           onClick={() => onChange(f.value)}
           className={cn(
             'rounded-full px-3 py-1 text-sm',
-            value === f.value ? 'bg-brand text-white' : 'bg-surface text-fg-secondary hover:bg-slate-100',
+            value === f.value ? 'bg-inverse text-on-inverse' : 'bg-surface text-fg-secondary hover:bg-subtle',
           )}
         >
           {f.label}
@@ -68,7 +68,7 @@ function StatTile({ label, value, tone }: { label: string; value?: number; tone?
   return (
     <div className="rounded-[var(--radius-md)] border border-line bg-surface p-4">
       <p className="text-xs text-fg-secondary">{label}</p>
-      <p className={cn('mt-1 text-2xl font-bold tabular-nums', tone === 'danger' && value ? 'text-red-600' : '')}>
+      <p className={cn('mt-1 text-2xl font-bold tabular-nums', tone === 'danger' && value ? 'text-danger' : '')}>
         {value === undefined ? '-' : formatNumber(value)}
       </p>
     </div>
@@ -100,7 +100,7 @@ export function AdminDashboardPage() {
     <section>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-bold">수집 현황</h1>
-        <Link to="/admin/sources/new" className="rounded-md bg-brand px-3 py-2 text-sm font-medium text-white">
+        <Link to="/admin/sources/new" className="rounded-full bg-inverse px-3.5 py-2 text-sm font-medium text-on-inverse">
           + 소스 추가
         </Link>
       </div>
@@ -125,7 +125,7 @@ export function AdminDashboardPage() {
       ) : (
         <>
           <table className="hidden w-full overflow-hidden rounded-[var(--radius-md)] border border-line bg-surface text-sm md:table">
-            <thead className="bg-slate-50 text-left text-xs text-fg-secondary">
+            <thead className="bg-hover text-left text-xs text-fg-secondary">
               <tr>
                 <th className="px-4 py-2 font-medium">소스</th>
                 <th className="px-4 py-2 font-medium">종류</th>
@@ -140,7 +140,7 @@ export function AdminDashboardPage() {
                 <tr
                   key={s.id}
                   onClick={() => navigate(`/admin/sources/${s.id}`)}
-                  className="cursor-pointer border-t border-line hover:bg-slate-50"
+                  className="cursor-pointer border-t border-line hover:bg-hover"
                 >
                   <td className="px-4 py-2.5">
                     <Link to={`/admin/sources/${s.id}`} className="font-medium hover:text-brand" onClick={(e) => e.stopPropagation()}>
@@ -153,7 +153,7 @@ export function AdminDashboardPage() {
                   </td>
                   <td className="px-4 py-2.5 text-fg-secondary">{lastSuccess(s)}</td>
                   <td className="px-4 py-2.5 text-right tabular-nums">{s.newPostCount7d}</td>
-                  <td className={cn('px-4 py-2.5 text-right tabular-nums', s.consecutiveFailures > 0 && 'text-red-600')}>
+                  <td className={cn('px-4 py-2.5 text-right tabular-nums', s.consecutiveFailures > 0 && 'text-danger')}>
                     {s.consecutiveFailures}
                   </td>
                 </tr>

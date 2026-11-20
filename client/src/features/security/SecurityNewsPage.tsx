@@ -51,13 +51,13 @@ function SourcePanel({
   count: number;
 }) {
   return (
-    <div className="space-y-4 rounded-[var(--radius-md)] border border-line bg-surface px-4 py-3.5">
+    <div className="space-y-6 pt-1">
       {(['DOMESTIC', 'OVERSEAS'] as const).map((region) => {
         const list = sources.filter((s) => s.region === region);
         if (list.length === 0) return null;
         return (
           <section key={region} aria-label={`${REGION_LABEL[region]} 출처`}>
-            <h3 className="mb-1.5 text-sm font-semibold">{REGION_LABEL[region]} 출처</h3>
+            <h3 className="mb-2 text-xs font-semibold text-fg-secondary">{REGION_LABEL[region]} 출처</h3>
             <div className="flex flex-wrap gap-1">
               {list.map((s) => (
                 <ToggleChip key={s.id} label={s.name} on={selected.includes(s.id)} onClick={() => onToggle(s.id)} />
@@ -66,9 +66,9 @@ function SourcePanel({
           </section>
         );
       })}
-      <div className="flex items-center justify-between border-t border-line pt-2.5 text-xs">
+      <div className="flex items-center justify-between border-t border-line pt-3 text-xs">
         <span className="text-fg-secondary">선택 {count}개</span>
-        <button type="button" onClick={onReset} disabled={count === 0} className="font-medium text-brand disabled:text-fg-muted">
+        <button type="button" onClick={onReset} disabled={count === 0} className="font-medium text-fg hover:underline disabled:text-fg-muted disabled:no-underline">
           초기화
         </button>
       </div>
@@ -111,7 +111,6 @@ export function SecurityNewsPage() {
       </aside>
 
       <section className="min-w-0 flex-1" aria-label="보안 뉴스">
-        <h1 className="sr-only">보안 뉴스</h1>
         <div className="mb-3 flex items-center gap-2">
           <div className="min-w-0 flex-1 lg:max-w-xs">
             <Segment
@@ -138,7 +137,7 @@ export function SecurityNewsPage() {
         <p className="mb-3 text-xs text-fg-muted">국내·해외 보안 매체의 최신 기사 제목과 요약만 보여줌. 전문은 원문에서 확인</p>
 
         {list.isPending ? (
-          <div className="space-y-3">
+          <div>
             {Array.from({ length: 5 }, (_, i) => (
               <PostCardSkeleton key={i} />
             ))}
@@ -151,14 +150,14 @@ export function SecurityNewsPage() {
             action={<Button variant="outlined" width={96} height={36} content="필터 초기화" onClick={state.reset} />}
           />
         ) : (
-          <div className="space-y-5">
+          <div className="space-y-8">
             {groups.map((g) => (
               <section key={g.key} aria-label={g.label}>
-                <h2 className="mb-2 flex items-center gap-3 text-xs font-semibold text-fg-secondary">
-                  <span className="shrink-0">{g.label}</span>
-                  <span className="h-px flex-1 bg-line" aria-hidden />
+                <h2 className="mb-1 flex items-center gap-2.5 px-3 text-[13px] font-semibold text-fg sm:px-4">
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" aria-hidden />
+                  <span>{g.label}</span>
                 </h2>
-                <ul className="space-y-3">
+                <ul className="divide-y divide-line">
                   {g.items.map((post) => (
                     <li key={post.id}>
                       <PostCard post={post} badges="new" summaryLines={2} onOpen={openPost} onToggleBookmark={toggleBookmark} />
@@ -172,7 +171,7 @@ export function SecurityNewsPage() {
 
         <div ref={sentinelRef} />
         {list.isFetchingNextPage && (
-          <div className="mt-3">
+          <div>
             <PostCardSkeleton />
           </div>
         )}

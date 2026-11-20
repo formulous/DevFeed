@@ -71,7 +71,7 @@ export function BookmarksPage() {
       )}
 
       {list.isPending ? (
-        <div className="space-y-3">
+        <div>
           {Array.from({ length: 3 }, (_, i) => (
             <PostCardSkeleton key={i} />
           ))}
@@ -84,7 +84,7 @@ export function BookmarksPage() {
           description="글 카드의 ☆를 누르면 여기에 모임"
         />
       ) : (
-        <ul className="space-y-3">
+        <ul className="divide-y divide-line">
           {items.map((post) => (
             <li key={post.id}>
               <PostCard
@@ -99,7 +99,7 @@ export function BookmarksPage() {
       )}
       <div ref={sentinel} />
       {list.isFetchingNextPage && (
-        <div className="mt-3">
+        <div>
           <PostCardSkeleton />
         </div>
       )}

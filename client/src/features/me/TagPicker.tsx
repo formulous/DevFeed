@@ -31,7 +31,7 @@ export function TagPicker({ selected, max, onToggle }: TagPickerProps) {
   }, [tags.data, keyword, category]);
 
   if (tags.isPending) return <p className="text-sm text-fg-muted">태그를 불러오는 중</p>;
-  if (tags.isError) return <p className="text-sm text-red-600">태그를 불러오지 못했음</p>;
+  if (tags.isError) return <p className="text-sm text-danger">태그를 불러오지 못했음</p>;
 
   return (
     <div>
@@ -53,7 +53,7 @@ export function TagPicker({ selected, max, onToggle }: TagPickerProps) {
             onClick={() => setCategory(c)}
             className={cn(
               'rounded-full px-3 py-1 text-xs',
-              category === c ? 'bg-slate-800 text-white' : 'bg-slate-100 text-fg-secondary hover:bg-slate-200',
+              category === c ? 'bg-inverse text-on-inverse' : 'bg-subtle text-fg-secondary hover:bg-subtle-strong',
             )}
           >
             {c}
@@ -72,7 +72,7 @@ export function TagPicker({ selected, max, onToggle }: TagPickerProps) {
                 onClick={() => onToggle(t.id)}
                 className={cn(
                   'rounded-full border px-3 py-1.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40',
-                  on ? 'border-brand bg-brand text-white' : 'border-line bg-surface hover:border-brand',
+                  on ? 'border-inverse bg-inverse text-on-inverse' : 'border-line bg-surface hover:border-line-strong',
                 )}
               >
                 {t.name}

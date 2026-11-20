@@ -13,7 +13,7 @@ export function PostBadges({ post, mode }: { post: PostSummary; mode: BadgeMode 
   return (
     <span className="flex shrink-0 items-center gap-1" data-testid="post-badges">
       {showNew && <span className={`${BASE} bg-brand-soft text-brand-hover`}>NEW</span>}
-      {showPopular && <span className={`${BASE} bg-orange-50 text-orange-700`}>인기</span>}
+      {showPopular && <span className={`${BASE} bg-hot-soft text-hot`}>인기</span>}
     </span>
   );
 }

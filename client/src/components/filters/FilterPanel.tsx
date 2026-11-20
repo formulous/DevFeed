@@ -12,8 +12,8 @@ interface FilterPanelProps {
 
 function SectionHead({ title, onAll }: { title: string; onAll: () => void }) {
   return (
-    <div className="mb-1.5 flex items-center justify-between">
-      <h3 className="text-sm font-semibold">{title}</h3>
+    <div className="mb-2 flex items-center justify-between">
+      <h3 className="text-xs font-semibold text-fg-secondary">{title}</h3>
       <button type="button" onClick={onAll} className="text-xs font-medium text-fg-secondary hover:text-brand" aria-label={`${title} 전체 보기`}>
         전체 ›
       </button>
@@ -29,7 +29,7 @@ export function ToggleChip({ label, count, on, onClick }: { label: string; count
       onClick={onClick}
       className={cn(
         'max-w-full truncate rounded-full border px-2.5 py-[3px] text-xs transition-colors',
-        on ? 'border-brand bg-brand text-white' : 'border-line bg-surface text-fg-secondary hover:border-brand hover:text-fg',
+        on ? 'border-inverse bg-inverse text-on-inverse' : 'border-line text-fg-secondary hover:border-line-strong hover:text-fg',
       )}
     >
       {label}
@@ -49,7 +49,7 @@ function MoreChip({ count, noun, onClick }: { count: number; noun: string; onCli
       type="button"
       onClick={onClick}
       aria-label={`선택한 ${noun} ${count}개 더 보기`}
-      className="rounded-full border border-dashed border-brand px-2.5 py-[3px] text-xs font-medium text-brand"
+      className="rounded-full border border-dashed border-line-strong px-2.5 py-[3px] text-xs font-medium text-fg-secondary hover:text-fg"
     >
       +{count}개
     </button>
@@ -65,7 +65,7 @@ export function FilterPanel({ b, onOpenTags, onOpenSources }: FilterPanelProps) 
   const count = activeCount(b);
 
   return (
-    <div className="space-y-4 rounded-[var(--radius-md)] border border-line bg-surface px-4 py-3.5">
+    <div className="space-y-6 pt-1">
       <section aria-label="태그 필터">
         <SectionHead title="태그" onAll={onOpenTags} />
         <div className="flex flex-wrap gap-1">
@@ -81,7 +81,7 @@ export function FilterPanel({ b, onOpenTags, onOpenSources }: FilterPanelProps) 
 
       {b.segment && (
         <section aria-label={`${b.segment.legend} 필터`}>
-          <h3 className="mb-1.5 text-sm font-semibold">{b.segment.legend}</h3>
+          <h3 className="mb-2 text-xs font-semibold text-fg-secondary">{b.segment.legend}</h3>
           <Segment {...b.segment} />
         </section>
       )}
@@ -91,7 +91,7 @@ export function FilterPanel({ b, onOpenTags, onOpenSources }: FilterPanelProps) 
         {selectedSourcesOutsideQuick.length > 0 && (
           <div className="mb-2 flex flex-wrap gap-1">
             {selectedSourcesOutsideQuick.slice(0, MAX_EXTRA_SOURCES).map((id) => (
-              <span key={id} className="inline-flex max-w-full items-center gap-1 rounded-full bg-brand px-2.5 py-[3px] text-xs text-white">
+              <span key={id} className="inline-flex max-w-full items-center gap-1 rounded-full bg-inverse px-2.5 py-[3px] text-xs text-on-inverse">
                 <span className="truncate">{catalog.sourceName(id)}</span>
                 <button type="button" aria-label={`${catalog.sourceName(id)} 소스 해제`} onClick={() => b.toggleSource(id)}>
                   <FiX size={11} />
@@ -115,9 +115,9 @@ export function FilterPanel({ b, onOpenTags, onOpenSources }: FilterPanelProps) 
         )}
       </section>
 
-      <div className="flex items-center justify-between border-t border-line pt-2.5 text-xs">
+      <div className="flex items-center justify-between border-t border-line pt-3 text-xs">
         <span className="text-fg-secondary">선택 {count}개</span>
-        <button type="button" onClick={b.reset} disabled={count === 0} className="font-medium text-brand disabled:text-fg-muted">
+        <button type="button" onClick={b.reset} disabled={count === 0} className="font-medium text-fg hover:underline disabled:text-fg-muted disabled:no-underline">
           초기화
         </button>
       </div>

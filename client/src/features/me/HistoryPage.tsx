@@ -93,7 +93,7 @@ export function HistoryPage() {
       <p className="mb-4 text-xs text-fg-muted">원문을 연 글이 최근 읽은 순으로 쌓임. 1년 지나면 자동 삭제됨</p>
 
       {list.isPending ? (
-        <div className="space-y-3">
+        <div>
           {Array.from({ length: 3 }, (_, i) => (
             <PostCardSkeleton key={i} />
           ))}
@@ -107,7 +107,7 @@ export function HistoryPage() {
           {groups.map((g) => (
             <section key={g.date} aria-label={g.date}>
               <h2 className="mb-2 text-sm font-semibold text-fg-secondary">{g.date}</h2>
-              <ul className="space-y-2">
+              <ul className="divide-y divide-line">
                 {g.items.map((post) => (
                   <li key={post.id} className="flex items-start gap-2">
                     <div className="min-w-0 flex-1">
@@ -118,7 +118,7 @@ export function HistoryPage() {
                       aria-label={`${post.title} 기록 삭제`}
                       disabled={removeOne.isPending && removeOne.variables === post.id}
                       onClick={() => removeOne.mutate(post.id)}
-                      className="mt-3 rounded p-1 text-fg-muted hover:bg-slate-100 hover:text-fg"
+                      className="mt-4 rounded p-1 text-fg-muted hover:bg-subtle hover:text-fg"
                     >
                       <FiX size={16} />
                     </button>

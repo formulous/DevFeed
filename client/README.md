@@ -100,10 +100,20 @@ App
         └ AdminLayout (lazy) → Admin*Pages
 ```
 
-## 테마 색상
-- `index.html` `<html data-theme="slate">` 한 줄로 전체 강조 색 지정 (onyx-ui `styles.css` 프리셋: blue·indigo·teal·violet·slate). 바꾸려면 이 값만 수정
-- 강조 색은 모두 onyx-ui 토큰을 씀 → tailwind `brand`(주 색)·`brand-hover`·`brand-soft`(옅은 배경)·`brand-line`(옅은 테두리)·`brand-ring`(포커스 테두리)·`brand-focus`(포커스 링). `blue-*` 같은 고정 색은 쓰지 않음
-- 파비콘·`theme-color` 메타는 정적 파일이라 테마를 바꾸면 함께 고쳐야 함 (지금 `#334155`). `og.png`는 기존 파랑 이미지 그대로
+## 테마·디자인 (`docs/discussions/022`)
+- 무채색 라이트·다크 두 벌. 색 값은 `src/theme.css`에 있음: `:root[data-color-scheme='light'|'dark']`가 onyx-ui 토큰(`--color-bg-*`·`--color-text-*`·`--color-border`·`--color-primary*`)을 덮어씀. 그래서 onyx-ui는 고치지 않았음
+- client 전용 토큰: `hover`·`subtle(-strong)`·`input`·`inverse`/`on-inverse`(반전 버튼·선택 칩)·`danger`·`success`·`warn`·`hot`(인기 배지)·`overlay`·`line-strong`·`shadow-pop`. 화면 코드에 `slate-*`·`white`·`red-*` 같은 고정 색은 쓰지 않음
+- 대비 (WCAG): 본문 16.8~17.1, 보조 글자 7.1~7.9, 흐린 글자 3.6~4.1, 배지·오류 글자 4.9 이상 (라이트·다크 모두)
+- 전환: `index.html` `<head>`의 인라인 스크립트가 렌더 전에 `data-color-scheme`와 `theme-color`를 정함 (첫 화면 깜빡임 없음). 저장값(`localStorage` `devfeed-color-scheme`)이 있으면 그 값, 없으면 `prefers-color-scheme`
+  - `lib/colorScheme.ts` `useColorScheme`: 버튼으로 전환하면 즉시 적용하고 저장함. 시스템 설정 변경은 저장값이 없을 때만 따라감
+  - `ThemeToggle`(해·달 아이콘): 헤더 로그인 왼쪽, 로그인·가입 화면 오른쪽 위
+- 레이아웃: 얇은 sticky 헤더(로고·테마·로그인 알약) → `PageHero`(최신·추천·인기·기업·개인·보안 뉴스·검색 화면에만 표시: 큰 제목 28/40px + 오른쪽 알약 검색창(모바일은 제목 위 전체 폭) + 글자 탭) → 1px 선 → 본문
+  - 내 정보·관리자·개인정보 화면에는 hero가 없음. 대신 헤더에 검색 아이콘(`/search`로 이동)이 있음
+- 글 목록: 카드 상자 없이 `divide-y` 구분선 목록. 마우스를 올리면 행 배경이 아주 옅게 바뀜. 추천 이유는 `PostCard kicker`로 행 안에 넣음. 보안 뉴스 날짜 구분은 점과 날짜
+- 사이드바: 상자 없이 작은 보조색 섹션 제목 사용. 선택 칩·주요 버튼·페이지 번호는 반전색 알약, 세그먼트는 얇은 테두리 트랙
+- 입력: onyx `TextField` 대신 `components/common/TextInput`을 씀 (className으로 `bg-input`·`border-line`을 덮어씀)
+- 파비콘은 `#18181b`(진회색). `og.png`는 예전 이미지 그대로임
+- 캡처: `npm run capture`(라이트), `SCHEME=dark npm run capture`(다크, `screenshots/dark/`)
 
 ## 상태 관리 원칙
 - 서버 데이터는 모두 React Query 캐시. 컴포넌트 로컬 상태로 복사하지 않음
@@ -114,14 +124,13 @@ App
 
 ## 상단 탭·분야·보안 뉴스 (M7, `docs/discussions/021`)
 - 1단 탭 6개 `components/layout/FeedTabs.tsx`: 최신·추천·인기·기업 블로그·개인 블로그·보안 뉴스
-  - 책갈피형(021 3차): 글자 14px, 탭 높이 40px·줄 높이 48px. 헤더 하단 1px 선은 `inset` 그림자로 그리고, 활성 탭(위·좌·우 테두리, 위쪽 모서리 8px)이 그 선을 배경으로 덮어 아래 영역과 이어짐
-  - 활성 탭 배경 = 아래 영역 배경: 분야 탭이 있으면 분야 줄(`bg-surface`), 추천·보안 뉴스는 본문(`bg-app`). 비활성 탭은 테두리 없음·회색 글자, hover 시 옅은 배경
-  - 포커스 링은 `:focus-visible`(키보드)에서만 안쪽 링으로 표시. 활성 탭은 가로 스크롤 시 자동으로 보이게 스크롤함
+  - 글자 탭(022): 15px, 선택 = 기본 글자색·굵게, 나머지 = 보조색. 테두리·배경·밑줄 없음, 마우스를 올리면 글자만 진해짐
+  - 포커스 링은 `:focus-visible`(키보드)에서만 표시
   - 1280px 한 줄, 좁은 폭은 가로 스크롤 + 양끝 흐림, 활성 탭 자동 스크롤(부드럽게)
   - 탭 이동 시 분야(`?field=`)는 유지, 태그·소스 필터는 초기화
-- 2단 분야 탭 `FieldTabs`: 회색 트랙 안 세그먼트, 선택 항목은 흰 알약이 미끄러져 이동 (1단과 모양 구분). 항목: 전체·백엔드·프론트엔드·AI·데이터·인프라·모바일·보안 (`lib/fields.ts`, API `field=BACKEND` 등)
+- 2단 분야 탭 `FieldTabs`: 13px 글자 탭, `·`으로 구분하고 1단과 같은 색 규칙. 항목: 전체·백엔드·프론트엔드·AI·데이터·인프라·모바일·보안 (`lib/fields.ts`, API `field=BACKEND` 등)
   - 최신·인기·기업·개인에서만 보임. 잘못된 `field` 값은 전체로 해석해 요청에 넣지 않음 (서버는 400)
-  - sticky 헤더 밖에 둠 → 스크롤하면 사라지고 사이드바 높이를 유지 (1280×720 최대 선택에서도 사이드바 스크롤 없음)
+  - hero 안에 있어 스크롤하면 사라짐. sticky 헤더는 56px라 사이드바 높이에 여유가 있음 (1280×720 최대 선택에서도 사이드바 스크롤 없음)
   - sticky 헤더 높이는 `--header-h` CSS 변수로 측정해 사이드바 `top`·`max-height`에 씀
 - 기업·개인 탭(S-13): `HomePage`에 `sourceType` 고정. 유형 세그먼트 숨김, 소스 선택 창·빠른 소스 칩은 해당 유형만 (`FilterBindings.sourceScope`), URL `sourceType`은 무시
 - 보안 뉴스(S-14) `features/security/`: `GET /security-news` 커서 무한 스크롤, 날짜 구분선(오늘·어제·M월 D일), `[전체|국내|해외]`(`?region=domestic|overseas`), 출처 칩 사이드바(`GET /security-news/sources`, 모바일은 S-12 시트)
