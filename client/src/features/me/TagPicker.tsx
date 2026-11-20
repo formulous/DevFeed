@@ -1,3 +1,4 @@
+import { categoryLabel } from '@/lib/categories';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { tagsQuery } from '@/features/feed/queries';
@@ -19,14 +20,14 @@ export function TagPicker({ selected, max, onToggle }: TagPickerProps) {
   const full = selected.length >= max;
 
   const categories = useMemo(() => {
-    const set = new Set((tags.data ?? []).map((t) => t.category ?? ETC));
+    const set = new Set((tags.data ?? []).map((t) => (t.category ? categoryLabel(t.category) : ETC)));
     return [ALL, ...Array.from(set).sort((a, b) => (a === ETC ? 1 : b === ETC ? -1 : a.localeCompare(b)))];
   }, [tags.data]);
 
   const visible = useMemo(() => {
     const k = keyword.trim().toLowerCase();
     return (tags.data ?? []).filter(
-      (t) => (category === ALL || (t.category ?? ETC) === category) && (!k || t.name.toLowerCase().includes(k)),
+      (t) => (category === ALL || ((t.category ? categoryLabel(t.category) : ETC)) === category) && (!k || t.name.toLowerCase().includes(k)),
     );
   }, [tags.data, keyword, category]);
 

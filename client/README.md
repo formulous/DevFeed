@@ -39,8 +39,7 @@
 | `/` (`?field=`) | S-01 HomePage | - | AppLayout + FilterLayout |
 | `/for-you` | S-02 ForYouPage | RequireAuth | AppLayout |
 | `/popular` (`?period=&field=`) | S-03 PopularPage | - | AppLayout |
-| `/company` (`?field=`) | S-13 HomePage `sourceType=COMPANY` | - | AppLayout + FilterLayout |
-| `/personal` (`?field=`) | S-13 HomePage `sourceType=PERSONAL` | - | AppLayout + FilterLayout |
+| `/company`·`/personal` | 예전 주소 호환: `/?sourceType=COMPANY|PERSONAL`로 `replace` 이동 (다른 쿼리 유지, 023) | - | - |
 | `/security` (`?region=&sourceIds=`) | S-14 SecurityNewsPage | - | AppLayout |
 | `/search?q=` | S-04 SearchPage | - | AppLayout + FilterLayout |
 | `/login` | S-05 LoginPage | GuestOnly | AuthLayout |
@@ -123,16 +122,18 @@ App
 - 북마크 토글: `onMutate`에서 피드·북마크·검색 캐시의 해당 글 `isBookmarked`를 즉시 반영, 실패 시 롤백
 
 ## 상단 탭·분야·보안 뉴스 (M7, `docs/discussions/021`)
-- 1단 탭 6개 `components/layout/FeedTabs.tsx`: 최신·추천·인기·기업 블로그·개인 블로그·보안 뉴스
+- 1단 탭 `components/layout/FeedTabs.tsx`: 최신·추천·인기·보안 뉴스 (023: 기업·개인 탭 삭제 → 사이드바 `소스 유형`으로만 구분)
+  - `추천`은 `status === 'member'`일 때만 그림. 게스트는 3개, 로그인 상태를 확인하는 중(`loading`)에는 그리지 않아 깜빡이지 않음
   - 글자 탭(022): 15px, 선택 = 기본 글자색·굵게, 나머지 = 보조색. 테두리·배경·밑줄 없음, 마우스를 올리면 글자만 진해짐
   - 포커스 링은 `:focus-visible`(키보드)에서만 표시
   - 1280px 한 줄, 좁은 폭은 가로 스크롤 + 양끝 흐림, 활성 탭 자동 스크롤(부드럽게)
   - 탭 이동 시 분야(`?field=`)는 유지, 태그·소스 필터는 초기화
-- 2단 분야 탭 `FieldTabs`: 13px 글자 탭, `·`으로 구분하고 1단과 같은 색 규칙. 항목: 전체·백엔드·프론트엔드·AI·데이터·인프라·모바일·보안 (`lib/fields.ts`, API `field=BACKEND` 등)
+- 2단 분야 탭 `FieldTabs`: 13px 글자 탭, `·`으로 구분하고 1단과 같은 색 규칙. 항목: 전체·BE·FE·AI·Data·Infra·Mobile·Security (023 영어 표기, `lib/fields.ts` `label`/`name`). BE·FE는 `aria-label`·`title`에 풀네임(Backend·Frontend). URL `?field=backend`·API `field=BACKEND` 그대로
   - 최신·인기·기업·개인에서만 보임. 잘못된 `field` 값은 전체로 해석해 요청에 넣지 않음 (서버는 400)
   - 위치: 1단 탭 아래 1px 구분선 밑, 본문(`main`) 맨 위 줄 (022 후속). 구분선은 탭 화면 6개 모두 1단 탭 바로 아래이고, 분야 탭과 본문 사이는 여백으로만 나눔. 스크롤하면 사라짐. sticky 헤더는 56px라 사이드바 높이에 여유가 있음 (1280×720 최대 선택에서도 사이드바 스크롤 없음)
   - sticky 헤더 높이는 `--header-h` CSS 변수로 측정해 사이드바 `top`·`max-height`에 씀
-- 기업·개인 탭(S-13): `HomePage`에 `sourceType` 고정. 유형 세그먼트 숨김, 소스 선택 창·빠른 소스 칩은 해당 유형만 (`FilterBindings.sourceScope`), URL `sourceType`은 무시
+- 태그 분류 표시(023): `lib/categories.ts` `categoryLabel`이 한글 분류 값을 영어(Backend·Frontend·Database·Cloud 등)로 바꿔 보여줌. S-12 분류 탭, 온보딩·설정 태그 고르기, 관리자 태그 사전에 씀. `문화`·`기타`는 한글 그대로
+  - dba가 DB 분류 값을 영어로 바꾸면 영어 값은 그대로 통과함. 전환이 끝나면 이 매핑은 지워도 됨
 - 보안 뉴스(S-14) `features/security/`: `GET /security-news` 커서 무한 스크롤, 날짜 구분선(오늘·어제·M월 D일), `[전체|국내|해외]`(`?region=domestic|overseas`), 출처 칩 사이드바(`GET /security-news/sources`, 모바일은 S-12 시트)
   - 카드는 `PostCard` `badges="new"`·`summaryLines={2}`, 썸네일 없음
 - 관리자: A-01 종류 필터(`?kind=`)·종류 열, A-02 종류·지역 표시, A-03 등록 시 종류 선택(보안 뉴스면 유형 대신 지역), 수정 시 종류 읽기 전용

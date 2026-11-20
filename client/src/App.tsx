@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
-import { Navigate, Route, Routes } from 'react-router';
+import { Navigate, Route, Routes, useLocation } from 'react-router';
+import type { SourceType } from '@/api/types';
 import { GuestOnly, RequireAdmin, RequireAuth } from '@/auth/guards';
 import { FullPageSpinner } from '@/components/common/FullPageSpinner';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -22,6 +23,13 @@ import { PrivacyPage } from '@/features/info/PrivacyPage';
 
 const AdminRoutes = lazy(() => import('@/features/admin/AdminRoutes'));
 
+function LegacySourceTypeRedirect({ type }: { type: SourceType }) {
+  const { search } = useLocation();
+  const params = new URLSearchParams(search);
+  params.set('sourceType', type);
+  return <Navigate to={`/?${params.toString()}`} replace />;
+}
+
 export function App() {
   return (
     <>
@@ -29,8 +37,8 @@ export function App() {
       <Routes>
         <Route element={<AppLayout />}>
           <Route index element={<HomePage />} />
-          <Route path="company" element={<HomePage key="company" sourceType="COMPANY" />} />
-          <Route path="personal" element={<HomePage key="personal" sourceType="PERSONAL" />} />
+          <Route path="company" element={<LegacySourceTypeRedirect type="COMPANY" />} />
+          <Route path="personal" element={<LegacySourceTypeRedirect type="PERSONAL" />} />
           <Route path="security" element={M7_API_READY ? <SecurityNewsPage /> : <Navigate to="/" replace />} />
           <Route path="for-you" element={<RequireAuth><ForYouPage /></RequireAuth>} />
           <Route path="popular" element={<PopularPage />} />

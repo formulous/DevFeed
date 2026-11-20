@@ -3,7 +3,7 @@ import { activeCount, segmentDefault, type FilterBindings } from './types';
 import { useFilterCatalog } from './useFilterCatalog';
 
 export function ActiveFilterChips({ b }: { b: FilterBindings }) {
-  const catalog = useFilterCatalog(b.sourceScope);
+  const catalog = useFilterCatalog();
   if (activeCount(b) === 0) return null;
   const seg = b.segment;
   const def = segmentDefault(b);

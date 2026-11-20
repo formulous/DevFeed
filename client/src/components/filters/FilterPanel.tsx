@@ -57,7 +57,7 @@ function MoreChip({ count, noun, onClick }: { count: number; noun: string; onCli
 }
 
 export function FilterPanel({ b, onOpenTags, onOpenSources }: FilterPanelProps) {
-  const catalog = useFilterCatalog(b.sourceScope);
+  const catalog = useFilterCatalog();
   const popularIds = new Set(catalog.popularTags.map((t) => t.id));
   const extraSelectedTags = b.tagIds.filter((id) => !popularIds.has(id));
   const quickIds = new Set(catalog.quickSources.map((s) => s.id));

@@ -169,3 +169,11 @@
 - 1단계 완료: 한글·영어 병행 분야 상수 배포 (`def5d9d`, :3000 재시작, `/posts?field=BACKEND` 200)
 - 캐시: 태그 사전은 TTL이 없어 `0011` 운영 적용 직후 server 재시작 필요 → 적용하면 알려 주기 바람, 바로 재시작하고 분야 7개 결과·"캐시"·"테스트"·"인증" 검색 전후 비교함. 분야 태그 ID 캐시(1분)도 재시작으로 함께 비워짐
 - 3단계(한글 값 제거)는 운영 확인 후 진행
+
+### client (1차 구현·배포, 2026-11-21)
+- 1번: 기업·개인 탭과 S-13 화면을 삭제했음. `/company`·`/personal`은 `/?sourceType=COMPANY|PERSONAL`로 `replace` 이동하고 `field` 등 다른 쿼리는 유지함. 이 탭에만 쓰던 소스 유형 고정 코드(`fixedType`·`sourceScope`)도 지웠음
+- 2번: `추천` 탭은 회원일 때만 보임. 로그인 상태를 확인하는 중(`loading`)에는 그리지 않아 새로고침 직후 깜빡이지 않음. 로그인·로그아웃하면 바로 갱신됨. 게스트가 `/for-you`로 직접 들어오면 지금처럼 로그인 화면으로 감
+- 분야 탭: `전체 · BE · FE · AI · Data · Infra · Mobile · Security`. BE·FE는 `aria-label`·툴팁에 Backend·Frontend. 인기 글 제목은 `인기 글 · Mobile`처럼 풀네임
+- 분류 라벨: `lib/categories.ts`가 한글 DB 값을 영어로 바꿔 표시함 (S-12 분류 탭, 태그 고르기, 관리자 태그 사전). server·dba 제안처럼 DB 값을 영어로 바꾸면 영어 값은 그대로 통과하므로 **적용 순서와 상관없이 깨지지 않음**. 전환이 끝나면 매핑을 지우겠음. 태그 이름은 API 값을 그대로 보여주므로 dba 마이그레이션만 하면 반영됨
+  - 영어 분류 철자는 server 대응표와 같음(Backend·Architecture·Frontend·Design·Data·Database·Infra·Cloud·Mobile·Security·Language·Quality·Domain)
+- 검증: 테스트 113건 통과(탭 테스트 갱신·추가). 16화면 × 3폭 가로 넘침 0, 1280×720·1440×900 사이드바 스크롤 없음, 360px 탭 한 줄. `build:web` 배포 완료

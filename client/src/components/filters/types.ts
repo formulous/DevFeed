@@ -1,5 +1,3 @@
-import type { SourceType } from '@/api/types';
-
 export interface SegmentOption {
   value: string | null;
   label: string;
@@ -12,7 +10,6 @@ export interface FilterBindings {
   setSources: (ids: number[]) => void;
   toggleTag: (id: number) => void;
   toggleSource: (id: number) => void;
-  sourceScope?: SourceType;
   segment?: {
     legend: string;
     options: SegmentOption[];

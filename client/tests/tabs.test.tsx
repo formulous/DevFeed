@@ -4,24 +4,47 @@ import { describe, expect, it } from 'vitest';
 import { App } from '@/App';
 import { parseFeedFilters } from '@/hooks/useFeedFilters';
 import { parseField } from '@/lib/fields';
-import { mockPosts, mockSources, mockTags } from '@/mocks/fixtures';
-import { currentLocation, renderWithApp } from './render';
+import { mockPosts, mockTags } from '@/mocks/fixtures';
+import { categoryLabel } from '@/lib/categories';
+import { currentLocation, renderWithApp, seedLogin } from './render';
 
 const nav = () => within(screen.getByRole('navigation', { name: '피드' }));
 const fieldGroup = () => screen.queryByRole('radiogroup', { name: '분야' });
-const tagNamesOf = (categories: string[]) => mockTags.filter((t) => t.category && categories.includes(t.category)).map((t) => t.name);
+const tagNamesOf = (categories: string[]) =>
+  mockTags.filter((t) => t.category && categories.includes(categoryLabel(t.category))).map((t) => t.name);
 
-describe('F-015 상단 탭', () => {
-  it('1단 탭 6개를 보여주고 현재 탭을 표시함', async () => {
-    renderWithApp(<App />, '/company');
-    const links = nav().getAllByRole('link');
-    expect(links.map((l) => l.textContent)).toEqual(['최신', '추천', '인기', '기업 블로그', '개인 블로그', '보안 뉴스']);
-    expect(nav().getByRole('link', { name: '기업 블로그' })).toHaveAttribute('aria-current', 'page');
-    expect(nav().getByRole('link', { name: '최신' })).not.toHaveAttribute('aria-current');
+describe('F-015 상단 탭 (023)', () => {
+  it('게스트는 최신·인기·보안 뉴스 3개, 추천 탭 없음', async () => {
+    renderWithApp(<App />, '/popular');
+    await screen.findByRole('list', { name: '인기 글 순위' });
+    expect(nav().getAllByRole('link').map((l) => l.textContent)).toEqual(['최신', '인기', '보안 뉴스']);
+    expect(nav().getByRole('link', { name: '인기' })).toHaveAttribute('aria-current', 'page');
   });
 
-  it('분야 탭은 최신·인기·기업·개인에서만 보임', async () => {
-    for (const path of ['/', '/popular', '/company', '/personal']) {
+  it('회원은 추천 포함 4개', async () => {
+    await seedLogin('user@devfeed.dev');
+    renderWithApp(<App />, '/');
+    await waitFor(() =>
+      expect(nav().getAllByRole('link').map((l) => l.textContent)).toEqual(['최신', '추천', '인기', '보안 뉴스']),
+    );
+  });
+
+  it('로그인 상태 확인 중에는 추천 탭을 그리지 않음', () => {
+    renderWithApp(<App />, '/');
+    expect(nav().queryByRole('link', { name: '추천' })).toBeNull();
+  });
+
+  it('예전 /company·/personal 주소는 소스 유형 필터가 걸린 최신 피드로 이동하고 분야를 유지함', async () => {
+    const { unmount } = renderWithApp(<App />, '/company?field=backend');
+    await waitFor(() => expect(currentLocation).toBe('/?field=backend&sourceType=COMPANY'));
+    unmount();
+    renderWithApp(<App />, '/personal');
+    await waitFor(() => expect(currentLocation).toBe('/?sourceType=PERSONAL'));
+    expect(await screen.findByRole('radio', { name: '개인' })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('분야 탭은 최신·인기에서만 보임', async () => {
+    for (const path of ['/', '/popular']) {
       const { unmount } = renderWithApp(<App />, path);
       expect(fieldGroup()).not.toBeNull();
       unmount();
@@ -33,13 +56,23 @@ describe('F-015 상단 탭', () => {
     }
   });
 
+  it('분야 탭은 영어 표기, BE·FE는 풀네임 라벨·툴팁', () => {
+    renderWithApp(<App />, '/');
+    const radios = within(fieldGroup()!).getAllByRole('radio');
+    expect(radios.map((r) => r.textContent)).toEqual(['전체', 'BE', 'FE', 'AI', 'Data', 'Infra', 'Mobile', 'Security']);
+    const be = within(fieldGroup()!).getByRole('radio', { name: 'Backend' });
+    expect(be).toHaveTextContent('BE');
+    expect(be).toHaveAttribute('title', 'Backend');
+    expect(within(fieldGroup()!).getByRole('radio', { name: 'Frontend' })).toHaveTextContent('FE');
+  });
+
   it('분야를 고르면 URL에 반영하고 해당 분류 태그 글만 보여줌, 다른 탭으로 가도 분야 유지', async () => {
     const user = userEvent.setup();
     renderWithApp(<App />, '/?tagIds=1');
     await screen.findAllByRole('article');
-    await user.click(within(fieldGroup()!).getByRole('radio', { name: '프론트엔드' }));
+    await user.click(within(fieldGroup()!).getByRole('radio', { name: 'Frontend' }));
     await waitFor(() => expect(currentLocation).toBe('/?tagIds=1&field=frontend'));
-    const allowed = tagNamesOf(['프론트엔드', '디자인']);
+    const allowed = tagNamesOf(['Frontend', 'Design']);
     await waitFor(() => {
       const empty = screen.queryByText('조건에 맞는 글이 없음');
       if (empty) return;
@@ -47,10 +80,9 @@ describe('F-015 상단 탭', () => {
       expect(articles.every((a) => allowed.some((n) => a.textContent?.includes(`#${n}`)))).toBe(true);
     });
     expect(nav().getByRole('link', { name: '인기' })).toHaveAttribute('href', '/popular?field=frontend');
-    expect(nav().getByRole('link', { name: '추천' })).toHaveAttribute('href', '/for-you');
-    await user.click(nav().getByRole('link', { name: '기업 블로그' }));
-    await waitFor(() => expect(currentLocation).toBe('/company?field=frontend'));
-    expect(within(fieldGroup()!).getByRole('radio', { name: '프론트엔드' })).toHaveAttribute('aria-checked', 'true');
+    await user.click(nav().getByRole('link', { name: '인기' }));
+    await waitFor(() => expect(currentLocation).toBe('/popular?field=frontend'));
+    expect(within(fieldGroup()!).getByRole('radio', { name: 'Frontend' })).toHaveAttribute('aria-checked', 'true');
   });
 
   it('잘못된 분야 값은 전체로 해석함', () => {
@@ -58,35 +90,11 @@ describe('F-015 상단 탭', () => {
     expect(parseFeedFilters(new URLSearchParams('field=ai')).field).toBe('AI');
     expect(parseFeedFilters(new URLSearchParams('field=AI')).field).toBeNull();
   });
-});
-
-describe('S-13 기업·개인 블로그 탭', () => {
-  it('기업 탭은 기업 소스 글만, 유형 세그먼트 없음, URL sourceType은 무시함', async () => {
-    renderWithApp(<App />, '/personal?sourceType=COMPANY');
-    const region = await screen.findByRole('region', { name: '개인 블로그 피드' });
-    const personal = mockSources.filter((s) => s.type === 'PERSONAL').map((s) => s.name);
-    await waitFor(() => {
-      const articles = within(region).getAllByRole('article');
-      expect(articles.every((a) => personal.some((n) => a.textContent?.includes(n)))).toBe(true);
-    });
-    expect(screen.queryByRole('radiogroup', { name: '소스 유형' })).toBeNull();
-  });
-
-  it('소스 선택 창에는 해당 유형 소스만 나옴', async () => {
-    const user = userEvent.setup();
-    renderWithApp(<App />, '/company');
-    await screen.findAllByRole('article');
-    await user.click(screen.getByRole('button', { name: '소스 전체 보기' }));
-    const dialog = await screen.findByRole('dialog', { name: '소스 선택' });
-    expect(within(dialog).queryByRole('tablist')).toBeNull();
-    expect(within(dialog).queryByText('개발자 김씨 블로그')).toBeNull();
-    expect(within(dialog).getByText('토스 기술블로그')).toBeInTheDocument();
-  });
 
   it('인기 탭에 분야를 적용함', async () => {
     renderWithApp(<App />, '/popular?field=mobile');
-    expect(await screen.findByRole('heading', { name: /인기 글 · 모바일/ })).toBeInTheDocument();
-    const allowed = tagNamesOf(['모바일']);
+    expect(await screen.findByRole('heading', { name: /인기 글 · Mobile/ })).toBeInTheDocument();
+    const allowed = tagNamesOf(['Mobile']);
     const ranking = await screen.findByRole('list', { name: '인기 글 순위' });
     const articles = within(ranking).getAllByRole('article');
     expect(articles.length).toBeGreaterThan(0);

@@ -15,7 +15,6 @@ const SCREENS = [
   { id: 'S-01', path: '/', auth: false, ready: 'article' },
   { id: 'S-03', path: '/popular', auth: false, ready: 'article' },
   { id: 'S-04', path: '/search?q=%EC%A0%95%EB%A6%AC', auth: false, ready: 'article' },
-  { id: 'S-13', path: '/company?field=backend', auth: false, ready: 'article' },
   { id: 'S-14', path: '/security', auth: false, ready: 'article' },
   { id: 'S-05', path: '/login', auth: false, ready: 'form' },
   { id: 'S-06', path: '/signup', auth: false, ready: 'form' },

@@ -7,8 +7,6 @@ const TITLES: [string, string][] = [
   ['/', '최신 기술 글'],
   ['/for-you', '나를 위한 추천'],
   ['/popular', '인기 글'],
-  ['/company', '기업 기술 블로그'],
-  ['/personal', '개인 기술 블로그'],
   ['/security', '보안 뉴스'],
   ['/login', '로그인'],
   ['/signup', '회원가입'],

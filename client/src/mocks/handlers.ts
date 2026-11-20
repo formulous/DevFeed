@@ -1,3 +1,4 @@
+import { categoryLabel } from '@/lib/categories';
 import { http, HttpResponse } from 'msw';
 import type { Me, PostSummary } from '@/api/types';
 import { resetAdminState } from './adminFixtures';
@@ -53,7 +54,7 @@ const postById = (id: number) => mockPosts.find((p) => p.id === id) ?? mockNewsP
 function fieldFilter(value: string | null) {
   const field = fieldByApi(value);
   if (!field) return () => true;
-  const ids = new Set(mockTags.filter((t) => t.category && field.categories.includes(t.category)).map((t) => t.id));
+  const ids = new Set(mockTags.filter((t) => t.category && field.categories.includes(categoryLabel(t.category))).map((t) => t.id));
   return (p: PostSummary) => p.tags.some((t) => ids.has(t.id));
 }
 const byDateDesc = (m: Map<number, string>) => [...m.entries()].sort((a, b) => b[1].localeCompare(a[1]));

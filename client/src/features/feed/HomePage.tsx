@@ -9,16 +9,12 @@ import { FilterLayout } from '@/components/filters/FilterLayout';
 import { useFeedFilterBindings, useFeedFilters } from '@/hooks/useFeedFilters';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useOpenPost, useToggleBookmark } from '@/hooks/usePostActions';
-import type { SourceType } from '@/api/types';
 import { feedQuery } from './queries';
 
-const LABELS: Record<SourceType | 'ALL', string> = { ALL: '최신 피드', COMPANY: '기업 블로그 피드', PERSONAL: '개인 블로그 피드' };
-
-export function HomePage({ sourceType = null }: { sourceType?: SourceType | null }) {
+export function HomePage() {
   const { status } = useAuth();
-  const { filters, reset } = useFeedFilters(sourceType);
-  const bindings = useFeedFilterBindings(sourceType);
-  const label = LABELS[sourceType ?? 'ALL'];
+  const { filters, reset } = useFeedFilters();
+  const bindings = useFeedFilterBindings();
   const feed = useInfiniteQuery({ ...feedQuery(filters, status), enabled: status !== 'loading' });
   const openPost = useOpenPost();
   const toggleBookmark = useToggleBookmark();
@@ -31,7 +27,7 @@ export function HomePage({ sourceType = null }: { sourceType?: SourceType | null
 
   return (
     <FilterLayout b={bindings}>
-      <section className="min-w-0 flex-1" aria-label={label}>
+      <section className="min-w-0 flex-1" aria-label="최신 피드">
         {feed.isPending ? (
           <div>
             {Array.from({ length: 5 }, (_, i) => (

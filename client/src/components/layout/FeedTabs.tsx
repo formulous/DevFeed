@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, type RefObject } from 'react';
 import { NavLink, useLocation, useSearchParams } from 'react-router';
+import { useAuth } from '@/auth/AuthProvider';
 import { cn } from '@/lib/cn';
 import { M7_API_READY } from '@/lib/features';
 import { FIELDS, parseField } from '@/lib/fields';
@@ -9,14 +10,13 @@ interface TabDef {
   to: string;
   label: string;
   field: boolean;
+  memberOnly?: boolean;
 }
 
 const ALL_TABS: TabDef[] = [
   { to: '/', label: '최신', field: true },
-  { to: '/for-you', label: '추천', field: false },
+  { to: '/for-you', label: '추천', field: false, memberOnly: true },
   { to: '/popular', label: '인기', field: true },
-  { to: '/company', label: '기업 블로그', field: true },
-  { to: '/personal', label: '개인 블로그', field: true },
   { to: '/security', label: '보안 뉴스', field: false },
 ];
 
@@ -52,9 +52,11 @@ export function isFieldTab(pathname: string) {
 export function FeedTabs() {
   const { pathname } = useLocation();
   const [params] = useSearchParams();
+  const { status } = useAuth();
   const field = isFieldTab(pathname) ? parseField(params.get('field')) : null;
   const ref = useRef<HTMLElement>(null);
   useScrollActiveIntoView(ref, pathname);
+  const tabs = FEED_TABS.filter((t) => !t.memberOnly || status === 'member');
 
   return (
     <nav
@@ -62,7 +64,7 @@ export function FeedTabs() {
       aria-label="피드"
       className={cn('scrollbar-none -mx-4 flex items-center gap-5 overflow-x-auto px-4 py-1 lg:mx-0 lg:px-0', FADE)}
     >
-      {FEED_TABS.map((tab) => (
+      {tabs.map((tab) => (
         <NavLink
           key={tab.to}
           to={tab.field && field ? `${tab.to}?field=${field.key}` : tab.to}
@@ -101,7 +103,10 @@ export function FieldTabs() {
       { replace: true },
     );
 
-  const options = [{ key: null, label: '전체' }, ...FIELDS.map((f) => ({ key: f.key as string | null, label: f.label }))];
+  const options = [
+    { key: null, label: '전체', name: '전체' },
+    ...FIELDS.map((f) => ({ key: f.key as string | null, label: f.label, name: f.name })),
+  ];
 
   return (
     <div
@@ -123,6 +128,8 @@ export function FieldTabs() {
               type="button"
               role="radio"
               aria-checked={on}
+              aria-label={o.name !== o.label ? o.name : undefined}
+              title={o.name !== o.label ? o.name : undefined}
               onClick={() => select(o.key)}
               className={cn(
                 'shrink-0 whitespace-nowrap py-0.5 text-[13px] transition-colors duration-150',

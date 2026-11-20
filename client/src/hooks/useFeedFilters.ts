@@ -17,12 +17,12 @@ function parseIds(value: string | null, max: number) {
   ).slice(0, max);
 }
 
-export function parseFeedFilters(params: URLSearchParams, fixedType: SourceType | null = null): FeedQuery {
+export function parseFeedFilters(params: URLSearchParams): FeedQuery {
   const type = params.get('sourceType');
   return {
     tagIds: parseIds(params.get('tagIds'), MAX_TAG_FILTER),
     sourceIds: parseIds(params.get('sourceIds'), MAX_SOURCE_FILTER),
-    sourceType: fixedType ?? (type === 'COMPANY' || type === 'PERSONAL' ? type : null),
+    sourceType: type === 'COMPANY' || type === 'PERSONAL' ? type : null,
     field: parseField(params.get('field'))?.api ?? null,
   };
 }
@@ -36,37 +36,30 @@ export function applyFeedFilters(params: URLSearchParams, filters: FeedQuery) {
   return next;
 }
 
-export function applyFixedTypeFilters(params: URLSearchParams, filters: FeedQuery) {
-  const next = applyFeedFilters(params, filters);
-  next.delete('sourceType');
-  return next;
-}
-
 function toggle(list: number[], id: number) {
   return list.includes(id) ? list.filter((v) => v !== id) : [...list, id];
 }
 
-export function useFeedFilters(fixedType: SourceType | null = null) {
+export function useFeedFilters() {
   const [params, setParams] = useSearchParams();
-  const filters = useMemo(() => parseFeedFilters(params, fixedType), [params, fixedType]);
+  const filters = useMemo(() => parseFeedFilters(params), [params]);
 
   const update = useCallback(
     (fn: (prev: FeedQuery) => FeedQuery) => {
-      const apply = fixedType ? applyFixedTypeFilters : applyFeedFilters;
-      setParams((prev) => apply(prev, fn(parseFeedFilters(prev, fixedType))), { replace: true });
+      setParams((prev) => applyFeedFilters(prev, fn(parseFeedFilters(prev))), { replace: true });
     },
-    [setParams, fixedType],
+    [setParams],
   );
 
   return {
     filters,
-    isEmpty: filters.tagIds.length === 0 && filters.sourceIds.length === 0 && filters.sourceType === fixedType,
+    isEmpty: filters.tagIds.length === 0 && filters.sourceIds.length === 0 && filters.sourceType === null,
     toggleTag: (id: number) => update((f) => ({ ...f, tagIds: toggle(f.tagIds, id) })),
     toggleSource: (id: number) => update((f) => ({ ...f, sourceIds: toggle(f.sourceIds, id) })),
     setTags: (tagIds: number[]) => update((f) => ({ ...f, tagIds })),
     setSources: (sourceIds: number[]) => update((f) => ({ ...f, sourceIds })),
     setSourceType: (sourceType: SourceType | null) => update((f) => ({ ...f, sourceType })),
-    reset: () => update((f) => ({ ...f, tagIds: [], sourceIds: [], sourceType: fixedType })),
+    reset: () => update((f) => ({ ...f, tagIds: [], sourceIds: [], sourceType: null })),
   };
 }
 
@@ -76,8 +69,8 @@ const SOURCE_TYPE_OPTIONS: SegmentOption[] = [
   { value: 'PERSONAL', label: '개인' },
 ];
 
-export function useFeedFilterBindings(fixedType: SourceType | null = null): FilterBindings {
-  const f = useFeedFilters(fixedType);
+export function useFeedFilterBindings(): FilterBindings {
+  const f = useFeedFilters();
   const base = {
     tagIds: f.filters.tagIds,
     sourceIds: f.filters.sourceIds,
@@ -87,7 +80,6 @@ export function useFeedFilterBindings(fixedType: SourceType | null = null): Filt
     toggleSource: f.toggleSource,
     reset: f.reset,
   };
-  if (fixedType) return { ...base, sourceScope: fixedType };
   return {
     ...base,
     segment: {

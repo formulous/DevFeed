@@ -80,7 +80,7 @@ describe('S-07 온보딩', () => {
     await seedLogin('user@devfeed.dev');
     renderWithApp(<App />, '/onboarding/tags');
     const list = await screen.findByRole('list', { name: '태그 목록' });
-    await user.click(screen.getByRole('tab', { name: '모바일' }));
+    await user.click(screen.getByRole('tab', { name: 'Mobile' }));
     expect(within(list).getAllByRole('button').map((b) => b.textContent)).toEqual(expect.arrayContaining(['Swift', 'Flutter']));
     expect(within(list).queryByRole('button', { name: 'Kafka' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: '전체' }));

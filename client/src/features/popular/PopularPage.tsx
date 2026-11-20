@@ -47,7 +47,7 @@ export function PopularPage() {
   return (
     <section className="mx-auto max-w-3xl">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-base font-semibold">인기 글{field && <span className="ml-1.5 font-medium text-fg-secondary">· {field.label}</span>}</h2>
+        <h2 className="text-base font-semibold">인기 글{field && <span className="ml-1.5 font-medium text-fg-secondary">· {field.name}</span>}</h2>
         <div role="radiogroup" aria-label="기간" className="flex rounded-full border border-line p-0.5">
           {PERIODS.map((p) => (
             <button

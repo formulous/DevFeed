@@ -7,17 +7,18 @@ export interface FieldDef {
   key: FieldKey;
   api: ApiField;
   label: string;
+  name: string;
   categories: string[];
 }
 
 export const FIELDS: FieldDef[] = [
-  { key: 'backend', api: 'BACKEND', label: '백엔드', categories: ['백엔드', '아키텍처'] },
-  { key: 'frontend', api: 'FRONTEND', label: '프론트엔드', categories: ['프론트엔드', '디자인'] },
-  { key: 'ai', api: 'AI', label: 'AI', categories: ['AI'] },
-  { key: 'data', api: 'DATA', label: '데이터', categories: ['데이터', '데이터베이스'] },
-  { key: 'infra', api: 'INFRA', label: '인프라', categories: ['인프라', 'DevOps', '클라우드'] },
-  { key: 'mobile', api: 'MOBILE', label: '모바일', categories: ['모바일'] },
-  { key: 'security', api: 'SECURITY', label: '보안', categories: ['보안'] },
+  { key: 'backend', api: 'BACKEND', label: 'BE', name: 'Backend', categories: ['Backend', 'Architecture'] },
+  { key: 'frontend', api: 'FRONTEND', label: 'FE', name: 'Frontend', categories: ['Frontend', 'Design'] },
+  { key: 'ai', api: 'AI', label: 'AI', name: 'AI', categories: ['AI'] },
+  { key: 'data', api: 'DATA', label: 'Data', name: 'Data', categories: ['Data', 'Database'] },
+  { key: 'infra', api: 'INFRA', label: 'Infra', name: 'Infra', categories: ['Infra', 'DevOps', 'Cloud'] },
+  { key: 'mobile', api: 'MOBILE', label: 'Mobile', name: 'Mobile', categories: ['Mobile'] },
+  { key: 'security', api: 'SECURITY', label: 'Security', name: 'Security', categories: ['Security'] },
 ];
 
 export function parseField(value: string | null): FieldDef | null {

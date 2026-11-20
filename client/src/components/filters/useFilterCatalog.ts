@@ -1,7 +1,8 @@
+import { categoryLabel } from '@/lib/categories';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { sourcesQuery, tagsQuery } from '@/features/feed/queries';
-import type { SourceListItem, SourceType } from '@/api/types';
+import type { SourceListItem } from '@/api/types';
 import type { PickerItem } from './ChipPickerModal';
 
 export const POPULAR_TAG_COUNT = 12;
@@ -27,15 +28,15 @@ export function pickQuickSources(list: SourceListItem[]): { quickSources: Source
   return { quickSources: [], quickBasis: null };
 }
 
-export function useFilterCatalog(scope?: SourceType) {
+export function useFilterCatalog() {
   const tags = useQuery(tagsQuery);
   const sources = useQuery(sourcesQuery);
 
   return useMemo(() => {
     const tagList = [...(tags.data ?? [])].sort((a, b) => b.postCount - a.postCount);
     const allSources = sources.data ?? [];
-    const sourceList = scope ? allSources.filter((s) => s.type === scope) : allSources;
-    const tagItems: PickerItem[] = tagList.map((t) => ({ id: t.id, name: t.name, group: t.category ?? ETC, count: t.postCount }));
+    const sourceList = allSources;
+    const tagItems: PickerItem[] = tagList.map((t) => ({ id: t.id, name: t.name, group: t.category ? categoryLabel(t.category) : ETC, count: t.postCount }));
     const tagGroups = Array.from(new Set(tagItems.map((t) => t.group))).sort((a, b) =>
       a === ETC ? 1 : b === ETC ? -1 : a.localeCompare(b),
     );
@@ -50,12 +51,12 @@ export function useFilterCatalog(scope?: SourceType) {
       tagItems,
       tagGroups,
       sourceItems,
-      sourceGroups: scope ? [] : ['기업', '개인'],
+      sourceGroups: ['기업', '개인'],
       popularTags: tagList.slice(0, POPULAR_TAG_COUNT),
       quickSources,
       quickBasis,
       tagName: (id: number) => tagList.find((t) => t.id === id)?.name ?? `태그 ${id}`,
       sourceName: (id: number) => allSources.find((s) => s.id === id)?.name ?? `소스 ${id}`,
     };
-  }, [tags.data, sources.data, scope]);
+  }, [tags.data, sources.data]);
 }

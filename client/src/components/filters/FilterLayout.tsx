@@ -33,7 +33,7 @@ export function BarButton({ label, count, onClick }: { label: string; count: num
 
 export function FilterLayout({ b, children }: FilterLayoutProps) {
   const [picker, setPicker] = useState<Picker>(null);
-  const catalog = useFilterCatalog(b.sourceScope);
+  const catalog = useFilterCatalog();
   const close = () => setPicker(null);
   const seg = b.segment;
 

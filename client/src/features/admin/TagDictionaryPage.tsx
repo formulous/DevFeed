@@ -1,3 +1,4 @@
+import { categoryLabel } from '@/lib/categories';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Button } from '@onyx/components/button/button';
@@ -123,7 +124,7 @@ export function TagDictionaryPage() {
                     <span className="font-medium">{t.name}</span>
                     <span className="ml-1 text-xs text-fg-muted">{t.slug}</span>
                   </td>
-                  <td className="px-3 py-2 text-fg-secondary">{t.category ?? '-'}</td>
+                  <td className="px-3 py-2 text-fg-secondary">{t.category ? categoryLabel(t.category) : '-'}</td>
                   <td className="max-w-[280px] truncate px-3 py-2 text-fg-secondary" title={t.synonyms.join(', ')}>
                     {t.synonyms.join(', ') || '-'}
                   </td>
