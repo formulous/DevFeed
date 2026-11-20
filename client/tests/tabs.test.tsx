@@ -74,7 +74,7 @@ describe('F-015 상단 탭 (023)', () => {
     await waitFor(() => expect(currentLocation).toBe('/?tagIds=1&field=frontend'));
     const allowed = tagNamesOf(['Frontend', 'Design']);
     await waitFor(() => {
-      const empty = screen.queryByText('조건에 맞는 글이 없음');
+      const empty = screen.queryByText('조건에 맞는 글이 없어요');
       if (empty) return;
       const articles = screen.getAllByRole('article');
       expect(articles.every((a) => allowed.some((n) => a.textContent?.includes(`#${n}`)))).toBe(true);

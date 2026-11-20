@@ -43,7 +43,7 @@ describe('S-03 인기 글', () => {
     const user = userEvent.setup();
     server.use(http.get('*/api/posts/popular', () => HttpResponse.json({ items: [] })));
     renderWithApp(<App />, '/popular?period=DAY');
-    expect(await screen.findByText('이 기간에 읽힌 글이 아직 없음')).toBeInTheDocument();
+    expect(await screen.findByText('이 기간에 읽힌 글이 아직 없어요')).toBeInTheDocument();
     await user.click(screen.getByRole('link', { name: '최신 피드 보기' }));
     await waitFor(() => expect(currentLocation).toBe('/'));
   });

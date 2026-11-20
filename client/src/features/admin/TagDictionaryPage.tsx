@@ -104,7 +104,7 @@ export function TagDictionaryPage() {
       ) : tags.isError ? (
         <ErrorState message={tags.error.message} onRetry={() => tags.refetch()} />
       ) : tags.data.length === 0 ? (
-        <EmptyState title="태그가 없음" />
+        <EmptyState title="태그가 없어요" />
       ) : (
         <div className="overflow-x-auto rounded-[var(--radius-md)] border border-line bg-surface">
           <table className="w-full min-w-[560px] text-sm">
@@ -155,7 +155,7 @@ export function TagDictionaryPage() {
         onClose={() => setConfirmRetag(false)}
         onConfirm={() => retag.mutate()}
       >
-        현재 태그 사전으로 모든 글의 태그를 다시 계산함. 글 수에 따라 몇 분 걸릴 수 있음.
+        현재 태그 사전으로 모든 글의 태그를 다시 계산해요. 글 수에 따라 몇 분 걸릴 수 있어요. 실행할까요?
       </ConfirmModal>
     </section>
   );

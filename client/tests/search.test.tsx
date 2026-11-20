@@ -44,7 +44,7 @@ describe('S-04 검색 결과', () => {
   it('검색어 1자는 헤더에서 막고, URL로 들어와도 요청하지 않음', async () => {
     const user = userEvent.setup();
     renderWithApp(<App />, '/search?q=a');
-    expect(await screen.findByText('검색어는 2자 이상 입력해야 함')).toBeInTheDocument();
+    expect(await screen.findByText('검색어는 2자 이상 입력해 주세요')).toBeInTheDocument();
     const box = screen.getByRole('searchbox', { name: '검색어' });
     expect(box).toHaveValue('a');
     expect(screen.getByRole('button', { name: '검색' })).toBeDisabled();
@@ -81,7 +81,7 @@ describe('S-04 검색 결과', () => {
     );
     renderWithApp(<App />, '/search?q=%EA%B0%9C%EB%B0%9C&page=50');
     expect(await screen.findByText('1,000건 이상')).toBeInTheDocument();
-    expect(screen.getByText(/상위 1,000건까지만 볼 수 있음/)).toBeInTheDocument();
+    expect(screen.getByText(/상위 1,000건까지만 볼 수 있어요/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '50' })).toHaveAttribute('aria-current', 'page');
   });
 
@@ -96,10 +96,10 @@ describe('S-04 검색 결과', () => {
   it('결과가 없으면 안내와 인기 태그를, 필터가 있으면 초기화 버튼도 보여줌', async () => {
     const user = userEvent.setup();
     renderWithApp(<App />, '/search?q=zzzz&period=1W');
-    expect(await screen.findByText('검색 결과가 없음')).toBeInTheDocument();
+    expect(await screen.findByText('검색 결과가 없어요')).toBeInTheDocument();
     expect(screen.getByRole('list', { name: '인기 태그' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '필터 초기화' }));
     await waitFor(() => expect(currentLocation).toBe('/search?q=zzzz'));
-    expect(await screen.findByText('철자를 확인하거나 다른 키워드를 써보셈')).toBeInTheDocument();
+    expect(await screen.findByText('철자를 확인하거나 다른 키워드로 검색해 보세요')).toBeInTheDocument();
   });
 });

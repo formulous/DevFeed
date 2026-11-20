@@ -53,9 +53,9 @@ export function OnboardingPage() {
 
   return (
     <section className="rounded-[var(--radius-lg)] border border-line bg-surface p-6 shadow-[var(--shadow-sm)]">
-      <h1 className="text-xl font-bold">관심 있는 기술을 골라주셈</h1>
+      <h1 className="text-xl font-bold">관심 있는 기술을 골라 주세요</h1>
       <p className="mb-5 mt-1 text-sm text-fg-secondary">
-        {INTEREST_MIN}개 이상 고르면 추천이 정확해짐 (최대 {INTEREST_MAX}개)
+        {INTEREST_MIN}개 이상 고르면 추천이 정확해져요 (최대 {INTEREST_MAX}개)
       </p>
       <TagPicker selected={picked} max={INTEREST_MAX} onToggle={toggle} />
       <div className="mt-6 flex items-center gap-2">

@@ -39,9 +39,9 @@ function TagForm({ tag, onClose, onSaved }: Omit<TagFormModalProps, 'open'>) {
   };
 
   const errors: Partial<Record<keyof TagInput, string>> = {};
-  if (!input.name) errors.name = '이름을 입력해야 함';
-  if (!SLUG_PATTERN.test(input.slug)) errors.slug = '영문 소문자·숫자·하이픈만 사용 (예: spring-boot)';
-  if (input.synonyms.length > MAX_SYNONYMS) errors.synonyms = `동의어는 최대 ${MAX_SYNONYMS}개`;
+  if (!input.name) errors.name = '이름을 입력해 주세요';
+  if (!SLUG_PATTERN.test(input.slug)) errors.slug = '영문 소문자, 숫자, 하이픈만 쓸 수 있어요 (예: spring-boot)';
+  if (input.synonyms.length > MAX_SYNONYMS) errors.synonyms = `동의어는 최대 ${MAX_SYNONYMS}개까지 넣을 수 있어요`;
 
   const save = useMutation({
     mutationFn: () => (tag ? updateTag(tag.id, input) : createTag(input)),
@@ -95,7 +95,7 @@ function TagForm({ tag, onClose, onSaved }: Omit<TagFormModalProps, 'open'>) {
         />
         <FieldError message={show('synonyms')} />
       </div>
-      {tag === null && <p className="text-xs text-fg-muted">기존 글에는 전체 재태깅을 실행해야 반영됨</p>}
+      {tag === null && <p className="text-xs text-fg-muted">기존 글에는 전체 재태깅을 실행해야 반영돼요</p>}
       {save.isError && Object.keys(server).length === 0 && (
         <p role="alert" className="text-sm text-danger">
           {errorMessage(save.error)}

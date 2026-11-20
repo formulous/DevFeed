@@ -70,7 +70,7 @@ export function ForYouPage() {
   useEffect(() => {
     if (!expired) return;
     client.resetQueries({ queryKey: RECOMMEND_KEY });
-    toast('추천 목록이 오래돼서 새로 불러왔음');
+    toast('추천 목록이 오래돼서 새로 불러왔어요');
   }, [expired, client, toast]);
 
   const entries = useMemo(
@@ -86,7 +86,7 @@ export function ForYouPage() {
       {fallback && (
         <div className="mb-4 flex flex-wrap items-center gap-3 rounded-[var(--radius-md)] border border-line bg-surface p-4 text-sm">
           <p className="mr-auto">
-            아직 취향 정보가 없어서 인기 글을 보여주는 중임. 관심 태그를 고르면 더 정확해짐
+            아직 취향 정보가 없어서 인기 글을 보여드리고 있어요. 관심 태그를 고르면 더 정확해져요
           </p>
           <Link to={ONBOARDING_LINK} className="rounded-full bg-inverse px-3.5 py-1.5 font-medium text-on-inverse hover:opacity-90">
             관심 태그 고르기
@@ -104,8 +104,8 @@ export function ForYouPage() {
         <ErrorState message={list.error.message} onRetry={() => list.refetch()} />
       ) : entries.length === 0 ? (
         <EmptyState
-          title="지금 추천할 새 글이 없음"
-          description="최근 2주 글을 이미 다 읽었거나 관심 태그 글이 아직 없음"
+          title="지금 추천할 새 글이 없어요"
+          description="최근 2주 글을 이미 다 읽었거나 관심 태그 글이 아직 없어요"
           action={
             <Link to="/" className="text-sm font-medium text-brand">
               최신 피드 보기

@@ -27,8 +27,8 @@ p.lead{margin-top:18px;font-size:28px;color:#55555e;letter-spacing:-0.01em}
 </style></head><body>
 <div class="top"><div class="logo">DevFeed</div><div class="pill">기술 글 검색…</div></div>
 <h1>기술 블로그 통합 피드</h1>
-<p class="lead">국내 기술 블로그와 보안 뉴스를 한곳에서 읽고, 검색하고, 추천받음</p>
-<div class="tabs"><b>최신</b><span>추천</span><span>인기</span><span>기업 블로그</span><span>개인 블로그</span><span>보안 뉴스</span></div>
+<p class="lead">국내 기술 블로그와 보안 뉴스를 한곳에서 읽고, 검색하고, 추천받아요</p>
+<div class="tabs"><b>최신</b><span>추천</span><span>인기</span><span>보안 뉴스</span></div>
 <div class="list">${rows.map(([s, t], i) => `<div class="row"><span>${s}</span><em>${t}</em>${i === 0 ? '<i class="dot"></i>' : ''}</div>`).join('')}</div>
 </body></html>`;
 

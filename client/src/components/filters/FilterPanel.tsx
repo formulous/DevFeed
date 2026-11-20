@@ -111,7 +111,7 @@ export function FilterPanel({ b, onOpenTags, onOpenSources }: FilterPanelProps) 
             </div>
           </>
         ) : (
-          b.sourceIds.length === 0 && <p className="text-xs text-fg-muted">"전체 ›"에서 블로그를 골라 모아볼 수 있음</p>
+          b.sourceIds.length === 0 && <p className="text-xs text-fg-muted">"전체 ›"에서 블로그를 골라 모아 볼 수 있어요</p>
         )}
       </section>
 

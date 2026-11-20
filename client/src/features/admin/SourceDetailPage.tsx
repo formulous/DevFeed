@@ -35,7 +35,7 @@ export function SourceDetailPage() {
   const crawl = useMutation({
     mutationFn: () => crawlSource(id),
     onSuccess: () => {
-      setNotice({ tone: 'ok', text: '수집을 시작했음' });
+      setNotice({ tone: 'ok', text: '수집을 시작했어요' });
       refreshAll();
     },
     onError,
@@ -43,7 +43,7 @@ export function SourceDetailPage() {
   const resume = useMutation({
     mutationFn: () => resumeSource(id),
     onSuccess: () => {
-      setNotice({ tone: 'ok', text: '수집을 재개했음' });
+      setNotice({ tone: 'ok', text: '수집을 재개했어요' });
       refreshAll();
     },
     onError,
@@ -52,7 +52,7 @@ export function SourceDetailPage() {
     mutationFn: (next: 'ACTIVE' | 'INACTIVE') => updateSource(id, { status: next }),
     onSuccess: (_d, next) => {
       setConfirmOpen(false);
-      setNotice({ tone: 'ok', text: next === 'INACTIVE' ? '비활성화했음' : '다시 활성화했음' });
+      setNotice({ tone: 'ok', text: next === 'INACTIVE' ? '비활성화했어요' : '다시 활성화했어요' });
       refreshAll();
     },
     onError: (e) => {
@@ -64,7 +64,7 @@ export function SourceDetailPage() {
   if (source.isPending) return <FullPageSpinner />;
   if (source.isError) {
     return source.error instanceof ApiError && source.error.code === 'NOT_FOUND' ? (
-      <EmptyState title="소스를 찾을 수 없음" action={<Link to="/admin" className="text-sm text-brand">목록으로</Link>} />
+      <EmptyState title="소스를 찾을 수 없어요" action={<Link to="/admin" className="text-sm text-brand">목록으로</Link>} />
     ) : (
       <ErrorState message={source.error.message} onRetry={() => source.refetch()} />
     );
@@ -144,7 +144,7 @@ export function SourceDetailPage() {
       ) : runs.isError ? (
         <ErrorState message={runs.error.message} onRetry={() => runs.refetch()} />
       ) : runs.data.length === 0 ? (
-        <EmptyState title="수집 이력이 없음" />
+        <EmptyState title="수집 이력이 없어요" />
       ) : (
         <div className="overflow-x-auto rounded-[var(--radius-md)] border border-line bg-surface">
           <table className="w-full min-w-[560px] text-sm">
@@ -188,8 +188,8 @@ export function SourceDetailPage() {
         onConfirm={() => toggleActive.mutate(inactive ? 'ACTIVE' : 'INACTIVE')}
       >
         {inactive
-          ? '주기 수집 대상에 다시 포함함.'
-          : '수집 대상에서 빠짐. 이미 수집한 글은 피드에 그대로 남음.'}
+          ? '주기 수집 대상에 다시 포함돼요.'
+          : '수집 대상에서 빠져요. 이미 수집한 글은 피드에 그대로 남아요.'}
       </ConfirmModal>
     </section>
   );

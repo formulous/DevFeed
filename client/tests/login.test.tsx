@@ -27,7 +27,7 @@ describe('LoginPage', () => {
   it('잘못된 자격 증명이면 오류 문구를 보여줌', async () => {
     renderWithApp(<App />, '/login');
     await fillAndSubmit('user@devfeed.dev', 'wrong');
-    expect(await screen.findByRole('alert')).toHaveTextContent('이메일 또는 비밀번호가 맞지 않음');
+    expect(await screen.findByRole('alert')).toHaveTextContent('이메일 또는 비밀번호가 맞지 않아요');
   });
 
   it('로그인 잠김이면 남은 시간과 함께 버튼을 막음', async () => {

@@ -121,7 +121,7 @@ export function AdminDashboardPage() {
       ) : sources.isError ? (
         <ErrorState message={sources.error.message} onRetry={() => sources.refetch()} />
       ) : sources.data.length === 0 ? (
-        <EmptyState title="조건에 맞는 소스가 없음" />
+        <EmptyState title="조건에 맞는 소스가 없어요" />
       ) : (
         <>
           <table className="hidden w-full overflow-hidden rounded-[var(--radius-md)] border border-line bg-surface text-sm md:table">

@@ -70,14 +70,14 @@ function toInput(v: FormValues): SourceInput {
 
 export function validateForm(v: FormValues): Partial<Record<keyof FormValues, string>> {
   const errors: Partial<Record<keyof FormValues, string>> = {};
-  if (!v.name.trim()) errors.name = '이름을 입력해야 함';
-  else if (v.name.trim().length > 100) errors.name = '100자 이하로 입력해야 함';
-  if (!isHttpUrl(v.siteUrl.trim())) errors.siteUrl = 'http(s) URL을 입력해야 함';
-  if (!isHttpUrl(v.feedUrl.trim())) errors.feedUrl = 'http(s) URL을 입력해야 함';
-  if (v.logoUrl.trim() && !isHttpUrl(v.logoUrl.trim())) errors.logoUrl = 'http(s) URL을 입력해야 함';
+  if (!v.name.trim()) errors.name = '이름을 입력해 주세요';
+  else if (v.name.trim().length > 100) errors.name = '100자 이하로 입력해 주세요';
+  if (!isHttpUrl(v.siteUrl.trim())) errors.siteUrl = 'http(s) URL을 입력해 주세요';
+  if (!isHttpUrl(v.feedUrl.trim())) errors.feedUrl = 'http(s) URL을 입력해 주세요';
+  if (v.logoUrl.trim() && !isHttpUrl(v.logoUrl.trim())) errors.logoUrl = 'http(s) URL을 입력해 주세요';
   const interval = Number(v.crawlIntervalMin);
   if (!Number.isInteger(interval) || interval < INTERVAL_MIN || interval > INTERVAL_MAX) {
-    errors.crawlIntervalMin = `${INTERVAL_MIN}~${INTERVAL_MAX}분 사이 정수여야 함`;
+    errors.crawlIntervalMin = `${INTERVAL_MIN}~${INTERVAL_MAX}분 사이 정수로 입력해 주세요`;
   }
   return errors;
 }
@@ -93,13 +93,13 @@ function diff(initial: SourceInput, next: SourceInput): UpdateSourceInput {
 
 function ValidationPanel({ result }: { result: FeedValidationResult }) {
   if (!result.valid) {
-    return <p className="text-sm text-danger">유효하지 않은 피드임: {result.reason ?? '알 수 없는 오류'}</p>;
+    return <p className="text-sm text-danger">유효하지 않은 피드예요: {result.reason ?? '알 수 없는 오류'}</p>;
   }
-  if (result.duplicated) return <p className="text-sm text-danger">같은 피드 URL로 등록된 소스가 이미 있음</p>;
+  if (result.duplicated) return <p className="text-sm text-danger">같은 피드 URL로 등록된 소스가 이미 있어요</p>;
   return (
     <div className="text-sm text-success">
       <p>
-        유효한 {result.format}임 · {result.feedTitle} · 최근 글 {result.itemCount}건 확인
+        유효한 {result.format} 피드예요 · {result.feedTitle} · 최근 글 {result.itemCount}건
       </p>
       {result.sampleTitles && result.sampleTitles.length > 0 && (
         <ul className="mt-1 list-disc pl-5 text-xs text-fg-secondary">
@@ -228,7 +228,7 @@ function SourceForm({ source }: { source?: AdminSource }) {
           ) : checked && checked.url === feedUrl ? (
             <ValidationPanel result={checked.result} />
           ) : feedChanged && isHttpUrl(feedUrl) ? (
-            <p className="text-xs text-fg-muted">저장하려면 피드 URL 검증이 필요함</p>
+            <p className="text-xs text-fg-muted">저장하려면 피드 URL을 먼저 검증해 주세요</p>
           ) : null}
         </div>
       </div>
@@ -244,7 +244,7 @@ function SourceForm({ source }: { source?: AdminSource }) {
         <div>
           <p className="mb-1 text-xs font-medium">종류</p>
           <p className="text-sm">
-            {KIND_LABEL[values.kind]} <span className="text-xs text-fg-muted">(등록 후 바꿀 수 없음)</span>
+            {KIND_LABEL[values.kind]} <span className="text-xs text-fg-muted">(등록 후에는 바꿀 수 없어요)</span>
           </p>
         </div>
       )}

@@ -40,8 +40,8 @@ export function useToggleBookmark() {
       patchPost(client, postId, { isBookmarked: !next });
       toast(
         error instanceof ApiError && error.code === 'BOOKMARK_LIMIT_EXCEEDED'
-          ? '북마크는 최대 5,000개까지 저장할 수 있음'
-          : '북마크를 저장하지 못했음',
+          ? '북마크는 최대 5,000개까지 저장할 수 있어요'
+          : '북마크를 저장하지 못했어요',
         'error',
       );
     },
@@ -52,7 +52,7 @@ export function useToggleBookmark() {
 
   return (post: PostSummary) => {
     if (status !== 'member') {
-      openLoginPrompt('북마크하려면 로그인이 필요함');
+      openLoginPrompt('북마크하려면 로그인이 필요해요');
       return;
     }
     mutation.mutate({ postId: post.id, next: !post.isBookmarked });

@@ -15,13 +15,13 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function validateSignup(v: Values): Partial<Record<Field, string>> {
   const errors: Partial<Record<Field, string>> = {};
-  if (!EMAIL_PATTERN.test(v.email.trim())) errors.email = '이메일 형식이 아님';
-  if (v.password.length < 8 || v.password.length > 64) errors.password = '8~64자여야 함';
-  else if (!/^[\x21-\x7E]+$/.test(v.password)) errors.password = '공백·한글은 쓸 수 없음';
-  else if (!/[A-Za-z]/.test(v.password) || !/\d/.test(v.password)) errors.password = '영문과 숫자를 모두 포함해야 함';
-  if (v.passwordConfirm !== v.password) errors.passwordConfirm = '비밀번호가 일치하지 않음';
+  if (!EMAIL_PATTERN.test(v.email.trim())) errors.email = '이메일 형식이 아니에요';
+  if (v.password.length < 8 || v.password.length > 64) errors.password = '비밀번호는 8~64자로 입력해 주세요';
+  else if (!/^[\x21-\x7E]+$/.test(v.password)) errors.password = '공백과 한글은 쓸 수 없어요';
+  else if (!/[A-Za-z]/.test(v.password) || !/\d/.test(v.password)) errors.password = '영문과 숫자를 모두 넣어 주세요';
+  if (v.passwordConfirm !== v.password) errors.passwordConfirm = '비밀번호가 일치하지 않아요';
   const nickname = v.nickname.trim();
-  if (nickname.length < 2 || nickname.length > 20) errors.nickname = '2~20자여야 함';
+  if (nickname.length < 2 || nickname.length > 20) errors.nickname = '닉네임은 2~20자로 입력해 주세요';
   return errors;
 }
 
@@ -35,7 +35,7 @@ export function SignupPage() {
 
   const local = validateSignup(values);
   const server = fieldErrorMap(error);
-  if (error instanceof ApiError && error.code === 'EMAIL_DUPLICATED') server.email = '이미 가입된 이메일임';
+  if (error instanceof ApiError && error.code === 'EMAIL_DUPLICATED') server.email = '이미 가입된 이메일이에요';
   const show = (f: Field) => (submitted ? local[f] : undefined) ?? server[f];
   const formError = error && Object.keys(server).length === 0 ? errorMessage(error) : null;
 
@@ -109,13 +109,13 @@ export function SignupPage() {
         />
       </form>
       <p className="mt-4 text-center text-xs text-fg-muted">
-        가입하면 이메일·닉네임을 보관함.{' '}
+        가입하면 이메일과 닉네임을 보관해요.{' '}
         <Link to="/privacy" className="font-medium text-fg-secondary underline hover:text-brand">
           개인정보 안내
         </Link>
       </p>
       <p className="mt-2 text-center text-sm text-fg-secondary">
-        이미 계정이 있음?{' '}
+        이미 계정이 있으신가요?{' '}
         <Link to={loginHref} className="font-medium text-brand">
           로그인
         </Link>

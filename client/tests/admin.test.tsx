@@ -10,7 +10,7 @@ describe('관리자 접근', () => {
   it('일반 회원은 권한 없음 화면을 봄', async () => {
     await seedLogin('user@devfeed.dev');
     renderWithApp(<App />, '/admin');
-    expect(await screen.findByText('접근 권한이 없음')).toBeInTheDocument();
+    expect(await screen.findByText('접근 권한이 없어요')).toBeInTheDocument();
   });
 });
 
@@ -60,7 +60,7 @@ describe('A-02 소스 상세', () => {
     await seedLogin('admin@devfeed.dev');
     renderWithApp(<App />, '/admin/sources/7');
     await user.click(await screen.findByRole('button', { name: '재개' }));
-    expect(await screen.findByText('수집을 재개했음')).toBeInTheDocument();
+    expect(await screen.findByText('수집을 재개했어요')).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByRole('button', { name: '재개' })).not.toBeInTheDocument());
   });
 });
@@ -79,12 +79,12 @@ describe('A-03 소스 등록', () => {
     await fillBase(user, 'https://new.example.com/invalid');
     expect(screen.getByRole('button', { name: '저장' })).toBeDisabled();
     await user.click(screen.getByRole('button', { name: '검증' }));
-    expect(await screen.findByText(/유효하지 않은 피드임/)).toBeInTheDocument();
+    expect(await screen.findByText(/유효하지 않은 피드예요/)).toBeInTheDocument();
 
     await user.clear(screen.getByLabelText('피드 URL (RSS/Atom)'));
     await user.type(screen.getByLabelText('피드 URL (RSS/Atom)'), 'https://new.example.com/rss');
     await user.click(screen.getByRole('button', { name: '검증' }));
-    expect(await screen.findByText(/유효한 RSS임/)).toBeInTheDocument();
+    expect(await screen.findByText(/유효한 RSS 피드예요/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '저장' }));
     await waitFor(() => expect(currentLocation).toBe('/admin/sources/100'));
     expect(await screen.findByRole('heading', { name: '새 블로그' })).toBeInTheDocument();
@@ -96,7 +96,7 @@ describe('A-03 소스 등록', () => {
     renderWithApp(<App />, '/admin/sources/new');
     await fillBase(user, 'https://blog1.example.com/rss');
     await user.click(screen.getByRole('button', { name: '검증' }));
-    expect(await screen.findByText(/이미 있음/)).toBeInTheDocument();
+    expect(await screen.findByText(/이미 있어요/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '저장' })).toBeDisabled();
   });
 
@@ -109,7 +109,7 @@ describe('A-03 소스 등록', () => {
     await user.clear(interval);
     await user.type(interval, '10');
     await user.click(screen.getByRole('button', { name: '저장' }));
-    expect(await screen.findByText('30~1440분 사이 정수여야 함')).toBeInTheDocument();
+    expect(await screen.findByText('30~1440분 사이 정수로 입력해 주세요')).toBeInTheDocument();
     await user.clear(interval);
     await user.type(interval, '120');
     await user.click(screen.getByRole('button', { name: '저장' }));
@@ -128,7 +128,7 @@ describe('A-04 태그 사전', () => {
     await user.type(within(dialog).getByLabelText('태그 이름'), 'Kafka');
     expect(within(dialog).getByLabelText('slug')).toHaveValue('kafka');
     await user.click(within(dialog).getByRole('button', { name: '저장' }));
-    expect(await within(dialog).findByRole('alert')).toHaveTextContent('같은 이름 또는 slug의 태그가 있음');
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('같은 이름 또는 slug의 태그가 이미 있어요');
   });
 
   it('태그를 추가하면 목록에 나타남', async () => {
@@ -183,13 +183,13 @@ describe('021 소스 종류·지역', () => {
     await user.type(screen.getByLabelText('사이트 URL'), 'https://news.example.com');
     await user.type(screen.getByLabelText('피드 URL (RSS/Atom)'), 'https://news.example.com/rss');
     await user.click(screen.getByRole('button', { name: '검증' }));
-    await screen.findByText(/유효한 RSS임/);
+    await screen.findByText(/유효한 RSS 피드예요/);
     await user.click(screen.getByRole('button', { name: '저장' }));
     await waitFor(() => expect(currentLocation).toBe('/admin/sources/100'));
     expect(await screen.findByText(/보안 뉴스 · 해외/)).toBeInTheDocument();
 
     renderWithApp(<App />, '/admin/sources/100/edit');
-    expect(await screen.findByText('(등록 후 바꿀 수 없음)')).toBeInTheDocument();
+    expect(await screen.findByText('(등록 후에는 바꿀 수 없어요)')).toBeInTheDocument();
     expect(screen.queryByRole('radio', { name: '기술 블로그' })).toBeNull();
   });
 });

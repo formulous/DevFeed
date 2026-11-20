@@ -137,7 +137,7 @@ function PickerBody({ title, noun, items, groups, groupLabel, initial, max, onAp
               </li>
             );
           })}
-          {visible.length === 0 && <li className="text-sm text-fg-muted">일치하는 {noun}가 없음</li>}
+          {visible.length === 0 && <li className="text-sm text-fg-muted">일치하는 {noun}가 없어요</li>}
         </ul>
         <div className="flex items-center gap-2 border-t border-line px-5 py-3">
           <span className="mr-auto text-sm tabular-nums text-fg-secondary" aria-live="polite">

@@ -15,7 +15,7 @@ describe('화면별 title', () => {
     expect(titleFor('/search', '?q=%EC%B9%B4%ED%94%84%EC%B9%B4')).toBe('검색: 카프카 · DevFeed');
     expect(titleFor('/admin/sources/3/edit', '')).toBe('소스 수정 · DevFeed');
     expect(titleFor('/admin/sources/3', '')).toBe('소스 상세 · DevFeed');
-    expect(titleFor('/nope', '')).toBe('페이지를 찾을 수 없음 · DevFeed');
+    expect(titleFor('/nope', '')).toBe('페이지를 찾을 수 없어요 · DevFeed');
   });
 
   it('라우트가 바뀌면 document.title을 갱신함', async () => {
@@ -58,7 +58,7 @@ describe('ErrorBoundary', () => {
         <Boom error={new Error('boom')} />
       </ErrorBoundary>,
     );
-    expect(screen.getByRole('alert')).toHaveTextContent('화면을 그리다 문제가 생겼음');
+    expect(screen.getByRole('alert')).toHaveTextContent('화면을 그리다 문제가 생겼어요');
     expect(screen.getByRole('button', { name: '새로고침' })).toBeInTheDocument();
     spy.mockRestore();
   });
@@ -75,7 +75,7 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>,
     );
     expect(reload).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole('alert')).toHaveTextContent('새 버전이 배포됐음');
+    expect(screen.getByRole('alert')).toHaveTextContent('새 버전이 배포됐어요');
     unmount();
     render(
       <ErrorBoundary resetKey="/">

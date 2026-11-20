@@ -32,7 +32,7 @@ export function TagPicker({ selected, max, onToggle }: TagPickerProps) {
   }, [tags.data, keyword, category]);
 
   if (tags.isPending) return <p className="text-sm text-fg-muted">태그를 불러오는 중</p>;
-  if (tags.isError) return <p className="text-sm text-danger">태그를 불러오지 못했음</p>;
+  if (tags.isError) return <p className="text-sm text-danger">태그를 불러오지 못했어요</p>;
 
   return (
     <div>
@@ -82,7 +82,7 @@ export function TagPicker({ selected, max, onToggle }: TagPickerProps) {
             </li>
           );
         })}
-        {visible.length === 0 && <li className="text-sm text-fg-muted">일치하는 태그가 없음</li>}
+        {visible.length === 0 && <li className="text-sm text-fg-muted">일치하는 태그가 없어요</li>}
       </ul>
     </div>
   );

@@ -28,7 +28,7 @@ export function titleFor(pathname: string, search: string) {
     return q ? `검색: ${q} · ${APP}` : `검색 · ${APP}`;
   }
   const hit = TITLES.find(([pattern]) => matchPath(pattern, pathname));
-  return hit ? `${hit[1]} · ${APP}` : `페이지를 찾을 수 없음 · ${APP}`;
+  return hit ? `${hit[1]} · ${APP}` : `페이지를 찾을 수 없어요 · ${APP}`;
 }
 
 const NOINDEX_PATTERNS = ['/login', '/signup', '/onboarding/*', '/me/*', '/admin', '/admin/*'];

@@ -57,7 +57,7 @@ function buildPosts(count: number): PostSummary[] {
     return {
       id,
       title: `${title} #${id}`,
-      summary: i % 11 === 10 ? null : `${title}에 대한 정리임. 실무에서 겪은 문제와 해결 과정을 단계별로 설명하고, 측정 수치와 함께 개선 효과를 공유함.`,
+      summary: i % 11 === 10 ? null : `${title}에 대해 정리했어요. 실무에서 겪은 문제와 해결 과정을 단계별로 설명하고, 측정 수치와 함께 개선 효과를 공유해요.`,
       url: `https://example.com/posts/${id}`,
       thumbnailUrl: i % 3 === 0 ? null : `https://picsum.photos/seed/devfeed${id}/224/160`,
       publishedAt: new Date(BASE_TIME - i * 180 * 60_000).toISOString(),
@@ -124,7 +124,7 @@ const NEWS_TITLES: Record<'DOMESTIC' | 'OVERSEAS', string[]> = {
 };
 
 const NEWS_SUMMARY =
-  '보안 업데이트가 공개됐음. 영향받는 버전 사용자는 즉시 최신 버전으로 업데이트하고, 외부 노출 서비스의 접근 기록을 점검하라고 권고함. 공격 지표와 대응 방법은 원문에서 확인할 수 있음. 추가 분석 결과는 확인되는 대로 공개 예정임.';
+  '보안 업데이트가 공개됐어요. 영향받는 버전 사용자는 즉시 최신 버전으로 업데이트하고, 외부 노출 서비스의 접근 기록을 점검하라고 권고해요. 공격 지표와 대응 방법은 원문에서 확인할 수 있어요. 추가 분석 결과는 확인되는 대로 공개할 예정이에요.';
 
 export const mockNewsPosts: PostSummary[] = Array.from({ length: 30 }, (_, i) => {
   const source = mockNewsSources[i % mockNewsSources.length];

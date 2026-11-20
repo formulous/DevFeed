@@ -25,7 +25,7 @@ export function RequireAdmin({ children }: { children: ReactNode }) {
   const { me } = useAuth();
   return (
     <RequireAuth>
-      {me?.role === 'ADMIN' ? children : <EmptyState title="접근 권한이 없음" description="관리자만 볼 수 있는 화면임" />}
+      {me?.role === 'ADMIN' ? children : <EmptyState title="접근 권한이 없어요" description="관리자만 볼 수 있는 화면이에요" />}
     </RequireAuth>
   );
 }

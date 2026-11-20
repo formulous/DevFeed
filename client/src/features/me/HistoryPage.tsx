@@ -69,7 +69,7 @@ export function HistoryPage() {
         data && { pages: [{ items: [], nextCursor: null }], pageParams: [undefined] },
       );
       client.invalidateQueries({ queryKey: ['posts'], refetchType: 'inactive' });
-      toast('읽은 기록을 모두 지웠음');
+      toast('읽은 기록을 모두 지웠어요');
     },
     onError: (e) => {
       setConfirmClear(false);
@@ -90,7 +90,7 @@ export function HistoryPage() {
           onClick={() => setConfirmClear(true)}
         />
       </div>
-      <p className="mb-4 text-xs text-fg-muted">원문을 연 글이 최근 읽은 순으로 쌓임. 1년 지나면 자동 삭제됨</p>
+      <p className="mb-4 text-xs text-fg-muted">원문을 연 글이 최근 읽은 순으로 쌓여요. 1년이 지나면 자동으로 삭제돼요</p>
 
       {list.isPending ? (
         <div>
@@ -101,7 +101,7 @@ export function HistoryPage() {
       ) : list.isError && items.length === 0 ? (
         <ErrorState message={list.error.message} onRetry={() => list.refetch()} />
       ) : items.length === 0 ? (
-        <EmptyState title="읽은 기록이 없음" description="글 카드를 눌러 원문을 열면 여기에 남음" />
+        <EmptyState title="읽은 기록이 없어요" description="글을 눌러 원문을 열면 여기에 남아요" />
       ) : (
         <div className="space-y-6">
           {groups.map((g) => (
@@ -140,7 +140,7 @@ export function HistoryPage() {
         onClose={() => setConfirmClear(false)}
         onConfirm={() => removeAll.mutate()}
       >
-        읽은 기록을 모두 지움. 되돌릴 수 없음. 피드의 읽음 표시도 함께 사라짐.
+        읽은 기록을 모두 지울까요? 되돌릴 수 없고, 피드의 읽음 표시도 함께 사라져요.
       </ConfirmModal>
     </section>
   );

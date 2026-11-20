@@ -27,12 +27,12 @@ function NicknameForm() {
   const toast = useToast();
   const [value, setValue] = useState(me?.nickname ?? '');
   const trimmed = value.trim();
-  const local = trimmed.length < 2 || trimmed.length > 20 ? '2~20자여야 함' : undefined;
+  const local = trimmed.length < 2 || trimmed.length > 20 ? '닉네임은 2~20자로 입력해 주세요' : undefined;
   const save = useMutation({
     mutationFn: () => updateNickname(trimmed),
     onSuccess: (user) => {
       updateMe({ nickname: user.nickname });
-      toast('닉네임을 바꿨음');
+      toast('닉네임을 바꿨어요');
     },
   });
   const submit = (e: FormEvent) => {
@@ -99,7 +99,7 @@ function InterestTags() {
                 <button
                   type="button"
                   aria-label={`${t.name} 관심 태그 제거`}
-                  title={atMin ? `최소 ${INTEREST_MIN}개 필요` : undefined}
+                  title={atMin ? `최소 ${INTEREST_MIN}개가 필요해요` : undefined}
                   disabled={atMin || save.isPending}
                   onClick={() => remove(t.id)}
                   className="disabled:cursor-not-allowed disabled:opacity-40"
@@ -117,7 +117,7 @@ function InterestTags() {
         </ul>
       )}
       <p className="mt-2 text-xs text-fg-muted">
-        {INTEREST_MIN}~{INTEREST_MAX}개. {atMin && current.length > 0 ? `최소 ${INTEREST_MIN}개가 필요해서 더 뺄 수 없음` : '추천 피드에 반영됨'}
+        {INTEREST_MIN}~{INTEREST_MAX}개. {atMin && current.length > 0 ? `최소 ${INTEREST_MIN}개가 필요해서 더 뺄 수 없어요` : '추천 피드에 반영돼요'}
       </p>
 
       <Modal open={picking} onClose={() => setPicking(false)} title="관심 태그">
@@ -153,12 +153,12 @@ function WithdrawModal({ open, onClose }: { open: boolean; onClose: () => void }
     mutationFn: () => withdraw(password),
     onSuccess: () => {
       clearSession();
-      toast('탈퇴했음. 그동안 이용해줘서 고마움');
+      toast('탈퇴했어요. 그동안 이용해 주셔서 고마워요');
     },
   });
   const message =
     run.error instanceof ApiError && run.error.code === 'PASSWORD_MISMATCH'
-      ? '비밀번호가 맞지 않음'
+      ? '비밀번호가 맞지 않아요'
       : run.isError
         ? errorMessage(run.error)
         : undefined;
@@ -178,12 +178,12 @@ function WithdrawModal({ open, onClose }: { open: boolean; onClose: () => void }
           if (password) run.mutate();
         }}
       >
-        <p className="text-sm text-fg-secondary">탈퇴하면 아래 데이터가 바로 삭제되고 되돌릴 수 없음.</p>
+        <p className="text-sm text-fg-secondary">탈퇴하면 아래 데이터가 바로 삭제되고 되돌릴 수 없어요. 계속할까요?</p>
         <ul className="my-3 list-disc pl-5 text-sm text-fg-secondary">
           <li>계정 정보 (이메일, 닉네임)</li>
           <li>북마크, 읽은 기록, 관심 태그</li>
         </ul>
-        <p className="mb-4 text-xs text-fg-muted">글 조회수 같은 집계 수치는 개인을 알 수 없는 형태로 남음.</p>
+        <p className="mb-4 text-xs text-fg-muted">글 조회수 같은 집계 수치는 개인을 알 수 없는 형태로 남아요.</p>
         <TextInput
           label="비밀번호 확인"
           type="password"

@@ -64,9 +64,9 @@ export class ErrorBoundary extends Component<Props, State> {
     const chunk = isChunkLoadError(error);
     return (
       <div role="alert" className="mx-auto my-16 max-w-md rounded-[var(--radius-lg)] border border-line bg-surface p-6 text-center">
-        <p className="text-base font-semibold">{chunk ? '새 버전이 배포됐음' : '화면을 그리다 문제가 생겼음'}</p>
+        <p className="text-base font-semibold">{chunk ? '새 버전이 배포됐어요' : '화면을 그리다 문제가 생겼어요'}</p>
         <p className="mt-2 text-sm text-fg-secondary">
-          {chunk ? '새로고침하면 최신 화면을 불러옴' : '새로고침해도 계속되면 잠시 뒤 다시 시도하셈'}
+          {chunk ? '새로고침하면 최신 화면을 불러와요' : '새로고침해도 계속되면 잠시 후 다시 시도해 주세요'}
         </p>
         <div className="mt-5 flex justify-center gap-2">
           <button

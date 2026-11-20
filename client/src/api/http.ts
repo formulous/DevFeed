@@ -92,7 +92,7 @@ function toErrorBody(status: number, data: unknown): ApiErrorBody {
   if (data && typeof data === 'object' && 'code' in data && 'message' in data) {
     return data as ApiErrorBody;
   }
-  return { code: status >= 500 ? 'INTERNAL_ERROR' : 'UNKNOWN', message: '요청을 처리하지 못했음' };
+  return { code: status >= 500 ? 'INTERNAL_ERROR' : 'UNKNOWN', message: '요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요' };
 }
 
 export async function request<T>(path: string, options: RequestOptions = {}, retried = false): Promise<T> {

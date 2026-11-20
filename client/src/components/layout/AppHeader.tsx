@@ -44,7 +44,7 @@ export function SearchBox({ className }: { className?: string }) {
         aria-label="검색어"
         className="h-10 w-full rounded-full border border-line bg-input pl-9 pr-4 text-sm text-fg placeholder:text-fg-muted transition-colors focus:border-line-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-focus"
       />
-      {trimmed.length === 1 && <p className="absolute left-4 mt-1 text-xs text-fg-muted">2자 이상 입력해야 함</p>}
+      {trimmed.length === 1 && <p className="absolute left-4 mt-1 text-xs text-fg-muted">2자 이상 입력해 주세요</p>}
     </form>
   );
 }

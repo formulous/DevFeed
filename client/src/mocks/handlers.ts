@@ -60,8 +60,8 @@ function fieldFilter(value: string | null) {
 const byDateDesc = (m: Map<number, string>) => [...m.entries()].sort((a, b) => b[1].localeCompare(a[1]));
 
 function adminGuard(request: Request) {
-  if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요함');
-  if (state.me?.role !== 'ADMIN') return error(403, 'FORBIDDEN', '관리자만 접근할 수 있음');
+  if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요해요');
+  if (state.me?.role !== 'ADMIN') return error(403, 'FORBIDDEN', '관리자만 접근할 수 있어요');
   return null;
 }
 
@@ -102,7 +102,7 @@ export const handlers = [
     const size = Math.min(Number(url.searchParams.get('size') ?? 20), 50);
     const cursor = url.searchParams.get('cursor');
     const offset = cursor ? Number(atob(cursor)) : 0;
-    if (Number.isNaN(offset)) return error(400, 'INVALID_CURSOR', '커서를 해석할 수 없음');
+    if (Number.isNaN(offset)) return error(400, 'INVALID_CURSOR', '커서를 해석할 수 없어요');
 
     const inField = fieldFilter(url.searchParams.get('field'));
     const filtered = mockPosts.filter(
@@ -123,7 +123,7 @@ export const handlers = [
     const period = url.searchParams.get('period');
     const inField = fieldFilter(url.searchParams.get('field'));
     const hours = { DAY: 24, WEEK: 24 * 7, MONTH: 24 * 30 }[period ?? ''];
-    if (!hours) return error(400, 'VALIDATION_FAILED', '기간 값이 올바르지 않음');
+    if (!hours) return error(400, 'VALIDATION_FAILED', '기간 값이 올바르지 않아요');
     const latest = Date.parse(mockPosts[0].publishedAt);
     const member = isMember(request);
     const items = mockPosts
@@ -183,7 +183,7 @@ export const handlers = [
     const url = new URL(request.url);
     const region = url.searchParams.get('region');
     const sourceIds = idList(url.searchParams.get('sourceIds'));
-    if (region && region !== 'DOMESTIC' && region !== 'OVERSEAS') return error(400, 'VALIDATION_FAILED', '지역 값이 올바르지 않음');
+    if (region && region !== 'DOMESTIC' && region !== 'OVERSEAS') return error(400, 'VALIDATION_FAILED', '지역 값이 올바르지 않아요');
     const regionOf = new Map(mockNewsSources.map((s) => [s.id, s.region]));
     const member = isMember(request);
     const list = mockNewsPosts
@@ -215,9 +215,9 @@ export const handlers = [
   }),
 
   http.put('*/api/me/bookmarks/:id', ({ request, params }) => {
-    if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요함');
+    if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요해요');
     const id = Number(params.id);
-    if (!postById(id)) return error(404, 'NOT_FOUND', '글을 찾을 수 없음');
+    if (!postById(id)) return error(404, 'NOT_FOUND', '글을 찾을 수 없어요');
     if (!state.bookmarks.has(id) && state.bookmarks.size >= BOOKMARK_LIMIT) {
       return error(422, 'BOOKMARK_LIMIT_EXCEEDED', '북마크는 최대 5,000개');
     }
@@ -225,7 +225,7 @@ export const handlers = [
     return new HttpResponse(null, { status: 204 });
   }),
   http.delete('*/api/me/bookmarks/:id', ({ request, params }) => {
-    if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요함');
+    if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요해요');
     state.bookmarks.delete(Number(params.id));
     return new HttpResponse(null, { status: 204 });
   }),
@@ -234,11 +234,11 @@ export const handlers = [
     const body = (await request.json()) as { email: string; password: string };
     if (body.password === 'locked') {
       return HttpResponse.json(
-        { code: 'LOGIN_LOCKED', message: '로그인 시도가 많아 잠겼음', retryAfterSec: 600 },
+        { code: 'LOGIN_LOCKED', message: '로그인 시도가 많아 잠겼어요', retryAfterSec: 600 },
         { status: 423 },
       );
     }
-    if (!body.email || body.password === 'wrong') return error(401, 'INVALID_CREDENTIALS', '이메일 또는 비밀번호가 맞지 않음');
+    if (!body.email || body.password === 'wrong') return error(401, 'INVALID_CREDENTIALS', '이메일 또는 비밀번호가 맞지 않아요');
     return startSession(
       {
         id: 1,
@@ -263,11 +263,11 @@ export const handlers = [
     return new HttpResponse(null, { status: 204 });
   }),
   http.get('*/api/me', ({ request }) =>
-    isMember(request) && state.me ? HttpResponse.json(state.me) : error(401, 'UNAUTHENTICATED', '로그인이 필요함'),
+    isMember(request) && state.me ? HttpResponse.json(state.me) : error(401, 'UNAUTHENTICATED', '로그인이 필요해요'),
   ),
   http.post('*/api/auth/signup', async ({ request }) => {
     const body = (await request.json()) as { email: string; password: string; nickname: string };
-    if (body.email === TAKEN_EMAIL) return error(409, 'EMAIL_DUPLICATED', '이미 가입된 이메일임');
+    if (body.email === TAKEN_EMAIL) return error(409, 'EMAIL_DUPLICATED', '이미 가입된 이메일이에요');
     return startSession(
       {
         id: 2,
@@ -283,29 +283,29 @@ export const handlers = [
     );
   }),
   http.patch('*/api/me', async ({ request }) => {
-    if (!isMember(request) || !state.me) return error(401, 'UNAUTHENTICATED', '로그인이 필요함');
+    if (!isMember(request) || !state.me) return error(401, 'UNAUTHENTICATED', '로그인이 필요해요');
     const { nickname } = (await request.json()) as { nickname: string };
     state.me = { ...state.me, nickname };
     return HttpResponse.json(state.me);
   }),
   http.post('*/api/me/withdraw', async ({ request }) => {
-    if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요함');
+    if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요해요');
     const { password } = (await request.json()) as { password: string };
-    if (password !== state.password) return error(403, 'PASSWORD_MISMATCH', '비밀번호가 맞지 않음');
+    if (password !== state.password) return error(403, 'PASSWORD_MISMATCH', '비밀번호가 맞지 않아요');
     resetMockState();
     return new HttpResponse(null, { status: 204 });
   }),
   http.post('*/api/me/onboarding/complete', ({ request }) => {
-    if (!isMember(request) || !state.me) return error(401, 'UNAUTHENTICATED', '로그인이 필요함');
+    if (!isMember(request) || !state.me) return error(401, 'UNAUTHENTICATED', '로그인이 필요해요');
     state.me = { ...state.me, onboardingCompleted: true };
     return new HttpResponse(null, { status: 204 });
   }),
   http.get('*/api/me/interest-tags', ({ request }) => {
-    if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요함');
+    if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요해요');
     return HttpResponse.json({ items: state.interestTags.map((id) => ({ id, name: mockTags.find((t) => t.id === id)!.name })) });
   }),
   http.put('*/api/me/interest-tags', async ({ request }) => {
-    if (!isMember(request) || !state.me) return error(401, 'UNAUTHENTICATED', '로그인이 필요함');
+    if (!isMember(request) || !state.me) return error(401, 'UNAUTHENTICATED', '로그인이 필요해요');
     const { tagIds } = (await request.json()) as { tagIds: number[] };
     if (tagIds.length < 3 || tagIds.length > 10 || tagIds.some((id) => !mockTags.some((t) => t.id === id))) {
       return HttpResponse.json(
@@ -318,7 +318,7 @@ export const handlers = [
     return HttpResponse.json({ items: tagIds.map((id) => ({ id, name: mockTags.find((t) => t.id === id)!.name })) });
   }),
   http.get('*/api/me/bookmarks', ({ request }) => {
-    if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요함');
+    if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요해요');
     const url = new URL(request.url);
     const tagIds = idList(url.searchParams.get('tagIds'));
     const list = byDateDesc(state.bookmarks)
@@ -327,25 +327,25 @@ export const handlers = [
     return HttpResponse.json({ ...cursorPage(list, url), total: state.bookmarks.size });
   }),
   http.get('*/api/me/history', ({ request }) => {
-    if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요함');
+    if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요해요');
     const list = byDateDesc(state.reads).map(([id, at]) => ({ ...decorate(postById(id)!, true), readAt: at }));
     return HttpResponse.json(cursorPage(list, new URL(request.url)));
   }),
   http.delete('*/api/me/history/:id', ({ request, params }) => {
-    if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요함');
+    if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요해요');
     state.reads.delete(Number(params.id));
     return new HttpResponse(null, { status: 204 });
   }),
   http.delete('*/api/me/history', ({ request }) => {
-    if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요함');
+    if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요해요');
     state.reads.clear();
     return new HttpResponse(null, { status: 204 });
   }),
   http.get('*/api/recommendations', ({ request }) => {
-    if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요함');
+    if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요해요');
     const url = new URL(request.url);
     const cursor = url.searchParams.get('cursor');
-    if (cursor === 'expired') return error(400, 'INVALID_CURSOR', '커서 값이 올바르지 않음');
+    if (cursor === 'expired') return error(400, 'INVALID_CURSOR', '커서 값이 올바르지 않아요');
     const fallback = state.interestTags.length === 0 && state.bookmarks.size === 0 && state.reads.size === 0;
     const interestNames = new Map(state.interestTags.map((id) => [id, mockTags.find((t) => t.id === id)!.name]));
     const candidates = mockPosts

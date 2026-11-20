@@ -80,8 +80,8 @@ export function BookmarksPage() {
         <ErrorState message={list.error.message} onRetry={() => list.refetch()} />
       ) : items.length === 0 ? (
         <EmptyState
-          title={tagIds.length ? '이 태그로 저장한 글이 없음' : '아직 북마크한 글이 없음'}
-          description="글 카드의 ☆를 누르면 여기에 모임"
+          title={tagIds.length ? '이 태그로 저장한 글이 없어요' : '아직 북마크한 글이 없어요'}
+          description="글의 ☆를 누르면 여기에 모여요"
         />
       ) : (
         <ul className="divide-y divide-line">

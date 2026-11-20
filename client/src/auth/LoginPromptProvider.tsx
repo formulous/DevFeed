@@ -14,7 +14,7 @@ export function LoginPromptProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const openLoginPrompt = useCallback((msg?: string) => setMessage(msg ?? '로그인이 필요한 기능임'), []);
+  const openLoginPrompt = useCallback((msg?: string) => setMessage(msg ?? '로그인이 필요한 기능이에요'), []);
   const close = () => setMessage(null);
   const goTo = (path: string) => {
     const redirect = encodeURIComponent(location.pathname + location.search);

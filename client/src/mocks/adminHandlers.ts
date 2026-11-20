@@ -48,11 +48,11 @@ function findSource(id: unknown) {
 function tagConflict(input: Partial<TagInput>, excludeId?: number) {
   const others = adminState.tags.filter((t) => t.id !== excludeId);
   if (others.some((t) => t.name.toLowerCase() === input.name?.toLowerCase() || t.slug === input.slug)) {
-    return err(409, 'TAG_DUPLICATED', '같은 이름 또는 slug의 태그가 있음');
+    return err(409, 'TAG_DUPLICATED', '같은 이름 또는 slug의 태그가 이미 있어요');
   }
   const syn = new Set(others.flatMap((t) => t.synonyms.map((s) => s.toLowerCase())));
   if (input.synonyms?.some((s) => syn.has(s.toLowerCase()))) {
-    return err(409, 'SYNONYM_DUPLICATED', '다른 태그에 이미 등록된 동의어가 있음');
+    return err(409, 'SYNONYM_DUPLICATED', '다른 태그에 이미 등록된 동의어가 있어요');
   }
   return null;
 }
@@ -105,11 +105,11 @@ export function adminHandlers(guard: Guard) {
       admin(async ({ request }) => {
         const input = (await request.json()) as SourceInput;
         const kind = input.kind ?? 'BLOG';
-        if (kind === 'SECURITY_NEWS' && !input.region) return err(400, 'VALIDATION_FAILED', '보안 뉴스는 지역이 필요함');
-        if (kind === 'BLOG' && input.region) return err(400, 'VALIDATION_FAILED', '기술 블로그는 지역을 지정할 수 없음');
+        if (kind === 'SECURITY_NEWS' && !input.region) return err(400, 'VALIDATION_FAILED', '보안 뉴스는 지역을 골라 주세요');
+        if (kind === 'BLOG' && input.region) return err(400, 'VALIDATION_FAILED', '기술 블로그는 지역을 지정할 수 없어요');
         const check = feedCheck(input.feedUrl);
         if (!check.valid) return err(422, 'SOURCE_FEED_INVALID', `유효한 피드가 아님: ${check.reason}`);
-        if (check.duplicated) return err(409, 'SOURCE_FEED_DUPLICATED', '같은 피드 URL 소스가 이미 있음');
+        if (check.duplicated) return err(409, 'SOURCE_FEED_DUPLICATED', '같은 피드 URL 소스가 이미 있어요');
         const now = new Date().toISOString();
         const source: AdminSource = {
           id: adminState.nextId++,
@@ -135,21 +135,21 @@ export function adminHandlers(guard: Guard) {
       '*/api/admin/sources/:id',
       admin(({ params }) => {
         const source = findSource(params.id);
-        return source ? HttpResponse.json(source) : err(404, 'NOT_FOUND', '소스를 찾을 수 없음');
+        return source ? HttpResponse.json(source) : err(404, 'NOT_FOUND', '소스를 찾을 수 없어요');
       }),
     ),
     http.patch(
       '*/api/admin/sources/:id',
       admin(async ({ request, params }) => {
         const source = findSource(params.id);
-        if (!source) return err(404, 'NOT_FOUND', '소스를 찾을 수 없음');
+        if (!source) return err(404, 'NOT_FOUND', '소스를 찾을 수 없어요');
         const input = (await request.json()) as UpdateSourceInput & { kind?: unknown };
-        if (input.kind !== undefined) return err(400, 'VALIDATION_FAILED', '종류는 바꿀 수 없음');
-        if (input.region && source.kind === 'BLOG') return err(400, 'VALIDATION_FAILED', '기술 블로그는 지역을 지정할 수 없음');
+        if (input.kind !== undefined) return err(400, 'VALIDATION_FAILED', '종류는 바꿀 수 없어요');
+        if (input.region && source.kind === 'BLOG') return err(400, 'VALIDATION_FAILED', '기술 블로그는 지역을 지정할 수 없어요');
         if (input.feedUrl && input.feedUrl !== source.feedUrl) {
           const check = feedCheck(input.feedUrl, source.id);
           if (!check.valid) return err(422, 'SOURCE_FEED_INVALID', `유효한 피드가 아님: ${check.reason}`);
-          if (check.duplicated) return err(409, 'SOURCE_FEED_DUPLICATED', '같은 피드 URL 소스가 이미 있음');
+          if (check.duplicated) return err(409, 'SOURCE_FEED_DUPLICATED', '같은 피드 URL 소스가 이미 있어요');
         }
         Object.assign(source, input, { updatedAt: new Date().toISOString() });
         return HttpResponse.json(source);
@@ -158,7 +158,7 @@ export function adminHandlers(guard: Guard) {
     http.get(
       '*/api/admin/sources/:id/runs',
       admin(({ params }) => {
-        if (!findSource(params.id)) return err(404, 'NOT_FOUND', '소스를 찾을 수 없음');
+        if (!findSource(params.id)) return err(404, 'NOT_FOUND', '소스를 찾을 수 없어요');
         return HttpResponse.json({ items: settleRuns(adminState.runs.get(Number(params.id)) ?? []).slice(0, 50) });
       }),
     ),
@@ -166,10 +166,10 @@ export function adminHandlers(guard: Guard) {
       '*/api/admin/sources/:id/crawl',
       admin(({ params }) => {
         const source = findSource(params.id);
-        if (!source) return err(404, 'NOT_FOUND', '소스를 찾을 수 없음');
-        if (source.status === 'INACTIVE') return err(409, 'SOURCE_INACTIVE', '비활성 소스는 수집할 수 없음');
+        if (!source) return err(404, 'NOT_FOUND', '소스를 찾을 수 없어요');
+        if (source.status === 'INACTIVE') return err(409, 'SOURCE_INACTIVE', '비활성 소스는 수집할 수 없어요');
         const runs = settleRuns(adminState.runs.get(source.id) ?? []);
-        if (runs.some((r) => r.result === 'RUNNING')) return err(409, 'CRAWL_ALREADY_RUNNING', '이미 수집 중임');
+        if (runs.some((r) => r.result === 'RUNNING')) return err(409, 'CRAWL_ALREADY_RUNNING', '이미 수집 중이에요');
         const run: CrawlRun = {
           id: adminState.nextId++,
           triggerType: 'MANUAL',
@@ -192,7 +192,7 @@ export function adminHandlers(guard: Guard) {
       '*/api/admin/sources/:id/resume',
       admin(({ params }) => {
         const source = findSource(params.id);
-        if (!source) return err(404, 'NOT_FOUND', '소스를 찾을 수 없음');
+        if (!source) return err(404, 'NOT_FOUND', '소스를 찾을 수 없어요');
         if (source.status !== 'ERROR') return err(409, 'SOURCE_NOT_IN_ERROR', '오류 상태가 아님');
         Object.assign(source, { status: 'ACTIVE', consecutiveFailures: 0, nextCrawlAt: new Date().toISOString() });
         return HttpResponse.json(source);
@@ -211,7 +211,7 @@ export function adminHandlers(guard: Guard) {
     http.post(
       '*/api/admin/tags/retag',
       admin(() => {
-        if (progressJob()?.status === 'RUNNING') return err(409, 'JOB_ALREADY_RUNNING', '재태깅이 이미 실행 중임');
+        if (progressJob()?.status === 'RUNNING') return err(409, 'JOB_ALREADY_RUNNING', '재태깅이 이미 실행 중이에요');
         adminState.job = {
           id: crypto.randomUUID(),
           type: 'RETAG',
@@ -240,7 +240,7 @@ export function adminHandlers(guard: Guard) {
       '*/api/admin/tags/:id',
       admin(async ({ request, params }) => {
         const tag = adminState.tags.find((t) => t.id === Number(params.id));
-        if (!tag) return err(404, 'NOT_FOUND', '태그를 찾을 수 없음');
+        if (!tag) return err(404, 'NOT_FOUND', '태그를 찾을 수 없어요');
         const input = (await request.json()) as Partial<TagInput>;
         const conflict = tagConflict(input, tag.id);
         if (conflict) return conflict;
@@ -251,7 +251,7 @@ export function adminHandlers(guard: Guard) {
     http.get(
       '*/api/admin/jobs/:jobId',
       admin(({ params }) =>
-        adminState.job?.id === params.jobId ? HttpResponse.json(progressJob()) : err(404, 'NOT_FOUND', '작업을 찾을 수 없음'),
+        adminState.job?.id === params.jobId ? HttpResponse.json(progressJob()) : err(404, 'NOT_FOUND', '작업을 찾을 수 없어요'),
       ),
     ),
   ];

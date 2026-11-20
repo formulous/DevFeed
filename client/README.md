@@ -181,6 +181,10 @@ App
 - A-04: 검색 300ms 디바운스, 추가·수정 모달(이름에서 slug 자동 생성), 재태깅 `202 jobId` 후 1.5초 간격 진행률 폴링
 - 로그인: 성공 시 `redirect`로 복귀, `onboardingCompleted=false`면 `/onboarding/tags?redirect=`로 이동 (`GuestOnly`가 처리). `LOGIN_LOCKED`는 남은 시간 카운트다운
 
+## 화면 문구 말투 (024)
+- 화면에 보이는 문장(빈 상태·오류·안내·토스트·검증·`<title>`·메타 설명·og 이미지)은 해요체로 씀. 버튼·라벨·탭·상태값 같은 짧은 명사는 그대로 둠. README·커밋은 음슴체
+- 서버 오류 메시지는 `errorMessage`로 그대로 보여 줌 (server가 해요체로 바꿨음). 분기는 메시지 문자열이 아니라 `code`로만 함
+
 ## 주요 처리 방식
 - 원문 이동(F-012): 카드는 `<a href={원문} target="_blank" rel="noopener noreferrer">`. 클릭 시 `fetch(keepalive)`로 조회 기록 API 호출. 기록 실패가 이동을 막지 않음
 - 하이라이트(F-022): 서버 HTML을 쓰지 않고, 검색어를 토큰으로 나눠 클라이언트에서 `<mark>` 요소로 렌더링 (`dangerouslySetInnerHTML` 금지)

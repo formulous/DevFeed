@@ -21,17 +21,17 @@ describe('S-06 회원가입', () => {
   it('입력 규칙을 검사함', () => {
     const errors = validateSignup({ email: 'x', password: 'abcdefgh', passwordConfirm: 'zz', nickname: 'a' });
     expect(errors).toEqual({
-      email: '이메일 형식이 아님',
-      password: '영문과 숫자를 모두 포함해야 함',
-      passwordConfirm: '비밀번호가 일치하지 않음',
-      nickname: '2~20자여야 함',
+      email: '이메일 형식이 아니에요',
+      password: '영문과 숫자를 모두 넣어 주세요',
+      passwordConfirm: '비밀번호가 일치하지 않아요',
+      nickname: '닉네임은 2~20자로 입력해 주세요',
     });
     expect(validateSignup({ email: 'a@b.co', password: 'abcd1234', passwordConfirm: 'abcd1234', nickname: '지훈' })).toEqual({});
     expect(validateSignup({ email: 'a@b.co', password: 'abcd 1234', passwordConfirm: 'abcd 1234', nickname: '지훈' }).password).toBe(
-      '공백·한글은 쓸 수 없음',
+      '공백과 한글은 쓸 수 없어요',
     );
     expect(validateSignup({ email: 'a@b.co', password: '비번abcd1234', passwordConfirm: '비번abcd1234', nickname: '지훈' }).password).toBe(
-      '공백·한글은 쓸 수 없음',
+      '공백과 한글은 쓸 수 없어요',
     );
   });
 
@@ -47,7 +47,7 @@ describe('S-06 회원가입', () => {
     const user = userEvent.setup();
     renderWithApp(<App />, '/signup');
     await fill(user, TAKEN_EMAIL);
-    expect(await screen.findByText('이미 가입된 이메일임')).toBeInTheDocument();
+    expect(await screen.findByText('이미 가입된 이메일이에요')).toBeInTheDocument();
   });
 
   it('가입하면 온보딩으로 이동함', async () => {
@@ -152,7 +152,7 @@ describe('S-08 북마크', () => {
     renderWithApp(<App />, '/');
     await screen.findByText(mockPosts[0].title);
     await user.click(screen.getAllByRole('button', { name: '북마크' })[0]);
-    expect(await screen.findByText('북마크는 최대 5,000개까지 저장할 수 있음')).toBeInTheDocument();
+    expect(await screen.findByText('북마크는 최대 5,000개까지 저장할 수 있어요')).toBeInTheDocument();
     await waitFor(() => expect(screen.getAllByRole('button', { name: '북마크' })[0]).toHaveAttribute('aria-pressed', 'false'));
   });
 });
@@ -182,7 +182,7 @@ describe('S-09 읽은 기록', () => {
     await user.click(screen.getByRole('button', { name: '전체 삭제' }));
     const dialog = screen.getByRole('dialog', { name: '읽은 기록 전체 삭제' });
     await user.click(within(dialog).getByRole('button', { name: '전체 삭제' }));
-    expect(await screen.findByText('읽은 기록이 없음')).toBeInTheDocument();
+    expect(await screen.findByText('읽은 기록이 없어요')).toBeInTheDocument();
     expect(mockState.reads.size).toBe(0);
   });
 });
@@ -208,7 +208,7 @@ describe('S-10 설정', () => {
     });
     expect(buttons).toHaveLength(3);
     buttons.forEach((b) => expect(b).toBeDisabled());
-    expect(buttons[0]).toHaveAttribute('title', '최소 3개 필요');
+    expect(buttons[0]).toHaveAttribute('title', '최소 3개가 필요해요');
   });
 
   it('관심 태그가 4개면 하나 빼서 저장함', async () => {
@@ -232,7 +232,7 @@ describe('S-10 설정', () => {
     const pw = within(dialog).getByLabelText('비밀번호 확인');
     await user.type(pw, 'nope');
     await user.click(within(dialog).getByRole('button', { name: '탈퇴하기' }));
-    expect(await within(dialog).findByText('비밀번호가 맞지 않음')).toBeInTheDocument();
+    expect(await within(dialog).findByText('비밀번호가 맞지 않아요')).toBeInTheDocument();
 
     await user.clear(pw);
     await user.type(pw, 'pw');

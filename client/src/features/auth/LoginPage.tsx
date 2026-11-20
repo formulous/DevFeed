@@ -78,7 +78,7 @@ export function LoginPage() {
         </div>
         {locked ? (
           <p role="alert" className="text-sm text-danger">
-            로그인 시도가 많아 잠겼음. {Math.floor(lockLeft / 60)}분 {lockLeft % 60}초 후 다시 시도
+            로그인 시도가 많아 잠겼어요. {Math.floor(lockLeft / 60)}분 {lockLeft % 60}초 후 다시 시도해 주세요
           </p>
         ) : (
           formError && (
@@ -96,7 +96,7 @@ export function LoginPage() {
         />
       </form>
       <p className="mt-4 text-center text-sm text-fg-secondary">
-        계정이 없음?{' '}
+        계정이 없으신가요?{' '}
         <Link to={signupHref} className="font-medium text-brand">
           회원가입
         </Link>

@@ -22,7 +22,7 @@ describe('추천 이유 문구', () => {
         { type: 'POPULAR' },
         { type: 'POPULAR' },
       ]),
-    ).toBe('Kafka 관심 태그, 최근 읽은 Redis 글과 비슷함, 북마크한 글과 비슷함, 요즘 많이 읽힘');
+    ).toBe('관심 태그 Kafka 관련 글이에요, 최근 읽은 Redis 글과 비슷해요, 북마크한 글과 비슷해요, 요즘 많이 읽혀요');
   });
 });
 
@@ -38,7 +38,7 @@ describe('S-02 추천 피드', () => {
     expect(await screen.findByText(/아직 취향 정보가 없어서/)).toBeInTheDocument();
     const links = screen.getAllByRole('link', { name: '관심 태그 고르기' });
     expect(links[0]).toHaveAttribute('href', '/onboarding/tags?redirect=%2Ffor-you');
-    expect(feed().getAllByText(/추천 이유: 요즘 많이 읽힘/).length).toBeGreaterThan(0);
+    expect(feed().getAllByText(/추천 이유: 요즘 많이 읽혀요/).length).toBeGreaterThan(0);
   });
 
   it('관심 태그 기준 추천 이유와 편집 링크를 보여주고, 클릭 시 recommendationId를 보냄', async () => {
@@ -75,7 +75,7 @@ describe('S-02 추천 피드', () => {
     renderWithApp(<App />, '/for-you');
     await within(await screen.findByRole('region', { name: '추천 피드' })).findAllByRole('article');
     await act(async () => triggerIntersect());
-    expect(await screen.findByText('추천 목록이 오래돼서 새로 불러왔음')).toBeInTheDocument();
+    expect(await screen.findByText('추천 목록이 오래돼서 새로 불러왔어요')).toBeInTheDocument();
     await waitFor(() => expect(cursors).toEqual([null, 'expired', null]));
     expect(await feed().findAllByRole('article')).toHaveLength(2);
   });

@@ -67,8 +67,8 @@ export function SearchPage() {
       <section className="min-w-0 flex-1" aria-label="검색 결과">
         {!valid ? (
           <EmptyState
-            title={state.q ? `검색어는 ${SEARCH_MIN}자 이상 입력해야 함` : '검색어를 입력하셈'}
-            description="제목·요약·태그·소스 이름에서 찾음"
+            title={state.q ? `검색어는 ${SEARCH_MIN}자 이상 입력해 주세요` : '검색어를 입력해 주세요'}
+            description="제목, 요약, 태그, 소스 이름에서 찾아요"
             action={<PopularTags />}
           />
         ) : (
@@ -108,9 +108,9 @@ export function SearchPage() {
               <ErrorState message={search.error.message} onRetry={() => search.refetch()} />
             ) : search.data.items.length === 0 ? (
               <EmptyState
-                title="검색 결과가 없음"
+                title="검색 결과가 없어요"
                 description={
-                  hasFilters ? '필터를 풀거나 다른 키워드를 써보셈' : '철자를 확인하거나 다른 키워드를 써보셈'
+                  hasFilters ? '필터를 풀거나 다른 키워드로 검색해 보세요' : '철자를 확인하거나 다른 키워드로 검색해 보세요'
                 }
                 action={
                   <div className="flex flex-col items-center gap-3">
@@ -134,7 +134,7 @@ export function SearchPage() {
                 </ul>
                 <Pagination page={state.page} totalPages={totalPages} onChange={setPage} />
                 {search.data.totalCapped && state.page === totalPages && (
-                  <p className="mt-2 text-center text-xs text-fg-muted">상위 1,000건까지만 볼 수 있음. 검색어나 필터를 좁혀보셈</p>
+                  <p className="mt-2 text-center text-xs text-fg-muted">상위 1,000건까지만 볼 수 있어요. 검색어나 필터를 좁혀 보세요</p>
                 )}
               </>
             )}

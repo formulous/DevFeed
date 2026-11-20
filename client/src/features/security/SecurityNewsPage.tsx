@@ -134,7 +134,7 @@ export function SecurityNewsPage() {
             </button>
           </div>
         )}
-        <p className="mb-3 text-xs text-fg-muted">국내·해외 보안 매체의 최신 기사 제목과 요약만 보여줌. 전문은 원문에서 확인</p>
+        <p className="mb-3 text-xs text-fg-muted">국내·해외 보안 매체의 최신 기사 제목과 요약만 보여드려요. 전문은 원문에서 확인해 주세요</p>
 
         {list.isPending ? (
           <div>
@@ -146,7 +146,7 @@ export function SecurityNewsPage() {
           <ErrorState message={list.error.message} onRetry={() => list.refetch()} />
         ) : posts.length === 0 ? (
           <EmptyState
-            title="조건에 맞는 보안 뉴스가 없음"
+            title="조건에 맞는 보안 뉴스가 없어요"
             action={<Button variant="outlined" width={96} height={36} content="필터 초기화" onClick={state.reset} />}
           />
         ) : (
@@ -178,7 +178,7 @@ export function SecurityNewsPage() {
         {list.isError && posts.length > 0 && (
           <div className="mt-3 text-center">
             <button type="button" onClick={() => list.fetchNextPage()} className="text-sm text-brand">
-              더 불러오지 못했음. 다시 시도
+              더 불러오지 못했어요. 다시 시도
             </button>
           </div>
         )}

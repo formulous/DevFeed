@@ -38,7 +38,7 @@ export function HomePage() {
           <ErrorState message={feed.error.message} onRetry={() => feed.refetch()} />
         ) : posts.length === 0 ? (
           <EmptyState
-            title="조건에 맞는 글이 없음"
+            title="조건에 맞는 글이 없어요"
             action={<Button variant="outlined" width={96} height={36} content="필터 초기화" onClick={reset} />}
           />
         ) : (
@@ -60,7 +60,7 @@ export function HomePage() {
         {feed.isError && posts.length > 0 && (
           <div className="mt-3 text-center">
             <button type="button" onClick={() => feed.fetchNextPage()} className="text-sm text-brand">
-              더 불러오지 못했음. 다시 시도
+              더 불러오지 못했어요. 다시 시도
             </button>
           </div>
         )}

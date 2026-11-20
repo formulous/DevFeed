@@ -66,7 +66,7 @@ export function PopularPage() {
           ))}
         </div>
       </div>
-      <p className="mb-3 text-xs text-fg-muted">최근 {PERIODS.find((p) => p.value === period)?.label} 동안 발행된 글 중 많이 읽힌 순 · 최대 10분 지연</p>
+      <p className="mb-3 text-xs text-fg-muted">최근 {PERIODS.find((p) => p.value === period)?.label} 동안 발행된 글을 많이 읽힌 순으로 보여드려요 · 최대 10분 늦게 반영돼요</p>
 
       {popular.isPending ? (
         <div>
@@ -78,8 +78,8 @@ export function PopularPage() {
         <ErrorState message={popular.error.message} onRetry={() => popular.refetch()} />
       ) : popular.data.items.length === 0 ? (
         <EmptyState
-          title="이 기간에 읽힌 글이 아직 없음"
-          description={period === 'MONTH' ? '최신 글부터 둘러보셈' : '기간을 늘리거나 최신 글을 둘러보셈'}
+          title="이 기간에 읽힌 글이 아직 없어요"
+          description={period === 'MONTH' ? '최신 글부터 둘러보세요' : '기간을 늘리거나 최신 글을 둘러보세요'}
           action={
             <Link to="/" className="text-sm font-medium text-brand">
               최신 피드 보기

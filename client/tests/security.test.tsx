@@ -40,7 +40,7 @@ describe('S-14 보안 뉴스', () => {
       expect(articles.every((a) => a.textContent?.includes('KISA 보호나라'))).toBe(true);
     });
     await user.click(screen.getByRole('radio', { name: '해외' }));
-    expect(await screen.findByText('조건에 맞는 보안 뉴스가 없음')).toBeInTheDocument();
+    expect(await screen.findByText('조건에 맞는 보안 뉴스가 없어요')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '필터 초기화' }));
     await waitFor(() => expect(currentLocation).toBe('/security'));
   });
