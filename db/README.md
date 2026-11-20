@@ -95,4 +95,4 @@ MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_field.py  # 분야·기업/�
 - `ck_sources_kind_region`: 뉴스인데 region 없음 / 블로그인데 region 있음 모두 거부
 - `003` 시드 2회 실행 후 뉴스 6곳 유지 (국내 3·해외 3, 주기 30·60분)
 - `feed.sql` 전체 실행 오류 없음, kind 정합성 검사 4항목 0
-- `devfeed` 적용은 사용자 확인 대기
+- `devfeed` 적용 (2026-11-20, 사용자 승인): 소스 36·글 2,387·태그 연결 2,826·검색 2,387 전후 동일, 전부 BLOG. kind 검사 4항목 0, 서버 `/api/health`·`/api/posts`·`/api/posts/popular` 200
