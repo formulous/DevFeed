@@ -12,11 +12,11 @@ export class AdminJobsController {
 
   @Get(':jobId')
   get(
-    @Param('jobId', new ParseUUIDPipe({ exceptionFactory: () => Errors.notFound('작업을 찾을 수 없음') }))
+    @Param('jobId', new ParseUUIDPipe({ exceptionFactory: () => Errors.notFound('작업을 찾을 수 없어요') }))
     jobId: string,
   ) {
     const job = this.jobs.get(jobId);
-    if (!job) throw Errors.notFound('작업을 찾을 수 없음');
+    if (!job) throw Errors.notFound('작업을 찾을 수 없어요');
     return job;
   }
 }

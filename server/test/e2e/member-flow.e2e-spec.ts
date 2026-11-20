@@ -36,7 +36,7 @@ describe('M4 회원 흐름: 가입 → 온보딩 → 북마크 → 읽은 기록
 
     expect((await api(t, 'PUT', '/me/interest-tags', { token: user.token, body: { tagIds: fx.tagIds.slice(0, 2) } })).status).toBe(400);
     const unknown = await api(t, 'PUT', '/me/interest-tags', { token: user.token, body: { tagIds: [...fx.tagIds.slice(0, 2), 999999999] } });
-    expect(unknown.body.fieldErrors[0].message).toBe('존재하지 않는 태그가 있음');
+    expect(unknown.body.fieldErrors[0].message).toBe('존재하지 않는 태그가 있어요');
     const saved = await api(t, 'PUT', '/me/interest-tags', { token: user.token, body: { tagIds: fx.tagIds.slice(0, 3) } });
     expect(saved.status).toBe(200);
     expect(saved.body.items).toHaveLength(3);

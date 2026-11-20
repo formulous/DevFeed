@@ -1077,7 +1077,7 @@ components:
           example: VALIDATION_FAILED
         message:
           type: string
-          example: 검색어는 2자 이상이어야 함
+          example: 검색어는 2~50자로 입력해 주세요
         fieldErrors:
           type: array
           items:

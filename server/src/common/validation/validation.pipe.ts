@@ -6,7 +6,7 @@ export function flattenValidationErrors(errors: ValidationError[], parent = ''):
     const field = parent ? `${parent}.${error.property}` : error.property;
     const own = Object.entries(error.constraints ?? {}).map(([key, message]) => ({
       field,
-      message: key === 'whitelistValidation' ? '허용되지 않은 필드임' : message,
+      message: key === 'whitelistValidation' ? '허용되지 않은 필드예요' : message,
     }));
     const nested = flattenValidationErrors(error.children ?? [], field);
     return [...own.slice(0, 1), ...nested];

@@ -10,7 +10,7 @@ export class FeedValidatorService {
   async check(feedUrl: string): Promise<FeedCheck> {
     try {
       const result = await fetchFeed(feedUrl, {}, { maxRetries: 0 });
-      if (result.kind !== 'ok') return { ok: false, reason: '피드 응답 없음' };
+      if (result.kind !== 'ok') return { ok: false, reason: '피드 응답이 없어요' };
       return { ok: true, feed: parseFeed(result.body) };
     } catch (error) {
       if (error instanceof FeedFetchError) return { ok: false, reason: error.message };

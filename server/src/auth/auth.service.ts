@@ -28,12 +28,12 @@ export interface IssuedTokens {
 }
 
 const invalidCredentials = () =>
-  new AppException(401, 'INVALID_CREDENTIALS', '이메일 또는 비밀번호가 올바르지 않음');
+  new AppException(401, 'INVALID_CREDENTIALS', '이메일 또는 비밀번호가 올바르지 않아요');
 const loginLocked = (retryAfterSec: number) =>
-  new AppException(423, 'LOGIN_LOCKED', '로그인 시도가 많아 잠시 후 다시 시도해야 함', { retryAfterSec });
-const emailDuplicated = () => new AppException(409, 'EMAIL_DUPLICATED', '이미 가입된 이메일임');
+  new AppException(423, 'LOGIN_LOCKED', '로그인 시도가 너무 많아요. 잠시 후 다시 시도해 주세요', { retryAfterSec });
+const emailDuplicated = () => new AppException(409, 'EMAIL_DUPLICATED', '이미 가입된 이메일이에요');
 const refreshInvalid = () =>
-  new AppException(401, 'REFRESH_TOKEN_INVALID', '다시 로그인해야 함');
+  new AppException(401, 'REFRESH_TOKEN_INVALID', '다시 로그인해 주세요');
 
 @Injectable()
 export class AuthService {

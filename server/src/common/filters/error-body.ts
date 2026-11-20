@@ -1,14 +1,14 @@
 import { AppException, ErrorBody } from '../errors/app.exception';
 
 const STATUS_CODES: Record<number, { code: string; message: string }> = {
-  400: { code: 'VALIDATION_FAILED', message: '요청 값이 올바르지 않음' },
-  401: { code: 'UNAUTHENTICATED', message: '로그인이 필요함' },
-  403: { code: 'FORBIDDEN', message: '권한이 없음' },
-  404: { code: 'NOT_FOUND', message: '대상을 찾을 수 없음' },
-  405: { code: 'NOT_FOUND', message: '대상을 찾을 수 없음' },
-  409: { code: 'CONFLICT', message: '요청이 현재 상태와 충돌함' },
-  413: { code: 'VALIDATION_FAILED', message: '요청 본문이 너무 큼' },
-  429: { code: 'RATE_LIMITED', message: '요청이 너무 많음' },
+  400: { code: 'VALIDATION_FAILED', message: '요청 값이 올바르지 않아요' },
+  401: { code: 'UNAUTHENTICATED', message: '로그인이 필요해요' },
+  403: { code: 'FORBIDDEN', message: '권한이 없어요' },
+  404: { code: 'NOT_FOUND', message: '대상을 찾을 수 없어요' },
+  405: { code: 'NOT_FOUND', message: '대상을 찾을 수 없어요' },
+  409: { code: 'CONFLICT', message: '요청이 현재 상태와 충돌해요' },
+  413: { code: 'VALIDATION_FAILED', message: '요청 본문이 너무 커요' },
+  429: { code: 'RATE_LIMITED', message: '요청이 너무 많아요. 잠시 후 다시 시도해 주세요' },
 };
 
 interface StatusCarrier {
@@ -28,8 +28,8 @@ export function toErrorBody(exception: unknown): { status: number; body: ErrorBo
     const mapped = STATUS_CODES[status];
     if (mapped) return { status, body: { ...mapped } };
     if (status >= 400 && status < 500) {
-      return { status, body: { code: 'CONFLICT', message: '요청을 처리할 수 없음' } };
+      return { status, body: { code: 'CONFLICT', message: '요청을 처리할 수 없어요' } };
     }
   }
-  return { status: 500, body: { code: 'INTERNAL_ERROR', message: '서버 오류가 발생함' } };
+  return { status: 500, body: { code: 'INTERNAL_ERROR', message: '서버 오류가 발생했어요. 잠시 후 다시 시도해 주세요' } };
 }

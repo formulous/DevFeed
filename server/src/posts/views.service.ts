@@ -21,7 +21,7 @@ export class ViewsService {
     now = new Date(),
   ): Promise<void> {
     const [exists] = (await this.dataSource.query('SELECT id FROM posts WHERE id = ?', [postId])) as unknown[];
-    if (!exists) throw Errors.notFound('글을 찾을 수 없음');
+    if (!exists) throw Errors.notFound('글을 찾을 수 없어요');
 
     const threshold = new Date(now.getTime() - VIEW_DEDUP_HOURS * 60 * 60 * 1000);
     await withDeadlockRetry(async () => {

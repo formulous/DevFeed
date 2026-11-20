@@ -178,7 +178,7 @@ export function parseFeed(xml: string): ParsedFeed {
   try {
     doc = parser.parse(xml, true) as Node;
   } catch (error) {
-    throw new FeedParseError(`XML 파싱 실패: ${(error as Error).message.split('\n')[0]}`);
+    throw new FeedParseError(`XML을 읽을 수 없어요: ${(error as Error).message.split('\n')[0]}`);
   }
 
   const rss = doc.rss as Node | undefined;
@@ -213,5 +213,5 @@ export function parseFeed(xml: string): ParsedFeed {
     };
   }
 
-  throw new FeedParseError('RSS/Atom 형식이 아님');
+  throw new FeedParseError('RSS/Atom 형식이 아니에요');
 }

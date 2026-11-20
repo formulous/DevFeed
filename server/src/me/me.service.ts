@@ -21,9 +21,9 @@ export interface MeResponse {
 }
 
 const DEFAULT_SIZE = 20;
-const passwordMismatch = () => new AppException(403, 'PASSWORD_MISMATCH', '비밀번호가 올바르지 않음');
+const passwordMismatch = () => new AppException(403, 'PASSWORD_MISMATCH', '비밀번호가 올바르지 않아요');
 const bookmarkLimit = () =>
-  new AppException(422, 'BOOKMARK_LIMIT_EXCEEDED', `북마크는 최대 ${BOOKMARK_LIMIT.toLocaleString('ko-KR')}개까지 저장할 수 있음`);
+  new AppException(422, 'BOOKMARK_LIMIT_EXCEEDED', `북마크는 최대 ${BOOKMARK_LIMIT.toLocaleString('ko-KR')}개까지 저장할 수 있어요`);
 
 function rethrowMissingUser(error: unknown): never {
   if (isMissingReference(error)) throw Errors.unauthenticated();
@@ -88,12 +88,12 @@ export class MeService {
 
   async replaceInterestTags(userId: number, tagIds: number[], now = new Date()) {
     const unique = [...new Set(tagIds)];
-    if (unique.length < 3) throw Errors.validation([{ field: 'tagIds', message: '서로 다른 태그 3~10개를 골라야 함' }]);
+    if (unique.length < 3) throw Errors.validation([{ field: 'tagIds', message: '서로 다른 태그를 3~10개 골라 주세요' }]);
     const [{ n }] = (await this.dataSource.query(
       `SELECT COUNT(*) AS n FROM tags WHERE id IN (${unique.map(() => '?').join(', ')})`,
       unique,
     )) as { n: number | string }[];
-    if (Number(n) !== unique.length) throw Errors.validation([{ field: 'tagIds', message: '존재하지 않는 태그가 있음' }]);
+    if (Number(n) !== unique.length) throw Errors.validation([{ field: 'tagIds', message: '존재하지 않는 태그가 있어요' }]);
     try {
       await this.dataSource.transaction(async (manager) => {
         await manager.query('DELETE FROM user_interest_tags WHERE user_id = ?', [userId]);
@@ -118,7 +118,7 @@ export class MeService {
          FROM posts p WHERE p.id = ?`,
       [userId, postId],
     )) as { id: number | string; saved: number | string }[];
-    if (!post) throw Errors.notFound('글을 찾을 수 없음');
+    if (!post) throw Errors.notFound('글을 찾을 수 없어요');
     if (Number(post.saved) === 1) return;
     const [{ n }] = (await this.dataSource.query('SELECT COUNT(*) AS n FROM bookmarks WHERE user_id = ?', [
       userId,

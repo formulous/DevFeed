@@ -5,21 +5,21 @@ const httpLike = (status: number) => Object.assign(new Error('Cannot GET /x'), {
 
 describe('toErrorBody', () => {
   it('AppException은 code·message·추가 필드를 유지함', () => {
-    expect(toErrorBody(Errors.validation([{ field: 'q', message: '2자 이상' }]))).toEqual({
+    expect(toErrorBody(Errors.validation([{ field: 'q', message: '2자 이상 입력해 주세요' }]))).toEqual({
       status: 400,
-      body: { code: 'VALIDATION_FAILED', message: '요청 값이 올바르지 않음', fieldErrors: [{ field: 'q', message: '2자 이상' }] },
+      body: { code: 'VALIDATION_FAILED', message: '요청 값이 올바르지 않아요', fieldErrors: [{ field: 'q', message: '2자 이상 입력해 주세요' }] },
     });
   });
 
   it('Nest 기본 HTTP 예외는 공통 코드로 바꾸고 원문 메시지를 숨김', () => {
-    expect(toErrorBody(httpLike(404))).toEqual({ status: 404, body: { code: 'NOT_FOUND', message: '대상을 찾을 수 없음' } });
-    expect(toErrorBody(httpLike(418))).toEqual({ status: 418, body: { code: 'CONFLICT', message: '요청을 처리할 수 없음' } });
+    expect(toErrorBody(httpLike(404))).toEqual({ status: 404, body: { code: 'NOT_FOUND', message: '대상을 찾을 수 없어요' } });
+    expect(toErrorBody(httpLike(418))).toEqual({ status: 418, body: { code: 'CONFLICT', message: '요청을 처리할 수 없어요' } });
   });
 
   it('알 수 없는 예외는 내부 정보를 숨긴 500', () => {
     expect(toErrorBody(new Error('ER_ACCESS_DENIED secret'))).toEqual({
       status: 500,
-      body: { code: 'INTERNAL_ERROR', message: '서버 오류가 발생함' },
+      body: { code: 'INTERNAL_ERROR', message: '서버 오류가 발생했어요. 잠시 후 다시 시도해 주세요' },
     });
   });
 });

@@ -65,7 +65,7 @@ export class AdminTagsService {
         WHERE t.id = ? GROUP BY t.id`,
       [id],
     )) as TagRow[];
-    if (!row) throw Errors.notFound('태그를 찾을 수 없음');
+    if (!row) throw Errors.notFound('태그를 찾을 수 없어요');
     return this.toAdminTag(row, await this.counts.get());
   }
 

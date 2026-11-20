@@ -137,13 +137,13 @@ export class AdminSourcesService {
       addDays(new Date(), -7),
       id,
     ])) as SourceRow[];
-    if (!row) throw Errors.notFound('소스를 찾을 수 없음');
+    if (!row) throw Errors.notFound('소스를 찾을 수 없어요');
     return row;
   }
 
   private canonicalFeedUrl(raw: string): string {
     const url = normalizeFeedUrl(raw);
-    if (!url) throw Errors.validation([{ field: 'feedUrl', message: 'http(s) URL이어야 함' }]);
+    if (!url) throw Errors.validation([{ field: 'feedUrl', message: 'http(s) URL을 입력해 주세요' }]);
     return url;
   }
 
@@ -180,7 +180,7 @@ export class AdminSourcesService {
   async create(dto: CreateSourceDto) {
     const kind = dto.kind ?? 'BLOG';
     if (kind === 'BLOG' && dto.region !== undefined) {
-      throw Errors.validation([{ field: 'region', message: '보안 뉴스만 지정할 수 있음' }]);
+      throw Errors.validation([{ field: 'region', message: '보안 뉴스만 지정할 수 있어요' }]);
     }
     const feedUrl = this.canonicalFeedUrl(dto.feedUrl);
     if (await this.isDuplicateFeed(feedUrl)) throw Errors.sourceFeedDuplicated();
@@ -212,10 +212,10 @@ export class AdminSourcesService {
   async update(id: number, dto: UpdateSourceDto) {
     const current = await this.findRow(id);
     if (current.kind === 'BLOG' && dto.region !== undefined) {
-      throw Errors.validation([{ field: 'region', message: '보안 뉴스만 수정할 수 있음' }]);
+      throw Errors.validation([{ field: 'region', message: '보안 뉴스만 수정할 수 있어요' }]);
     }
     if (current.kind !== 'BLOG' && dto.type !== undefined) {
-      throw Errors.validation([{ field: 'type', message: '기술 블로그만 수정할 수 있음' }]);
+      throw Errors.validation([{ field: 'type', message: '기술 블로그만 수정할 수 있어요' }]);
     }
     const sets: string[] = [];
     const params: unknown[] = [];

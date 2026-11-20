@@ -31,7 +31,7 @@ export class AdminTagsController {
   @Patch(':tagId')
   update(@Param('tagId', IdParamPipe) id: number, @Body() dto: UpdateTagDto) {
     if (!Object.values(dto).some((v) => v !== undefined)) {
-      throw Errors.validation([{ field: 'body', message: '수정할 필드가 하나 이상 필요함' }]);
+      throw Errors.validation([{ field: 'body', message: '수정할 필드가 하나 이상 필요해요' }]);
     }
     return this.tags.update(id, dto);
   }

@@ -58,12 +58,12 @@
 ```json
 {
   "code": "VALIDATION_FAILED",
-  "message": "검색어는 2자 이상이어야 함",
-  "fieldErrors": [ { "field": "q", "message": "2자 이상 입력해야 함" } ]
+  "message": "요청 값이 올바르지 않아요",
+  "fieldErrors": [ { "field": "q", "message": "검색어는 2~50자로 입력해 주세요" } ]
 }
 ```
 - `code`: 기계 판독용 상수. client 분기 기준은 HTTP status가 아니라 `code`
-- `message`: 사용자에게 그대로 보여도 되는 한국어 문장
+- `message`: 사용자에게 그대로 보여도 되는 한국어 문장. 화면 문구와 같이 해요체로 씀 (024, 예: `로그인이 필요해요`). `code`가 판단 기준이고 `message`는 표시용
 - `fieldErrors`: 필드 검증 오류일 때만 존재, 그 외 생략
 
 ### 공통 에러 코드
