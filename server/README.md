@@ -160,7 +160,7 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - 관리자 소스: 목록 `?kind=`, 등록 시 `kind`·`region` 검증(뉴스는 `source_type = COMPANY`로 저장), 수정 시 `kind` 불가, 블로그 `region`·뉴스 `type` 400
   - 성능 (`devfeed_perf` 블로그 10만 + 뉴스, `perf/field-latency.js`, 페이지 21건 DB 시간): 분야 7개 단독 p95 0.5~2.9ms, 분야 + 개인 탭 최악 9.3ms, 최신 1.0ms, 보안 뉴스 0.4ms
 - 태그 영어 표기 (023)
-  - 태그 분류 값을 영어로 바꿈 (`Backend`·`Frontend`·`Data`·`Database`·`Infra`·`Cloud`·`Mobile`·`Security`·`Architecture`·`Design` 등). `posts/fields.ts`는 전환 기간 동안 한글·영어 값을 같은 분야로 묶음 → 서버 배포와 dba 데이터 변경 순서 무관
+  - 태그 분류 값을 영어로 바꿈 (`Backend`·`Frontend`·`Data`·`Database`·`Infra`·`Cloud`·`Mobile`·`Security`·`Architecture`·`Design` 등). dba `0011` 적용 후 `posts/fields.ts`는 영어 값만 묶음 (전환 기간에는 한글·영어 병행 배포로 무중단 전환)
   - 태그 ID 유지, 이름만 영어로 바꾸고 한글 이름은 동의어로 보존 → 자동 태깅·검색(`post_search`에 이름 + 동의어 색인) 결과 유지
   - 태그 사전 캐시는 TTL이 없어 DB를 직접 바꾸면 서버 재시작 또는 관리자 재태깅 필요. 분야 태그 ID 캐시는 1분
 

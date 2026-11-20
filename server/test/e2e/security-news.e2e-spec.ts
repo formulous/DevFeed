@@ -36,7 +36,7 @@ describe('분야 필터·보안 뉴스 분리 (021)', () => {
     await addSource('personal', 'PERSONAL', 'BLOG', null);
     await addSource('domestic', 'COMPANY', 'SECURITY_NEWS', 'DOMESTIC');
     await addSource('overseas', 'COMPANY', 'SECURITY_NEWS', 'OVERSEAS');
-    for (const [key, category] of [['security', '보안'], ['backend', '아키텍처'], ['lang', '언어']] as const) {
+    for (const [key, category] of [['security', 'Security'], ['backend', 'Architecture'], ['lang', 'Language']] as const) {
       const r = (await t.db.query('INSERT INTO tags (name, slug, category) VALUES (?, ?, ?)', [
         `E2E${t.runId}${key}`,
         `e2e-${t.runId}-${key}`,

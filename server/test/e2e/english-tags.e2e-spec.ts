@@ -55,7 +55,7 @@ describe('태그 영어화: 한글 이름을 동의어로 남기면 태깅·검�
     admin = (await api(t, 'POST', '/auth/login', { body: { email: a.email, password: a.password } })).body.accessToken;
     const created = await api(t, 'POST', '/admin/tags', {
       token: admin,
-      body: { name: korean(), slug: `e2e-${t.runId}-cache`, category: '백엔드' },
+      body: { name: korean(), slug: `e2e-${t.runId}-cache`, category: 'Language' },
     });
     expect(created.status).toBe(201);
     tagId = created.body.id;
@@ -89,7 +89,7 @@ describe('태그 영어화: 한글 이름을 동의어로 남기면 태깅·검�
     expect(english.body.items.map((i: { id: number }) => i.id)).toEqual([postIds.title, postIds.category]);
   });
 
-  it('분류를 영어 값으로 바꿔도 같은 분야 탭에 나옴', async () => {
+  it('분류를 분야에 묶인 영어 값으로 바꾸면 분야 탭에 나옴', async () => {
     const res = await api(t, 'GET', `/posts?field=BACKEND&tagIds=${tagId}&size=10`);
     expect(res.status).toBe(200);
     expect(res.body.items.map((i: { id: number }) => i.id)).toEqual([postIds.title, postIds.category]);
