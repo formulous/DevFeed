@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { NavLink, useLocation, useSearchParams } from 'react-router';
 import { cn } from '@/lib/cn';
 import { M7_API_READY } from '@/lib/features';
@@ -57,12 +57,16 @@ function useSlidingIndicator<T extends HTMLElement>(dep: string) {
     return () => ro.disconnect();
   }, [dep]);
 
+  useScrollActiveIntoView(ref, dep);
+
+  return { ref, style };
+}
+
+function useScrollActiveIntoView(ref: RefObject<HTMLElement | null>, dep: string) {
   useEffect(() => {
     const el = ref.current?.querySelector<HTMLElement>(ACTIVE);
     el?.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
-  }, [dep]);
-
-  return { ref, style };
+  }, [ref, dep]);
 }
 
 const INDICATOR = 'pointer-events-none absolute left-0 top-0 duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] motion-reduce:duration-0';
@@ -74,16 +78,17 @@ export function isFieldTab(pathname: string) {
 export function FeedTabs() {
   const { pathname } = useLocation();
   const [params] = useSearchParams();
-  const field = isFieldTab(pathname) ? parseField(params.get('field')) : null;
-  const { ref, style } = useSlidingIndicator<HTMLElement>(pathname);
+  const fieldTab = isFieldTab(pathname);
+  const field = fieldTab ? parseField(params.get('field')) : null;
+  const ref = useRef<HTMLElement>(null);
+  useScrollActiveIntoView(ref, pathname);
 
   return (
     <nav
       ref={ref}
       aria-label="피드"
-      className={cn('scrollbar-none relative isolate flex items-center gap-1 overflow-x-auto px-3 py-2 lg:px-0', FADE)}
+      className={cn('scrollbar-none flex items-end gap-1 overflow-x-auto px-3 pt-2 lg:px-0', FADE)}
     >
-      <span aria-hidden className={cn(INDICATOR, '-z-10 rounded-full bg-brand-soft ring-1 ring-inset ring-brand-line')} style={style} />
       {FEED_TABS.map((tab) => (
         <NavLink
           key={tab.to}
@@ -91,9 +96,11 @@ export function FeedTabs() {
           end={tab.to === '/'}
           className={({ isActive }) =>
             cn(
-              'flex h-9 shrink-0 items-center whitespace-nowrap rounded-full px-4 text-sm transition-colors duration-200',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring',
-              isActive ? 'font-semibold text-brand' : 'font-medium text-fg-secondary hover:bg-slate-100 hover:text-fg',
+              'flex h-10 shrink-0 items-center whitespace-nowrap rounded-t-lg border border-b-0 px-4 text-sm transition-colors duration-200',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-ring',
+              isActive
+                ? cn('border-line font-semibold text-fg', fieldTab ? 'bg-surface' : 'bg-app')
+                : 'border-transparent font-medium text-fg-secondary hover:bg-slate-50 hover:text-fg',
             )
           }
         >

@@ -94,7 +94,7 @@ function useHeaderHeightVar() {
 export function AppHeader() {
   const ref = useHeaderHeightVar();
   return (
-    <header ref={ref} className="sticky top-0 z-30 border-b border-line bg-surface/95 backdrop-blur">
+    <header ref={ref} className="sticky top-0 z-30 bg-surface/95 shadow-[inset_0_-1px_0_var(--color-border)] backdrop-blur">
       <div className="mx-auto flex max-w-[1200px] items-center gap-4 px-4 pt-3">
         <Link to="/" className="shrink-0 text-lg font-bold text-brand">
           DevFeed
