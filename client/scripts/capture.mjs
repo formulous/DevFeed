@@ -162,12 +162,13 @@ async function main() {
         return {
           oneLine: nav.scrollWidth <= nav.clientWidth,
           minHeight: Math.min(...tabs.map((t) => t.getBoundingClientRect().height)),
+          rowHeight: nav.getBoundingClientRect().height,
           autoScrolled: before > 0,
           lastReachable: lastBox.right <= navBox.right + 1,
           fontSize: getComputedStyle(tabs[0]).fontSize,
         };
       });
-      sidebarChecks.push(`${w} tabs: oneLine=${r.oneLine} minHeight=${r.minHeight} font=${r.fontSize} activeAutoScrolled=${r.autoScrolled} lastReachable=${r.lastReachable}`);
+      sidebarChecks.push(`${w} tabs: oneLine=${r.oneLine} tab=${r.minHeight} row=${r.rowHeight} font=${r.fontSize} activeAutoScrolled=${r.autoScrolled} lastReachable=${r.lastReachable}`);
       await context.close();
     }
     console.log(sidebarChecks.join('\n'));
