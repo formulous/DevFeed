@@ -144,7 +144,7 @@ export class AdminTagsService {
     const { job } = this.jobs.start('RETAG', async (context) => {
       this.dictionary.invalidate();
       const loaded = await this.dictionary.get();
-      const [{ total }] = (await this.dataSource.query('SELECT COUNT(*) AS total FROM posts')) as {
+      const [{ total }] = (await this.dataSource.query("SELECT COUNT(*) AS total FROM posts WHERE kind = 'BLOG'")) as {
         total: number | string;
       }[];
       context.setTotal(Number(total));
@@ -154,7 +154,7 @@ export class AdminTagsService {
           `SELECT p.id, p.title, p.summary, p.published_at, p.kind, s.name AS source_name, ps.feed_categories
              FROM posts p JOIN sources s ON s.id = p.source_id
              LEFT JOIN post_search ps ON ps.post_id = p.id
-            WHERE p.id > ? ORDER BY p.id LIMIT ?`,
+            WHERE p.kind = 'BLOG' AND p.id > ? ORDER BY p.id LIMIT ?`,
           [lastId, RETAG_CHUNK],
         )) as {
           id: number | string;

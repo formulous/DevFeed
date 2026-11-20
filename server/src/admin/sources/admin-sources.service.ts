@@ -271,7 +271,7 @@ export class AdminSourcesService {
       const posts = (await this.dataSource.query(
         `SELECT p.id, p.title, p.summary, p.published_at, p.kind, ps.feed_categories FROM posts p
            LEFT JOIN post_search ps ON ps.post_id = p.id
-          WHERE p.source_id = ? AND p.id > ? ORDER BY p.id LIMIT ?`,
+          WHERE p.source_id = ? AND p.kind = 'BLOG' AND p.id > ? ORDER BY p.id LIMIT ?`,
         [sourceId, lastId, REINDEX_CHUNK],
       )) as {
         id: number | string;

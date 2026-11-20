@@ -189,7 +189,7 @@ describe('관리자 API: 소스·수집·태그 사전·재태깅·권한', () =
     expect(tags.every((r) => r.kind === 'SECURITY_NEWS')).toBe(true);
   });
 
-  it('태그 사전: 중복·동의어 충돌·수정·재태깅 작업', async () => {
+  it('태그 사전: 중복·동의어 충돌·수정·재태깅 작업 (뉴스 글 태그는 재태깅 대상 아님)', async () => {
     const dup = await api(t, 'POST', '/admin/tags', { token: admin, body: { name: tagName(), slug: `e2e-${t.runId}-other` } });
     expect(dup.body.code).toBe('TAG_DUPLICATED');
     const synonym = await api(t, 'POST', '/admin/tags', {
@@ -204,6 +204,15 @@ describe('관리자 API: 소스·수집·태그 사전·재태깅·권한', () =
     const patched = await api(t, 'PATCH', `/admin/tags/${tagId}`, { token: admin, body: { category: null, synonyms: ['e2e-only-synonym'] } });
     expect(patched.body).toMatchObject({ category: null, synonyms: ['e2e-only-synonym'] });
 
+    const newsTags = async () =>
+      (await t.db.query(
+        `SELECT pt.post_id, pt.tag_id, pt.tag_rank FROM post_tags pt JOIN posts p ON p.id = pt.post_id JOIN sources s ON s.id = p.source_id
+          WHERE s.feed_url = ? ORDER BY pt.post_id, pt.tag_rank`,
+        [feedUrl.replace('/feed.xml', '/news.xml')],
+      )) as unknown[];
+    const newsBefore = await newsTags();
+    expect(newsBefore.length).toBeGreaterThan(0);
+
     const job = await api(t, 'POST', '/admin/tags/retag', { token: admin });
     expect(job.status).toBe(202);
     let state = '';
@@ -212,6 +221,7 @@ describe('관리자 API: 소스·수집·태그 사전·재태깅·권한', () =
       if (state !== 'SUCCEEDED') await new Promise((r) => setTimeout(r, 250));
     }
     expect(state).toBe('SUCCEEDED');
+    expect(await newsTags()).toEqual(newsBefore);
     expect((await api(t, 'GET', '/admin/jobs/00000000-0000-4000-8000-000000000000', { token: admin })).status).toBe(404);
   });
 });
