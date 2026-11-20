@@ -10,6 +10,7 @@ import { useOpenPost, useToggleBookmark } from '@/hooks/usePostActions';
 import { cn } from '@/lib/cn';
 import { formatNumber } from '@/lib/format';
 import { popularQuery } from '@/features/feed/queries';
+import { parseField } from '@/lib/fields';
 
 export const PERIODS: { value: PopularPeriod; label: string }[] = [
   { value: 'DAY', label: '24시간' },
@@ -27,17 +28,26 @@ export function PopularPage() {
   const { status } = useAuth();
   const [params, setParams] = useSearchParams();
   const period = parsePeriod(params.get('period'));
-  const popular = useQuery({ ...popularQuery(period, status), enabled: status !== 'loading' });
+  const field = parseField(params.get('field'));
+  const popular = useQuery({ ...popularQuery(period, field?.api ?? null, status), enabled: status !== 'loading' });
   const openPost = useOpenPost();
   const toggleBookmark = useToggleBookmark();
 
   const select = (value: PopularPeriod) =>
-    setParams(value === DEFAULT_PERIOD ? {} : { period: value }, { replace: true });
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (value === DEFAULT_PERIOD) next.delete('period');
+        else next.set('period', value);
+        return next;
+      },
+      { replace: true },
+    );
 
   return (
     <section className="mx-auto max-w-3xl">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-bold">인기 글</h1>
+        <h1 className="text-xl font-bold">인기 글{field && <span className="ml-1.5 text-base font-semibold text-fg-secondary">· {field.label}</span>}</h1>
         <div role="radiogroup" aria-label="기간" className="flex rounded-full bg-surface p-1 shadow-[var(--shadow-sm)]">
           {PERIODS.map((p) => (
             <button

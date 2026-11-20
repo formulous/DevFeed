@@ -1,5 +1,14 @@
 export type Role = 'USER' | 'ADMIN';
 export type SourceType = 'COMPANY' | 'PERSONAL';
+export type SourceKind = 'BLOG' | 'SECURITY_NEWS';
+export type NewsRegion = 'DOMESTIC' | 'OVERSEAS';
+
+export interface SecurityNewsSource {
+  id: number;
+  name: string;
+  logoUrl: string | null;
+  region: NewsRegion;
+}
 
 export interface SourceRef {
   id: number;
@@ -93,6 +102,8 @@ export interface AdminStats {
 }
 
 export interface AdminSourceListItem extends SourceRef {
+  kind: SourceKind;
+  region: NewsRegion | null;
   status: SourceStatus;
   lastSuccessAt: string | null;
   newPostCount7d: number;
@@ -114,11 +125,13 @@ export interface SourceInput {
   siteUrl: string;
   feedUrl: string;
   type: SourceType;
+  kind?: SourceKind;
+  region?: NewsRegion | null;
   logoUrl: string | null;
   crawlIntervalMin: number;
 }
 
-export type UpdateSourceInput = Partial<SourceInput> & { status?: 'ACTIVE' | 'INACTIVE' };
+export type UpdateSourceInput = Partial<Omit<SourceInput, 'kind'>> & { status?: 'ACTIVE' | 'INACTIVE' };
 
 export interface FeedValidationResult {
   valid: boolean;

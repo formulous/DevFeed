@@ -1,10 +1,12 @@
 import { request } from './http';
+import type { ApiField } from '@/lib/fields';
 import type { CursorPage, PopularPeriod, PopularPost, PostSummary, SourceListItem, SourceType, TagItem } from './types';
 
 export interface FeedQuery {
   tagIds: number[];
   sourceIds: number[];
   sourceType: SourceType | null;
+  field: ApiField | null;
 }
 
 export const FEED_PAGE_SIZE = 20;
@@ -20,12 +22,13 @@ export function fetchFeed(filters: FeedQuery, cursor?: string, signal?: AbortSig
       tagIds: filters.tagIds,
       sourceIds: filters.sourceIds,
       sourceType: filters.sourceType,
+      field: filters.field,
     },
   });
 }
 
-export function fetchPopular(period: PopularPeriod, signal?: AbortSignal) {
-  return request<{ items: PopularPost[] }>('/posts/popular', { signal, query: { period } });
+export function fetchPopular(period: PopularPeriod, field: ApiField | null, signal?: AbortSignal) {
+  return request<{ items: PopularPost[] }>('/posts/popular', { signal, query: { period, field } });
 }
 
 export function fetchTags(signal?: AbortSignal) {

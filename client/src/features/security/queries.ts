@@ -1,0 +1,18 @@
+import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query';
+import { fetchSecurityNews, fetchSecurityNewsSources, type SecurityNewsQuery } from '@/api/securityNews';
+import { POSTS_KEY } from '@/hooks/usePostActions';
+
+export const securityNewsQuery = (q: SecurityNewsQuery, authKey: string) =>
+  infiniteQueryOptions({
+    queryKey: [...POSTS_KEY, 'security-news', authKey, q],
+    queryFn: ({ pageParam, signal }) => fetchSecurityNews(q, pageParam, signal),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
+  });
+
+export const securitySourcesQuery = queryOptions({
+  queryKey: ['security-news', 'sources'],
+  queryFn: ({ signal }) => fetchSecurityNewsSources(signal),
+  staleTime: 10 * 60_000,
+  select: (data) => data.items,
+});

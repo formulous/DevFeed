@@ -2,7 +2,8 @@ import { http, HttpResponse } from 'msw';
 import type { Me, PostSummary } from '@/api/types';
 import { resetAdminState } from './adminFixtures';
 import { adminHandlers } from './adminHandlers';
-import { mockExtraSources, mockPosts, mockSources, mockTags } from './fixtures';
+import { fieldByApi } from '@/lib/fields';
+import { mockExtraSources, mockNewsPosts, mockNewsSources, mockPosts, mockSources, mockTags } from './fixtures';
 
 const MOCK_TOKEN = 'mock-access-token';
 
@@ -47,7 +48,14 @@ function cursorPage<T>(list: T[], url: URL) {
   return { items: list.slice(offset, next), nextCursor: next < list.length ? btoa(String(next)) : null };
 }
 
-const postById = (id: number) => mockPosts.find((p) => p.id === id);
+const postById = (id: number) => mockPosts.find((p) => p.id === id) ?? mockNewsPosts.find((p) => p.id === id);
+
+function fieldFilter(value: string | null) {
+  const field = fieldByApi(value);
+  if (!field) return () => true;
+  const ids = new Set(mockTags.filter((t) => t.category && field.categories.includes(t.category)).map((t) => t.id));
+  return (p: PostSummary) => p.tags.some((t) => ids.has(t.id));
+}
 const byDateDesc = (m: Map<number, string>) => [...m.entries()].sort((a, b) => b[1].localeCompare(a[1]));
 
 function adminGuard(request: Request) {
@@ -95,8 +103,10 @@ export const handlers = [
     const offset = cursor ? Number(atob(cursor)) : 0;
     if (Number.isNaN(offset)) return error(400, 'INVALID_CURSOR', '커서를 해석할 수 없음');
 
+    const inField = fieldFilter(url.searchParams.get('field'));
     const filtered = mockPosts.filter(
       (p) =>
+        inField(p) &&
         (tagIds.length === 0 || p.tags.some((t) => tagIds.includes(t.id))) &&
         (sourceIds.length === 0 || sourceIds.includes(p.source.id)) &&
         (!sourceType || p.source.type === sourceType),
@@ -108,13 +118,15 @@ export const handlers = [
   }),
 
   http.get('*/api/posts/popular', ({ request }) => {
-    const period = new URL(request.url).searchParams.get('period');
+    const url = new URL(request.url);
+    const period = url.searchParams.get('period');
+    const inField = fieldFilter(url.searchParams.get('field'));
     const hours = { DAY: 24, WEEK: 24 * 7, MONTH: 24 * 30 }[period ?? ''];
     if (!hours) return error(400, 'VALIDATION_FAILED', '기간 값이 올바르지 않음');
     const latest = Date.parse(mockPosts[0].publishedAt);
     const member = isMember(request);
     const items = mockPosts
-      .filter((p) => latest - Date.parse(p.publishedAt) <= hours * 3_600_000)
+      .filter((p) => latest - Date.parse(p.publishedAt) <= hours * 3_600_000 && inField(p))
       .map((p) => ({ ...decorate(p, member), viewCount: mockViewCount(p.id) }))
       .filter((p) => p.viewCount >= 1)
       .sort((a, b) => b.viewCount - a.viewCount)
@@ -162,6 +174,25 @@ export const handlers = [
       page,
       size,
     });
+  }),
+
+  http.get('*/api/security-news/sources', () => HttpResponse.json({ items: mockNewsSources })),
+
+  http.get('*/api/security-news', ({ request }) => {
+    const url = new URL(request.url);
+    const region = url.searchParams.get('region');
+    const sourceIds = idList(url.searchParams.get('sourceIds'));
+    if (region && region !== 'DOMESTIC' && region !== 'OVERSEAS') return error(400, 'VALIDATION_FAILED', '지역 값이 올바르지 않음');
+    const regionOf = new Map(mockNewsSources.map((s) => [s.id, s.region]));
+    const member = isMember(request);
+    const list = mockNewsPosts
+      .filter(
+        (p) =>
+          (!region || regionOf.get(p.source.id) === region) &&
+          (sourceIds.length === 0 || sourceIds.includes(p.source.id)),
+      )
+      .map((p) => ({ ...decorate(p, member), isPopular: false }));
+    return HttpResponse.json(cursorPage(list, url));
   }),
 
   http.get('*/api/tags', () => HttpResponse.json({ items: mockTags })),

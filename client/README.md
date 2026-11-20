@@ -36,10 +36,13 @@
 ## 라우트
 | 경로 | 화면 | 가드 | 레이아웃 |
 |---|---|---|---|
-| `/` | S-01 HomePage | - | AppLayout + FeedSidebar |
+| `/` (`?field=`) | S-01 HomePage | - | AppLayout + FilterLayout |
 | `/for-you` | S-02 ForYouPage | RequireAuth | AppLayout |
-| `/popular` | S-03 PopularPage | - | AppLayout |
-| `/search?q=` | S-04 SearchPage | - | AppLayout + SearchSidebar |
+| `/popular` (`?period=&field=`) | S-03 PopularPage | - | AppLayout |
+| `/company` (`?field=`) | S-13 HomePage `sourceType=COMPANY` | - | AppLayout + FilterLayout |
+| `/personal` (`?field=`) | S-13 HomePage `sourceType=PERSONAL` | - | AppLayout + FilterLayout |
+| `/security` (`?region=&sourceIds=`) | S-14 SecurityNewsPage | - | AppLayout |
+| `/search?q=` | S-04 SearchPage | - | AppLayout + FilterLayout |
 | `/login` | S-05 LoginPage | GuestOnly | AuthLayout |
 | `/signup` | S-06 SignupPage | GuestOnly | AuthLayout |
 | `/onboarding/tags` | S-07 OnboardingTagsPage | RequireAuth | AuthLayout |
@@ -103,6 +106,20 @@ App
 - 액세스 토큰은 메모리(Context)에만 보관, 리프레시 토큰은 httpOnly 쿠키 가정 → 새로고침 시 `/auth/refresh`로 복구
 - 401 응답 시 1회 refresh 후 재시도, 동시 요청은 refresh 1번만 수행 (단일 Promise 공유)
 - 북마크 토글: `onMutate`에서 피드·북마크·검색 캐시의 해당 글 `isBookmarked`를 즉시 반영, 실패 시 롤백
+
+## 상단 탭·분야·보안 뉴스 (M7, `docs/discussions/021`)
+- 1단 탭 6개 `components/layout/FeedTabs.tsx`: 최신·추천·인기·기업 블로그·개인 블로그·보안 뉴스
+  - 높이 48px, 글자 16px(모바일 15px), 활성은 굵게 + 밑줄 3px. 1280px 한 줄, 좁은 폭은 가로 스크롤 + 양끝 흐림, 활성 탭 자동 스크롤
+  - 탭 이동 시 분야(`?field=`)는 유지, 태그·소스 필터는 초기화
+- 2단 분야 탭 `FieldTabs`: 전체·백엔드·프론트엔드·AI·데이터·인프라·모바일·보안 (`lib/fields.ts`, API `field=BACKEND` 등)
+  - 최신·인기·기업·개인에서만 보임. 잘못된 `field` 값은 전체로 해석해 요청에 넣지 않음 (서버는 400)
+  - sticky 헤더 밖에 둠 → 스크롤하면 사라지고 사이드바 높이를 유지 (1280×720 최대 선택에서도 사이드바 스크롤 없음)
+  - sticky 헤더 높이는 `--header-h` CSS 변수로 측정해 사이드바 `top`·`max-height`에 씀
+- 기업·개인 탭(S-13): `HomePage`에 `sourceType` 고정. 유형 세그먼트 숨김, 소스 선택 창·빠른 소스 칩은 해당 유형만 (`FilterBindings.sourceScope`), URL `sourceType`은 무시
+- 보안 뉴스(S-14) `features/security/`: `GET /security-news` 커서 무한 스크롤, 날짜 구분선(오늘·어제·M월 D일), `[전체|국내|해외]`(`?region=domestic|overseas`), 출처 칩 사이드바(`GET /security-news/sources`, 모바일은 S-12 시트)
+  - 카드는 `PostCard` `badges="new"`·`summaryLines={2}`, 썸네일 없음
+- 관리자: A-01 종류 필터(`?kind=`)·종류 열, A-02 종류·지역 표시, A-03 등록 시 종류 선택(보안 뉴스면 유형 대신 지역), 수정 시 종류 읽기 전용
+- mock: 보안 뉴스 출처 6곳·기사 30건, 분야는 태그 `category`로 거름, 관리자 소스 목록에 보안 뉴스 6곳
 
 ## 인기 글 (S-03, M2)
 - 기간 탭 24시간 / 7일 / 30일 (`period=DAY|WEEK|MONTH`, 롤링 윈도우). 기본 7일이고 기본값이면 URL에서 `period`를 뺌
@@ -256,13 +273,14 @@ npm run capture    # 반응형 점검·README용 스크린샷 (Playwright, 최�
 - 글 카드 배지 (F-014, `docs/discussions/020`): 소스 줄 시간 옆에 `NEW`(발행 24시간 이내, client 계산)·`인기`(`PostSummary.isPopular`, 7일 인기 상위 20) 최대 2개
   - `components/post/PostBadges.tsx`, `PostCard`의 `badges` prop: 기본 `all`, S-03 인기는 `new`(인기 배지 생략), S-09 기록은 `none`
   - `isPopular`가 없는 응답이면 `인기`만 생략. mock은 7일 조회수 상위 20건에 `isPopular: true`
-- 반응형 점검: `npm run capture`가 dev 서버(MSW mock)를 띄워 15개 화면 × 360·768·1280px를 찍음
+- 반응형 점검: `npm run capture`가 dev 서버(MSW mock)를 띄워 17개 화면 × 360·768·1280px를 찍음
   - 결과: `screenshots/{폭}/{화면}.png`(전체), `.top.png`(첫 화면), `screenshots/overview-{폭}.png`(폭별 모음). git 제외
   - 가로 넘침(`scrollWidth > clientWidth`)을 자동 검사해 출력
   - 외부 이미지 요청은 막아서 결과가 매번 같음
   - 브라우저 시각을 mock 기준(2026-11-19 12:00Z)으로 고정해 `NEW` 배지가 매번 같게 찍힘
   - README용 4장(S-01·S-02·S-04·A-01, 1280px 첫 화면)은 `docs/screens/`에 복사 → 커밋
 - 반응형 점검 결과 (2026-11-19): 15개 화면(S-11 포함) × 3폭 모두 가로 넘침 없음
+- 반응형 점검 결과 (2026-11-20, M7): 17개 화면(S-13·S-14 추가) × 3폭 가로 넘침 없음. 탭 높이 48px, 1280px 한 줄, 360px 마지막 탭까지 스크롤 도달·활성 탭 자동 스크롤 (`npm run capture`가 함께 출력)
   | 발견 | 폭 | 조치 |
   |---|---|---|
   | 헤더 "로그인"이 세로로 한 글자씩 접힘 | 360 | 헤더 오른쪽 영역 `shrink-0 whitespace-nowrap`, 닉네임은 8rem에서 말줄임 |

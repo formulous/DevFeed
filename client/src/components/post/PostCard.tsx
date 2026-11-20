@@ -13,6 +13,7 @@ interface PostCardProps {
   onToggleBookmark: (post: PostSummary) => void;
   meta?: ReactNode;
   badges?: BadgeMode;
+  summaryLines?: 2 | 3;
 }
 
 function ExternalImage({ src, alt, className }: { src: string | null; alt: string; className: string }) {
@@ -31,7 +32,7 @@ function ExternalImage({ src, alt, className }: { src: string | null; alt: strin
   );
 }
 
-export function PostCard({ post, query, onOpen, onToggleBookmark, meta, badges = 'all' }: PostCardProps) {
+export function PostCard({ post, query, onOpen, onToggleBookmark, meta, badges = 'all', summaryLines = 3 }: PostCardProps) {
   return (
     <article
       className={cn(
@@ -76,7 +77,7 @@ export function PostCard({ post, query, onOpen, onToggleBookmark, meta, badges =
             </a>
           </h3>
           {post.summary && (
-            <p className="mt-1 line-clamp-3 text-sm text-fg-secondary">
+            <p className={cn('mt-1 text-sm text-fg-secondary', summaryLines === 2 ? 'line-clamp-2' : 'line-clamp-3')}>
               <Highlight text={post.summary} query={query} />
             </p>
           )}

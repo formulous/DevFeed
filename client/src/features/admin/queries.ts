@@ -1,6 +1,6 @@
 import { queryOptions } from '@tanstack/react-query';
 import { fetchAdminSource, fetchAdminSources, fetchAdminStats, fetchAdminTags, fetchCrawlRuns } from '@/api/admin';
-import type { SourceStatus } from '@/api/types';
+import type { SourceKind, SourceStatus } from '@/api/types';
 
 export const ADMIN_KEY = ['admin'] as const;
 export const RUN_POLL_MS = 3000;
@@ -11,10 +11,10 @@ export const adminStatsQuery = queryOptions({
   queryFn: fetchAdminStats,
 });
 
-export const adminSourcesQuery = (status: SourceStatus | null) =>
+export const adminSourcesQuery = (status: SourceStatus | null, kind: SourceKind | null = null) =>
   queryOptions({
-    queryKey: [...ADMIN_KEY, 'sources', status],
-    queryFn: () => fetchAdminSources(status),
+    queryKey: [...ADMIN_KEY, 'sources', status, kind],
+    queryFn: () => fetchAdminSources(status, kind),
     select: (data) => data.items,
   });
 

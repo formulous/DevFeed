@@ -14,6 +14,8 @@ const SCREENS = [
   { id: 'S-01', path: '/', auth: false, ready: 'article' },
   { id: 'S-03', path: '/popular', auth: false, ready: 'article' },
   { id: 'S-04', path: '/search?q=%EC%A0%95%EB%A6%AC', auth: false, ready: 'article' },
+  { id: 'S-13', path: '/company?field=backend', auth: false, ready: 'article' },
+  { id: 'S-14', path: '/security', auth: false, ready: 'article' },
   { id: 'S-05', path: '/login', auth: false, ready: 'form' },
   { id: 'S-06', path: '/signup', auth: false, ready: 'form' },
   { id: 'S-11', path: '/privacy', auth: false, ready: 'article' },
@@ -108,7 +110,9 @@ async function main() {
         const aside = page.getByTestId('filter-sidebar');
         await aside.getByRole('region', { name: '소스 필터' }).getByRole('button', { pressed: false }).first().waitFor();
         await page.mouse.move(w - 1, h - 1);
-        const fits = await aside.evaluate((el) => el.scrollHeight <= el.clientHeight);
+        const [sh, ch, hh] = await aside.evaluate((el) => [el.scrollHeight, el.clientHeight, document.querySelector("header").offsetHeight]);
+        const fits = sh <= ch;
+        if (!fits) sidebarChecks.push(`  overflow ${sh}/${ch} header=${hh}`);
         sidebarChecks.push(`${w}x${h} sidebar ${label}: no scroll=${fits}`);
         await page.screenshot({ path: `${OUT}/1280/S-01-sidebar-${w}x${h}-${label}.png` });
       }
@@ -139,6 +143,31 @@ async function main() {
       await page.screenshot({ path: `${OUT}/360/S-12-sheet.png` });
       const box = await sheet.boundingBox();
       sidebarChecks.push(`360 tag sheet full height: ${box && Math.round(box.height) === 740}`);
+      await context.close();
+    }
+    for (const [w, h] of [[360, 740], [1280, 800]]) {
+      const context = await browser.newContext({ viewport: { width: w, height: h }, locale: 'ko-KR' });
+      await context.route(/^https?:\/\/(?!localhost)/, (route) => route.abort());
+      const page = await context.newPage();
+      await page.goto(`${base}/security`);
+      await page.locator('article').first().waitFor();
+      const r = await page.evaluate(() => {
+        const nav = document.querySelector('nav[aria-label="피드"]');
+        const tabs = [...nav.querySelectorAll('a')];
+        const last = tabs[tabs.length - 1];
+        const before = nav.scrollLeft;
+        last.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+        const navBox = nav.getBoundingClientRect();
+        const lastBox = last.getBoundingClientRect();
+        return {
+          oneLine: nav.scrollWidth <= nav.clientWidth,
+          minHeight: Math.min(...tabs.map((t) => t.getBoundingClientRect().height)),
+          autoScrolled: before > 0,
+          lastReachable: lastBox.right <= navBox.right + 1,
+          fontSize: getComputedStyle(tabs[0]).fontSize,
+        };
+      });
+      sidebarChecks.push(`${w} tabs: oneLine=${r.oneLine} minHeight=${r.minHeight} font=${r.fontSize} activeAutoScrolled=${r.autoScrolled} lastReachable=${r.lastReachable}`);
       await context.close();
     }
     console.log(sidebarChecks.join('\n'));

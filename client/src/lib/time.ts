@@ -18,3 +18,13 @@ export function relativeTime(iso: string, now: number = Date.now()) {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
+
+export function dayLabel(iso: string, now: number = Date.now()) {
+  const d = new Date(iso);
+  const start = (t: Date) => new Date(t.getFullYear(), t.getMonth(), t.getDate()).getTime();
+  const days = Math.round((start(new Date(now)) - start(d)) / DAY);
+  if (days === 0) return '오늘';
+  if (days === 1) return '어제';
+  const md = `${d.getMonth() + 1}월 ${d.getDate()}일`;
+  return d.getFullYear() === new Date(now).getFullYear() ? md : `${d.getFullYear()}년 ${md}`;
+}

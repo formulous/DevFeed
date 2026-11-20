@@ -1,4 +1,4 @@
-import type { PostSummary, SourceRef, TagItem } from '@/api/types';
+import type { PostSummary, SecurityNewsSource, SourceRef, TagItem } from '@/api/types';
 
 export const mockSources: SourceRef[] = [
   { id: 1, name: '토스 기술블로그', logoUrl: null, type: 'COMPANY' },
@@ -93,8 +93,51 @@ export const mockTags: TagItem[] = TAGS.map(([name, category], i): TagItem => ({
     id: 100 + i,
     name,
     slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-    category: null,
+    category: name === 'Security' ? '보안' : null,
     postCount: 0,
   })),
 )
   .sort((a, b) => b.postCount - a.postCount);
+
+export const mockNewsSources: SecurityNewsSource[] = [
+  { id: 200, name: '데일리시큐', logoUrl: null, region: 'DOMESTIC' },
+  { id: 201, name: 'KISA 보호나라', logoUrl: null, region: 'DOMESTIC' },
+  { id: 202, name: 'AhnLab ASEC', logoUrl: null, region: 'DOMESTIC' },
+  { id: 203, name: 'BleepingComputer', logoUrl: null, region: 'OVERSEAS' },
+  { id: 204, name: 'SecurityWeek', logoUrl: null, region: 'OVERSEAS' },
+  { id: 205, name: 'The Hacker News', logoUrl: null, region: 'OVERSEAS' },
+];
+
+const NEWS_TITLES: Record<'DOMESTIC' | 'OVERSEAS', string[]> = {
+  DOMESTIC: [
+    '국내 쇼핑몰 회원정보 유출 사고 조사 착수',
+    '공유기 펌웨어 원격 코드 실행 취약점 보안 업데이트 권고',
+    '정보 탈취형 악성코드 유포 동향 분석',
+    '랜섬웨어 피해 기업 복구 지원 절차 안내',
+  ],
+  OVERSEAS: [
+    'Critical zero-day in VPN appliances exploited in the wild',
+    'New phishing kit targets Microsoft 365 accounts with MFA bypass',
+    'Supply chain attack hits popular npm packages',
+    'Ransomware gang leaks data stolen from healthcare provider',
+  ],
+};
+
+const NEWS_SUMMARY =
+  '보안 업데이트가 공개됐음. 영향받는 버전 사용자는 즉시 최신 버전으로 업데이트하고, 외부 노출 서비스의 접근 기록을 점검하라고 권고함. 공격 지표와 대응 방법은 원문에서 확인할 수 있음. 추가 분석 결과는 확인되는 대로 공개 예정임.';
+
+export const mockNewsPosts: PostSummary[] = Array.from({ length: 30 }, (_, i) => {
+  const source = mockNewsSources[i % mockNewsSources.length];
+  const titles = NEWS_TITLES[source.region];
+  const id = 1000 + 30 - i;
+  return {
+    id,
+    title: `${titles[i % titles.length]} (${id})`,
+    summary: i % 7 === 6 ? null : NEWS_SUMMARY.slice(0, 150),
+    url: `https://example.com/news/${id}`,
+    thumbnailUrl: null,
+    publishedAt: new Date(BASE_TIME - i * 110 * 60_000).toISOString(),
+    source: { id: source.id, name: source.name, logoUrl: null, type: 'COMPANY' },
+    tags: [{ id: 128, name: 'Security' }],
+  };
+});

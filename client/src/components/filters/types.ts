@@ -1,3 +1,5 @@
+import type { SourceType } from '@/api/types';
+
 export interface SegmentOption {
   value: string | null;
   label: string;
@@ -10,7 +12,8 @@ export interface FilterBindings {
   setSources: (ids: number[]) => void;
   toggleTag: (id: number) => void;
   toggleSource: (id: number) => void;
-  segment: {
+  sourceScope?: SourceType;
+  segment?: {
     legend: string;
     options: SegmentOption[];
     value: string | null;
@@ -19,7 +22,11 @@ export interface FilterBindings {
   reset: () => void;
 }
 
+export function segmentDefault(b: FilterBindings) {
+  return b.segment?.options[0]?.value ?? null;
+}
+
 export function activeCount(b: FilterBindings) {
-  const def = b.segment.options[0]?.value ?? null;
-  return b.tagIds.length + b.sourceIds.length + (b.segment.value !== def ? 1 : 0);
+  const segOn = b.segment && b.segment.value !== segmentDefault(b) ? 1 : 0;
+  return b.tagIds.length + b.sourceIds.length + segOn;
 }

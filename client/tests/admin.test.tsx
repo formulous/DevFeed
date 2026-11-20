@@ -20,7 +20,7 @@ describe('A-01 수집 현황', () => {
     await seedLogin('admin@devfeed.dev');
     renderWithApp(<App />, '/admin');
     const table = await screen.findByRole('table');
-    expect(within(table).getAllByRole('row')).toHaveLength(9);
+    expect(within(table).getAllByRole('row')).toHaveLength(15);
     await user.click(screen.getByRole('radio', { name: '오류' }));
     await waitFor(() => expect(currentLocation).toBe('/admin?status=ERROR'));
     await waitFor(() => expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(2));
@@ -158,4 +158,38 @@ describe('A-04 태그 사전', () => {
     },
     SLOW + 2000,
   );
+});
+
+describe('021 소스 종류·지역', () => {
+  it('A-01 종류 필터로 보안 뉴스만 보고, 종류·지역을 표시함', async () => {
+    const user = userEvent.setup();
+    await seedLogin('admin@devfeed.dev');
+    renderWithApp(<App />, '/admin');
+    await screen.findByRole('table');
+    await user.click(screen.getByRole('radio', { name: '보안 뉴스' }));
+    await waitFor(() => expect(currentLocation).toBe('/admin?kind=SECURITY_NEWS'));
+    await waitFor(() => expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(7));
+    expect(within(screen.getByRole('table')).getAllByText('보안 뉴스 · 국내')).toHaveLength(3);
+  });
+
+  it('A-03 보안 뉴스 등록: 유형 대신 지역을 고르고, 수정 화면에서는 종류를 바꿀 수 없음', async () => {
+    const user = userEvent.setup();
+    await seedLogin('admin@devfeed.dev');
+    renderWithApp(<App />, '/admin/sources/new');
+    await user.click(await screen.findByRole('radio', { name: '보안 뉴스' }));
+    expect(screen.queryByRole('group', { name: '유형' })).toBeNull();
+    await user.click(screen.getByRole('radio', { name: '해외' }));
+    await user.type(screen.getByLabelText('이름'), '새 보안 매체');
+    await user.type(screen.getByLabelText('사이트 URL'), 'https://news.example.com');
+    await user.type(screen.getByLabelText('피드 URL (RSS/Atom)'), 'https://news.example.com/rss');
+    await user.click(screen.getByRole('button', { name: '검증' }));
+    await screen.findByText(/유효한 RSS임/);
+    await user.click(screen.getByRole('button', { name: '저장' }));
+    await waitFor(() => expect(currentLocation).toBe('/admin/sources/100'));
+    expect(await screen.findByText(/보안 뉴스 · 해외/)).toBeInTheDocument();
+
+    renderWithApp(<App />, '/admin/sources/100/edit');
+    expect(await screen.findByText('(등록 후 바꿀 수 없음)')).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: '기술 블로그' })).toBeNull();
+  });
 });

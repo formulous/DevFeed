@@ -1,22 +1,10 @@
 import { request } from './http';
-import type {
-  AdminSource,
-  AdminSourceListItem,
-  AdminStats,
-  AdminTag,
-  CrawlRun,
-  FeedValidationResult,
-  Job,
-  SourceInput,
-  SourceStatus,
-  TagInput,
-  UpdateSourceInput,
-} from './types';
+import type { AdminSource, AdminSourceListItem, AdminStats, AdminTag, CrawlRun, FeedValidationResult, Job, SourceInput, SourceKind, SourceStatus, TagInput, UpdateSourceInput } from './types';
 
 export const fetchAdminStats = () => request<AdminStats>('/admin/stats');
 
-export const fetchAdminSources = (status: SourceStatus | null) =>
-  request<{ items: AdminSourceListItem[] }>('/admin/sources', { query: { status } });
+export const fetchAdminSources = (status: SourceStatus | null, kind: SourceKind | null = null) =>
+  request<{ items: AdminSourceListItem[] }>('/admin/sources', { query: { status, kind } });
 
 export const fetchAdminSource = (id: number) => request<AdminSource>(`/admin/sources/${id}`);
 

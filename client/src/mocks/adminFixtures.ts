@@ -1,11 +1,13 @@
 import type { AdminSource, AdminTag, CrawlRun, Job } from '@/api/types';
-import { mockSources } from './fixtures';
+import { mockNewsSources, mockSources } from './fixtures';
 
 const NOW = Date.parse('2026-11-19T09:00:00.000Z');
 const iso = (offsetMin: number) => new Date(NOW - offsetMin * 60_000).toISOString();
 
 function seedSources(): AdminSource[] {
-  return mockSources.map((s, i) => {
+  const blogs = mockSources.map((s) => ({ ...s, kind: 'BLOG' as const, region: null }));
+  const news = mockNewsSources.map((s) => ({ ...s, type: 'COMPANY' as const, kind: 'SECURITY_NEWS' as const }));
+  return [...blogs, ...news].map((s, i) => {
     const status = i === 6 ? 'ERROR' : i === 7 ? 'INACTIVE' : 'ACTIVE';
     return {
       ...s,
@@ -15,7 +17,7 @@ function seedSources(): AdminSource[] {
       consecutiveFailures: status === 'ERROR' ? 7 : 0,
       siteUrl: `https://blog${s.id}.example.com`,
       feedUrl: `https://blog${s.id}.example.com/rss`,
-      crawlIntervalMin: 60,
+      crawlIntervalMin: s.kind === 'SECURITY_NEWS' ? (s.id === 201 ? 60 : 30) : 60,
       nextCrawlAt: iso(-30),
       lastCrawledAt: iso(10),
       createdAt: iso(60 * 24 * 30),

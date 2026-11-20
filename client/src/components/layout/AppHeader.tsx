@@ -1,8 +1,8 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react';
 import { FiSearch } from 'react-icons/fi';
-import { Link, NavLink, useNavigate, useSearchParams } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '@/auth/AuthProvider';
-import { cn } from '@/lib/cn';
+import { FeedTabs } from './FeedTabs';
 
 export const SEARCH_MIN = 2;
 export const SEARCH_MAX = 50;
@@ -46,12 +46,6 @@ function SearchBox() {
   );
 }
 
-const TABS = [
-  { to: '/', label: '최신', end: true },
-  { to: '/for-you', label: '추천', end: false },
-  { to: '/popular', label: '인기', end: false },
-];
-
 function ProfileMenu() {
   const { status, me, logout } = useAuth();
   if (status === 'loading') return <div className="h-8 w-16" />;
@@ -82,9 +76,25 @@ function ProfileMenu() {
   );
 }
 
+function useHeaderHeightVar() {
+  const ref = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const apply = () => document.documentElement.style.setProperty('--header-h', `${el.offsetHeight}px`);
+    apply();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return ref;
+}
+
 export function AppHeader() {
+  const ref = useHeaderHeightVar();
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-surface/95 backdrop-blur">
+    <header ref={ref} className="sticky top-0 z-30 border-b border-line bg-surface/95 backdrop-blur">
       <div className="mx-auto flex max-w-[1200px] items-center gap-4 px-4 pt-3">
         <Link to="/" className="shrink-0 text-lg font-bold text-brand">
           DevFeed
@@ -94,23 +104,9 @@ export function AppHeader() {
           <ProfileMenu />
         </div>
       </div>
-      <nav className="mx-auto flex max-w-[1200px] gap-5 px-4" aria-label="피드">
-        {TABS.map((tab) => (
-          <NavLink
-            key={tab.to}
-            to={tab.to}
-            end={tab.end}
-            className={({ isActive }) =>
-              cn(
-                'border-b-2 py-2.5 text-sm font-medium',
-                isActive ? 'border-brand text-brand' : 'border-transparent text-fg-secondary hover:text-fg',
-              )
-            }
-          >
-            {tab.label}
-          </NavLink>
-        ))}
-      </nav>
+      <div className="mx-auto max-w-[1200px] lg:px-4">
+        <FeedTabs />
+      </div>
     </header>
   );
 }

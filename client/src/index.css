@@ -21,6 +21,12 @@ mark {
     scrollbar-width: thin;
     scrollbar-color: rgb(148 163 184 / 0.35) transparent;
   }
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
   .scrollbar-thin:hover {
     scrollbar-color: rgb(148 163 184 / 0.7) transparent;
   }

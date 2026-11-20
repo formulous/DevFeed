@@ -9,12 +9,16 @@ import { FilterLayout } from '@/components/filters/FilterLayout';
 import { useFeedFilterBindings, useFeedFilters } from '@/hooks/useFeedFilters';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useOpenPost, useToggleBookmark } from '@/hooks/usePostActions';
+import type { SourceType } from '@/api/types';
 import { feedQuery } from './queries';
 
-export function HomePage() {
+const LABELS: Record<SourceType | 'ALL', string> = { ALL: '최신 피드', COMPANY: '기업 블로그 피드', PERSONAL: '개인 블로그 피드' };
+
+export function HomePage({ sourceType = null }: { sourceType?: SourceType | null }) {
   const { status } = useAuth();
-  const { filters, reset } = useFeedFilters();
-  const bindings = useFeedFilterBindings();
+  const { filters, reset } = useFeedFilters(sourceType);
+  const bindings = useFeedFilterBindings(sourceType);
+  const label = LABELS[sourceType ?? 'ALL'];
   const feed = useInfiniteQuery({ ...feedQuery(filters, status), enabled: status !== 'loading' });
   const openPost = useOpenPost();
   const toggleBookmark = useToggleBookmark();
@@ -27,8 +31,8 @@ export function HomePage() {
 
   return (
     <FilterLayout b={bindings}>
-      <section className="min-w-0 flex-1" aria-label="최신 피드">
-        <h1 className="sr-only">최신 피드</h1>
+      <section className="min-w-0 flex-1" aria-label={label}>
+        <h1 className="sr-only">{label}</h1>
 
         {feed.isPending ? (
           <div className="space-y-3">

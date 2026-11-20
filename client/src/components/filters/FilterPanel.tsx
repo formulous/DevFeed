@@ -21,7 +21,7 @@ function SectionHead({ title, onAll }: { title: string; onAll: () => void }) {
   );
 }
 
-function ToggleChip({ label, count, on, onClick }: { label: string; count?: number; on: boolean; onClick: () => void }) {
+export function ToggleChip({ label, count, on, onClick }: { label: string; count?: number; on: boolean; onClick: () => void }) {
   return (
     <button
       type="button"
@@ -57,7 +57,7 @@ function MoreChip({ count, noun, onClick }: { count: number; noun: string; onCli
 }
 
 export function FilterPanel({ b, onOpenTags, onOpenSources }: FilterPanelProps) {
-  const catalog = useFilterCatalog();
+  const catalog = useFilterCatalog(b.sourceScope);
   const popularIds = new Set(catalog.popularTags.map((t) => t.id));
   const extraSelectedTags = b.tagIds.filter((id) => !popularIds.has(id));
   const quickIds = new Set(catalog.quickSources.map((s) => s.id));
@@ -79,10 +79,12 @@ export function FilterPanel({ b, onOpenTags, onOpenSources }: FilterPanelProps) 
         </div>
       </section>
 
-      <section aria-label={`${b.segment.legend} 필터`}>
-        <h3 className="mb-1.5 text-sm font-semibold">{b.segment.legend}</h3>
-        <Segment {...b.segment} />
-      </section>
+      {b.segment && (
+        <section aria-label={`${b.segment.legend} 필터`}>
+          <h3 className="mb-1.5 text-sm font-semibold">{b.segment.legend}</h3>
+          <Segment {...b.segment} />
+        </section>
+      )}
 
       <section aria-label="소스 필터">
         <SectionHead title="소스" onAll={onOpenSources} />

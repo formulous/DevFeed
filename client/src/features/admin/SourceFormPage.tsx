@@ -4,13 +4,14 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { Button } from '@onyx/components/button/button';
 import { TextField } from '@onyx/components/input/text-field';
 import { createSource, updateSource, validateFeed } from '@/api/admin';
-import type { AdminSource, FeedValidationResult, SourceInput, SourceType, UpdateSourceInput } from '@/api/types';
+import type { AdminSource, FeedValidationResult, NewsRegion, SourceInput, SourceKind, SourceType, UpdateSourceInput } from '@/api/types';
 import { ErrorState } from '@/components/common/ErrorState';
 import { FieldError } from '@/components/common/FieldError';
 import { FullPageSpinner } from '@/components/common/FullPageSpinner';
 import { errorMessage, fieldErrorMap } from '@/lib/errors';
 import { isHttpUrl } from '@/lib/format';
 import { ADMIN_KEY, adminSourceQuery } from './queries';
+import { KIND_LABEL, REGION_LABEL, TYPE_LABEL } from './sourceKind';
 
 export const INTERVAL_MIN = 30;
 export const INTERVAL_MAX = 1440;
@@ -20,11 +21,22 @@ interface FormValues {
   siteUrl: string;
   feedUrl: string;
   type: SourceType;
+  kind: SourceKind;
+  region: NewsRegion;
   logoUrl: string;
   crawlIntervalMin: string;
 }
 
-const EMPTY: FormValues = { name: '', siteUrl: '', feedUrl: '', type: 'COMPANY', logoUrl: '', crawlIntervalMin: '60' };
+const EMPTY: FormValues = {
+  name: '',
+  siteUrl: '',
+  feedUrl: '',
+  type: 'COMPANY',
+  kind: 'BLOG',
+  region: 'DOMESTIC',
+  logoUrl: '',
+  crawlIntervalMin: '60',
+};
 
 function toValues(s: AdminSource): FormValues {
   return {
@@ -32,6 +44,8 @@ function toValues(s: AdminSource): FormValues {
     siteUrl: s.siteUrl,
     feedUrl: s.feedUrl,
     type: s.type,
+    kind: s.kind,
+    region: s.region ?? 'DOMESTIC',
     logoUrl: s.logoUrl ?? '',
     crawlIntervalMin: String(s.crawlIntervalMin),
   };
@@ -42,7 +56,9 @@ function toInput(v: FormValues): SourceInput {
     name: v.name.trim(),
     siteUrl: v.siteUrl.trim(),
     feedUrl: v.feedUrl.trim(),
-    type: v.type,
+    type: v.kind === 'SECURITY_NEWS' ? 'COMPANY' : v.type,
+    kind: v.kind,
+    region: v.kind === 'SECURITY_NEWS' ? v.region : undefined,
     logoUrl: v.logoUrl.trim() || null,
     crawlIntervalMin: Number(v.crawlIntervalMin),
   };
@@ -65,6 +81,7 @@ export function validateForm(v: FormValues): Partial<Record<keyof FormValues, st
 function diff(initial: SourceInput, next: SourceInput): UpdateSourceInput {
   const out: UpdateSourceInput = {};
   for (const key of Object.keys(next) as (keyof SourceInput)[]) {
+    if (key === 'kind') continue;
     if (initial[key] !== next[key]) Object.assign(out, { [key]: next[key] });
   }
   return out;
@@ -88,6 +105,40 @@ function ValidationPanel({ result }: { result: FeedValidationResult }) {
         </ul>
       )}
     </div>
+  );
+}
+
+function RadioRow<T extends string>({
+  legend,
+  name,
+  options,
+  value,
+  onChange,
+}: {
+  legend: string;
+  name: string;
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <fieldset>
+      <legend className="mb-1 text-xs font-medium">{legend}</legend>
+      <div className="flex gap-4 text-sm">
+        {options.map((o) => (
+          <label key={o.value} className="flex items-center gap-1">
+            <input
+              type="radio"
+              name={name}
+              checked={value === o.value}
+              onChange={() => onChange(o.value)}
+              className="accent-[var(--color-primary)]"
+            />
+            {o.label}
+          </label>
+        ))}
+      </div>
+    </fieldset>
   );
 }
 
@@ -143,7 +194,7 @@ function SourceForm({ source }: { source?: AdminSource }) {
         <FieldError message={errorOf('name')} />
       </div>
       <div>
-        <TextField label="블로그 URL" value={values.siteUrl} onChange={set('siteUrl')} inputMode="url" className="h-9" />
+        <TextField label={values.kind === 'SECURITY_NEWS' ? '사이트 URL' : '블로그 URL'} value={values.siteUrl} onChange={set('siteUrl')} inputMode="url" className="h-9" />
         <FieldError message={errorOf('siteUrl')} />
       </div>
       <div>
@@ -177,23 +228,39 @@ function SourceForm({ source }: { source?: AdminSource }) {
           ) : null}
         </div>
       </div>
-      <fieldset>
-        <legend className="mb-1 text-xs font-medium">유형</legend>
-        <div className="flex gap-4 text-sm">
-          {(['COMPANY', 'PERSONAL'] as const).map((t) => (
-            <label key={t} className="flex items-center gap-1">
-              <input
-                type="radio"
-                name="type"
-                checked={values.type === t}
-                onChange={() => setValues((v) => ({ ...v, type: t }))}
-                className="accent-[var(--color-primary)]"
-              />
-              {t === 'COMPANY' ? '기업' : '개인'}
-            </label>
-          ))}
+      {isNew ? (
+        <RadioRow
+          legend="종류"
+          name="kind"
+          options={(['BLOG', 'SECURITY_NEWS'] as const).map((k) => ({ value: k, label: KIND_LABEL[k] }))}
+          value={values.kind}
+          onChange={(kind) => setValues((v) => ({ ...v, kind }))}
+        />
+      ) : (
+        <div>
+          <p className="mb-1 text-xs font-medium">종류</p>
+          <p className="text-sm">
+            {KIND_LABEL[values.kind]} <span className="text-xs text-fg-muted">(등록 후 바꿀 수 없음)</span>
+          </p>
         </div>
-      </fieldset>
+      )}
+      {values.kind === 'BLOG' ? (
+        <RadioRow
+          legend="유형"
+          name="type"
+          options={(['COMPANY', 'PERSONAL'] as const).map((t) => ({ value: t, label: TYPE_LABEL[t] }))}
+          value={values.type}
+          onChange={(type) => setValues((v) => ({ ...v, type }))}
+        />
+      ) : (
+        <RadioRow
+          legend="지역"
+          name="region"
+          options={(['DOMESTIC', 'OVERSEAS'] as const).map((r) => ({ value: r, label: REGION_LABEL[r] }))}
+          value={values.region}
+          onChange={(region) => setValues((v) => ({ ...v, region }))}
+        />
+      )}
       <div>
         <TextField label="로고 URL (선택)" value={values.logoUrl} onChange={set('logoUrl')} inputMode="url" className="h-9" />
         <FieldError message={errorOf('logoUrl')} />

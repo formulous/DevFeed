@@ -86,8 +86,10 @@ export function adminHandlers(guard: Guard) {
     http.get(
       '*/api/admin/sources',
       admin(({ request }) => {
-        const status = new URL(request.url).searchParams.get('status');
-        const items = adminState.sources.filter((s) => !status || s.status === status);
+        const url = new URL(request.url);
+        const status = url.searchParams.get('status');
+        const kind = url.searchParams.get('kind');
+        const items = adminState.sources.filter((s) => (!status || s.status === status) && (!kind || s.kind === kind));
         return HttpResponse.json({ items });
       }),
     ),
@@ -102,6 +104,9 @@ export function adminHandlers(guard: Guard) {
       '*/api/admin/sources',
       admin(async ({ request }) => {
         const input = (await request.json()) as SourceInput;
+        const kind = input.kind ?? 'BLOG';
+        if (kind === 'SECURITY_NEWS' && !input.region) return err(400, 'VALIDATION_FAILED', '보안 뉴스는 지역이 필요함');
+        if (kind === 'BLOG' && input.region) return err(400, 'VALIDATION_FAILED', '기술 블로그는 지역을 지정할 수 없음');
         const check = feedCheck(input.feedUrl);
         if (!check.valid) return err(422, 'SOURCE_FEED_INVALID', `유효한 피드가 아님: ${check.reason}`);
         if (check.duplicated) return err(409, 'SOURCE_FEED_DUPLICATED', '같은 피드 URL 소스가 이미 있음');
@@ -109,6 +114,9 @@ export function adminHandlers(guard: Guard) {
         const source: AdminSource = {
           id: adminState.nextId++,
           ...input,
+          type: kind === 'SECURITY_NEWS' ? 'COMPANY' : input.type,
+          kind,
+          region: kind === 'SECURITY_NEWS' ? (input.region ?? null) : null,
           status: 'ACTIVE',
           lastSuccessAt: null,
           newPostCount7d: 0,
@@ -135,7 +143,9 @@ export function adminHandlers(guard: Guard) {
       admin(async ({ request, params }) => {
         const source = findSource(params.id);
         if (!source) return err(404, 'NOT_FOUND', '소스를 찾을 수 없음');
-        const input = (await request.json()) as UpdateSourceInput;
+        const input = (await request.json()) as UpdateSourceInput & { kind?: unknown };
+        if (input.kind !== undefined) return err(400, 'VALIDATION_FAILED', '종류는 바꿀 수 없음');
+        if (input.region && source.kind === 'BLOG') return err(400, 'VALIDATION_FAILED', '기술 블로그는 지역을 지정할 수 없음');
         if (input.feedUrl && input.feedUrl !== source.feedUrl) {
           const check = feedCheck(input.feedUrl, source.id);
           if (!check.valid) return err(422, 'SOURCE_FEED_INVALID', `유효한 피드가 아님: ${check.reason}`);

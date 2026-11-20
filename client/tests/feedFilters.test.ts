@@ -4,7 +4,7 @@ import { applyFeedFilters, parseFeedFilters } from '@/hooks/useFeedFilters';
 describe('feed filters URL', () => {
   it('쿼리를 필터로 해석하고 잘못된 값은 버림', () => {
     const params = new URLSearchParams('tagIds=1,2,abc,2&sourceIds=3&sourceType=WRONG');
-    expect(parseFeedFilters(params)).toEqual({ tagIds: [1, 2], sourceIds: [3], sourceType: null });
+    expect(parseFeedFilters(params)).toEqual({ tagIds: [1, 2], sourceIds: [3], sourceType: null, field: null });
   });
 
   it('명세 상한(태그 10, 소스 20)을 넘는 값은 자름', () => {
@@ -19,6 +19,7 @@ describe('feed filters URL', () => {
       tagIds: [],
       sourceIds: [4, 5],
       sourceType: 'PERSONAL',
+      field: null,
     });
     expect(next.get('q')).toBe('keep');
     expect(next.has('tagIds')).toBe(false);

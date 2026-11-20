@@ -13,6 +13,7 @@ import { HistoryPage } from '@/features/me/HistoryPage';
 import { OnboardingPage } from '@/features/me/OnboardingPage';
 import { SettingsPage } from '@/features/me/SettingsPage';
 import { HomePage } from '@/features/feed/HomePage';
+import { SecurityNewsPage } from '@/features/security/SecurityNewsPage';
 import { PopularPage } from '@/features/popular/PopularPage';
 import { ForYouPage } from '@/features/recommend/ForYouPage';
 import { SearchPage } from '@/features/search/SearchPage';
@@ -27,6 +28,9 @@ export function App() {
       <Routes>
         <Route element={<AppLayout />}>
           <Route index element={<HomePage />} />
+          <Route path="company" element={<HomePage key="company" sourceType="COMPANY" />} />
+          <Route path="personal" element={<HomePage key="personal" sourceType="PERSONAL" />} />
+          <Route path="security" element={<SecurityNewsPage />} />
           <Route path="for-you" element={<RequireAuth><ForYouPage /></RequireAuth>} />
           <Route path="popular" element={<PopularPage />} />
           <Route path="search" element={<SearchPage />} />

@@ -92,6 +92,7 @@ function PickerBody({ title, noun, items, groups, groupLabel, initial, max, onAp
             aria-label={`${noun} 검색`}
             className="h-9 w-full rounded-lg border border-line px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200/40"
           />
+          {groups.length > 0 && (
           <div role="tablist" aria-label={groupLabel} className="flex flex-wrap gap-1">
             {[ALL, ...groups].map((g) => (
               <button
@@ -109,6 +110,7 @@ function PickerBody({ title, noun, items, groups, groupLabel, initial, max, onAp
               </button>
             ))}
           </div>
+          )}
         </div>
         <ul
           aria-label={`${noun} 선택지`}

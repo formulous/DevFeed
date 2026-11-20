@@ -12,6 +12,7 @@ import { errorMessage } from '@/lib/errors';
 import { formatDateTime, formatDuration } from '@/lib/format';
 import { ADMIN_KEY, adminSourceQuery, crawlRunsQuery } from './queries';
 import { RunResultBadge, SourceStatusBadge } from './StatusBadge';
+import { sourceKindLabel } from './sourceKind';
 
 export function SourceDetailPage() {
   const id = Number(useParams().id);
@@ -124,9 +125,9 @@ export function SourceDetailPage() {
           <dd className="truncate">{s.siteUrl}</dd>
         </div>
         <div>
-          <dt className="text-xs text-fg-secondary">유형 · 주기</dt>
+          <dt className="text-xs text-fg-secondary">종류 · 주기</dt>
           <dd>
-            {s.type === 'COMPANY' ? '기업' : '개인'} · {s.crawlIntervalMin}분
+            {sourceKindLabel(s)} · {s.crawlIntervalMin}분
           </dd>
         </div>
         <div>
