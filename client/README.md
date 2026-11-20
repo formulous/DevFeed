@@ -112,7 +112,7 @@ App
 - 글 목록: 카드 상자 없이 `divide-y` 구분선 목록. 마우스를 올리면 행 배경이 아주 옅게 바뀜. 추천 이유는 `PostCard kicker`로 행 안에 넣음. 보안 뉴스 날짜 구분은 점과 날짜
 - 사이드바: 상자 없이 작은 보조색 섹션 제목 사용. 선택 칩·주요 버튼·페이지 번호는 반전색 알약, 세그먼트는 얇은 테두리 트랙
 - 입력: onyx `TextField` 대신 `components/common/TextInput`을 씀 (className으로 `bg-input`·`border-line`을 덮어씀)
-- 파비콘은 `#18181b`(진회색). `og.png`는 예전 이미지 그대로임
+- 파비콘은 `#18181b`(진회색). `public/og.png`(1200×630, 라이트 무채색: 글자 로고·제목·글자 탭·구분선 목록)는 `npm run og`(`scripts/og.mjs`, Playwright)로 다시 만듦
 - 캡처: `npm run capture`(라이트), `SCHEME=dark npm run capture`(다크, `screenshots/dark/`)
 
 ## 상태 관리 원칙
