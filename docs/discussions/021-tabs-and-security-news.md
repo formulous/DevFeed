@@ -121,3 +121,36 @@
   - `field` enum 7개, 분야 목록 API 없음(client 상수)
   - 보안 뉴스는 별도 경로 + 별도 출처 목록. 기존 `/sources`·`/posts`·`/search`·`/recommendations` 응답에 보안 뉴스 0건 유지 (021 수용 기준)
   - 북마크·읽은 기록에는 섞여도 됨. 보안 뉴스 `thumbnailUrl` 항상 null, `isPopular` 항상 false (server 보장)
+
+### server (1차) — 명세 초안·스키마 요청
+- client 제안 형태 그대로 채택 (pm 동의). `docs/api/openapi.yaml` 초안 반영함 → client·pm 검토 요청
+  | 항목 | 명세 |
+  |---|---|
+  | 분야 | `GET /posts`, `GET /posts/popular`에 `field` (`BACKEND·FRONTEND·AI·DATA·INFRA·MOBILE·SECURITY`). 잘못된 값은 400 (client가 URL 단계에서 `전체`로 보정) |
+  | 기업·개인 | 기존 `GET /posts?sourceType=` 그대로 |
+  | 보안 뉴스 목록 | `GET /security-news?cursor&size&region&sourceIds` → `PostPage`. `thumbnailUrl` 항상 null, `isPopular` 항상 false, `summary` 최대 150자 |
+  | 보안 뉴스 출처 | `GET /security-news/sources` → `{ items: [{ id, name, logoUrl, region }] }`, 국내 → 해외, 이름순 |
+  | `/sources` | 기술 블로그만 (응답 형태 변경 없음) |
+  | 관리자 | 목록·상세에 `kind`·`region`, 목록 `?kind=` 필터. 등록 시 `kind`(기본 BLOG)·`region`(보안 뉴스 필수). `kind`는 등록 후 변경 불가 |
+  - 새 enum: `SourceKind` `BLOG|SECURITY_NEWS`, `NewsRegion` `DOMESTIC|OVERSEAS`, `Field`
+  - 보안 뉴스 제외 범위: 피드·인기(`isPopular` 집합 포함)·검색·추천(후보·선호도)·`/tags` postCount. 북마크·읽은 기록·조회 기록은 포함
+- 분야 묶음 정의: **서버 상수**로 둠 (`field → category[]`). 바꿀 일이 드물고, 요청마다 `tags.category`로 태그 ID 집합을 만들어 10분 캐시함. DB 테이블 불필요
+- 보안 뉴스 저장 규칙 (수집 단계에서 적용): 요약 150자 자름, 썸네일 저장 안 함(NULL), `post_search` 색인 안 함 (검색 제외가 쿼리 조건 없이 보장됨, Next에서 검색 포함 시 재색인 작업으로 채움)
+- 보안 뉴스 출처의 `source_type`: 화면에서 쓰지 않으므로 `COMPANY`로 저장 (NOT NULL 유지, 컬럼 변경 불필요)
+
+#### dba 요청 (스키마)
+- `sources.kind ENUM('BLOG','SECURITY_NEWS') NOT NULL DEFAULT 'BLOG'`, `sources.region ENUM('DOMESTIC','OVERSEAS') NULL`
+- **`posts.kind` 비정규화 필요** (`source_type`과 같은 방식, 소스 kind는 변경 불가라 동기화 문제 없음)
+  - 이유: 기본 피드·기업·개인 탭이 모두 "블로그만" 조건을 가짐. 보안 뉴스는 하루 100건 안팎으로 블로그보다 많이 쌓일 것이라 sources 조인 후 거르면 LIMIT 21을 채우려고 뉴스 행을 계속 건너뜀
+  - 인덱스 제안: `idx_posts_published (published_at, id)` → `(kind, published_at, id)`, `idx_posts_type_published` → `(kind, source_type, published_at, id)`. 보안 뉴스 지역 필터는 출처 6곳이라 `region` → 출처 ID 목록으로 바꿔 `idx_posts_source_published`를 씀 (posts에 region 불필요)
+  - 인기 글은 기간 범위 스캔이라 `kind` 조건만 추가해도 충분 (기존 008 판단과 같음)
+- **`post_tags.kind` 비정규화도 필요** (`published_at`과 같은 방식)
+  - 이유: 분야·태그 필터는 `post_tags (tag_id, published_at, post_id)` 범위 스캔인데, `보안` 분류 태그는 보안 뉴스 글이 대부분을 차지하게 됨 → posts 조인으로 거르면 `field=SECURITY`가 느려짐
+  - 인덱스 제안: `idx_post_tags_tag_published` → `(tag_id, kind, published_at, post_id)`
+- 분야 피드 쿼리 계획 (dba 측정용): 태그 필터 없으면 분야 태그마다 `post_tags` 범위 스캔 `LIMIT size+1`을 `UNION` 후 정렬 (007과 같은 분해, 백엔드는 태그 28개). 태그 필터가 있으면 선택 태그 쪽을 분해하고 분야는 `EXISTS (post_tags PK 조회)`로 거름. 측정 SQL은 구현 후 server가 `server/perf/`에 추가하고 10만 건에서 함께 확인
+- 시드 6곳: 수집 주기 30분(KISA 60분) 그대로 동의. KISA `B0000127`은 **제외 의견** — 확인 결과 "보고서/가이드" 게시판(랜섬웨어 분석 보고서, 동향 보고서 등)이고 갱신이 몇 주~몇 달 단위, `description` 없음. 뉴스 탭 성격과 다름
+- 참고: KISA RSS의 `pubDate`가 `2026-10-28` 같은 날짜만 있는 형식임 → 서버 파서가 처리하는지 구현 때 확인하고, 안 되면 날짜만 있는 형식을 KST 자정으로 해석하게 보완함
+
+#### 진행 순서 (server)
+1. 지금: 명세 초안 (완료) → client·pm 검토
+2. dba 마이그레이션 나오면 엔티티 매핑 검토 → 구현 (수집 규칙, 블로그 전용 조건, 분야, 보안 뉴스 API, 관리자) → e2e → 배포
