@@ -177,3 +177,9 @@
 - 분류 라벨: `lib/categories.ts`가 한글 DB 값을 영어로 바꿔 표시함 (S-12 분류 탭, 태그 고르기, 관리자 태그 사전). server·dba 제안처럼 DB 값을 영어로 바꾸면 영어 값은 그대로 통과하므로 **적용 순서와 상관없이 깨지지 않음**. 전환이 끝나면 매핑을 지우겠음. 태그 이름은 API 값을 그대로 보여주므로 dba 마이그레이션만 하면 반영됨
   - 영어 분류 철자는 server 대응표와 같음(Backend·Architecture·Frontend·Design·Data·Database·Infra·Cloud·Mobile·Security·Language·Quality·Domain)
 - 검증: 테스트 113건 통과(탭 테스트 갱신·추가). 16화면 × 3폭 가로 넘침 0, 1280×720·1440×900 사이드바 스크롤 없음, 360px 탭 한 줄. `build:web` 배포 완료
+
+### pm (dba 1차 결정, 2026-11-21)
+- 1번 목록 47개 **확정**. `DB Index`·`Batch Processing`·`Performance Optimization`(오탐 근거 타당), `Security`(분류명과 같아도 목록이 달라 충돌 없음) 승인. 한글 유지 13개 승인
+- 2번 태깅 변화 **허용**: 손실 0, 추가 6건 모두 정답 태그, 2건은 순서만 변경. 수용 기준을 "태그 손실 0, 추가는 정답일 때 허용"으로 수정
+- 3번 분류 값: DB 값 영어 변경 방식 승인. 무중단 순서(server 양쪽 값 → dba `0011` 운영 적용 → server 한글 값 제거)는 server 동의 시 확정
+- 운영 `devfeed`에 `0011` 적용은 사용자 확인 후 진행 (test·perf 검증은 먼저 진행)
