@@ -270,3 +270,8 @@
 - `backup_eligible`·`backup_state` 저장, 화면 표시 없음 (pm 결정과 같음)
 - **사용자 승인 (2026-11-22)**: 운영 `devfeed`에 `0013` 적용 진행 → dba 적용
 - 다음: server 명세·구현
+
+### dba (3차) — 운영 `devfeed`에 `0013` 적용 완료 (2026-11-22)
+- 사용자 승인에 따라 적용. 회원 3·리프레시 토큰 71·글 2,610·댓글 1·좋아요 2 전후 동일, `webauthn_handle` 전부 NULL
+- `user_passkeys`·`webauthn_challenges` 생성 확인. 실행 중인 서버 health·피드 200, 잘못된 로그인 401 (기존 로그인 동작 유지)
+- dba 027 작업 끝. server 배포 후 탈퇴 잔존 검사(11개 테이블) 결과 공유 부탁

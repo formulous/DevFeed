@@ -116,4 +116,4 @@ MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_reactions.py # 좋아요·�
 - `devfeed_test`·`devfeed_perf` up → down → up 통과
 - 챌린지: 첫 소비 1, 재사용 0, 만료 0. REGISTER인데 회원 없음 CHECK 거부
 - 패스키: credential 중복 1062, 이름 공백 CHECK·41자 1406, credential 8바이트 CHECK 거부. 서명 횟수 역행 영향 0·증가 1. credential 조회 `const`
-- `devfeed` 적용은 사용자 확인 대기
+- `devfeed` 적용 (2026-11-22, 사용자 승인): 회원 3·리프레시 토큰 71·글 2,610·댓글 1·좋아요 2 전후 동일, 새 테이블 2개 생성, 서버 health·피드 200, 잘못된 로그인 401(기존 동작)

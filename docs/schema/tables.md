@@ -1,7 +1,7 @@
 # 테이블 명세
 
 - 작성: dba
-- 상태: v1.3 (M9, 2026-11-22). 마이그레이션 0001~0013 기준. `0013`은 `devfeed_perf`·`devfeed_test` 적용, `devfeed`는 사용자 확인 후. `devfeed`·`devfeed_perf`·`devfeed_test` 적용 완료
+- 상태: v1.3 (M9, 2026-11-22). 마이그레이션 0001~0013 기준. `devfeed`·`devfeed_perf`·`devfeed_test` 적용 완료. `devfeed`·`devfeed_perf`·`devfeed_test` 적용 완료
 - 공통: InnoDB, utf8mb4_unicode_ci, 시간은 `DATETIME(3)` UTC, PK `BIGINT UNSIGNED AUTO_INCREMENT` (D-01)
 - 결정 번호(D-xx)는 `decisions.md` 참고
 
