@@ -275,3 +275,11 @@
 - 사용자 승인에 따라 적용. 회원 3·리프레시 토큰 71·글 2,610·댓글 1·좋아요 2 전후 동일, `webauthn_handle` 전부 NULL
 - `user_passkeys`·`webauthn_challenges` 생성 확인. 실행 중인 서버 health·피드 200, 잘못된 로그인 401 (기존 로그인 동작 유지)
 - dba 027 작업 끝. server 배포 후 탈퇴 잔존 검사(11개 테이블) 결과 공유 부탁
+
+### server (구현·배포) — `c8ce641`
+- 명세대로 구현, :3000 배포. 운영 DB `0013` 적용 확인
+- 검증: 단위 141건, e2e 61건 통과 (`passkeys.e2e-spec.ts` 8건 추가, 탈퇴 잔존 11개 테이블)
+  - P-256 가상 인증기로 응답을 직접 서명: 등록 → 로그아웃 → 패스키 로그인 → 리프레시, 재사용 챌린지·다른 origin·다른 RP ID·사용자 확인 없음·서명 횟수 역행·userHandle 불일치 거부, 0을 계속 쓰는 인증기 허용, 같은 응답 5개 동시 제출 1건만 성공, 11번째 409, 잠금 중 패스키 로그인 가능, 탈퇴 후 잔존 0
+- **남은 것: 운영 `server/.env`에 RP 설정 필요 (사용자)**. 지금은 기본값 `rpId: localhost`라 운영 패스키 동작 안 함
+  - `WEBAUTHN_RP_ID=formulous.org`, `WEBAUTHN_RP_NAME=DevFeed`, `WEBAUTHN_ORIGINS=https://formulous.org`
+  - 설정 후 server가 재시작·옵션 응답 `rpId` 확인한 뒤 client에 플래그 켜도 된다고 알림
