@@ -171,6 +171,24 @@ async function main() {
       sidebarChecks.push(`${w} tabs: oneLine=${r.oneLine} tab=${r.minHeight} row=${r.rowHeight} font=${r.fontSize} activeAutoScrolled=${r.autoScrolled} lastReachable=${r.lastReachable}`);
       await context.close();
     }
+    for (const [w, h] of [[360, 740], [1280, 900]]) {
+      const context = await browser.newContext({ viewport: { width: w, height: h }, locale: 'ko-KR', colorScheme: SCHEME });
+      await context.route(/^https?:\/\/(?!localhost)/, (route) => route.abort());
+      const page = await context.newPage();
+      await login(page, base);
+      const card = page.locator('article').first().locator('..');
+      await card.getByRole('button', { name: /^댓글 / }).click();
+      const region = card.getByRole('region', { name: '댓글' });
+      await region.getByText('삭제된 댓글이에요').waitFor();
+      await card.getByRole('button', { name: /^좋아요/ }).click();
+      await region.getByRole('button', { name: '답글 달기' }).first().click();
+      await card.scrollIntoViewIfNeeded();
+      await page.evaluate(() => window.scrollBy(0, -60));
+      const wide = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      if (wide > 0) overflow.push(`S-01-comments @${w}px: +${wide}px`);
+      await page.screenshot({ path: `${OUT}/${w}/S-01-comments.png` });
+      await context.close();
+    }
     console.log(sidebarChecks.join('\n'));
     if (SCHEME === 'light') await mkdir(README_OUT, { recursive: true });
     if (SCHEME === 'light') for (const id of README_SET) await copyFile(`${OUT}/1280/${id}.top.png`, `${README_OUT}/${id}.png`);

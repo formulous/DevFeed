@@ -39,6 +39,41 @@ export interface PostSummary {
   isBookmarked?: boolean;
   isRead?: boolean;
   isPopular?: boolean;
+  likeCount?: number;
+  commentCount?: number;
+  likedByMe?: boolean;
+}
+
+export type CommentStatus = 'VISIBLE' | 'DELETED' | 'HIDDEN';
+
+export interface Comment {
+  id: number;
+  parentId: number | null;
+  status: CommentStatus;
+  content: string | null;
+  author: { id: number; nickname: string } | null;
+  createdAt: string;
+  editedAt: string | null;
+  mine: boolean;
+  replyCount: number;
+  replies?: Comment[];
+  repliesNextCursor?: string | null;
+}
+
+export interface LikeResult {
+  liked: boolean;
+  likeCount: number;
+}
+
+export interface CommentCreated {
+  comment: Comment;
+  commentCount: number;
+}
+
+export interface CommentRemoved {
+  commentCount: number;
+  removed: boolean;
+  parentRemoved: boolean;
 }
 
 export interface PopularPost extends PostSummary {

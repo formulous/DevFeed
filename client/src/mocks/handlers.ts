@@ -3,6 +3,7 @@ import { http, HttpResponse } from 'msw';
 import type { Me, PostSummary } from '@/api/types';
 import { resetAdminState } from './adminFixtures';
 import { adminHandlers } from './adminHandlers';
+import { reactionFields, reactionHandlers, resetReactions, withdrawReactions } from './reactions';
 import { fieldByApi } from '@/lib/fields';
 import { mockExtraSources, mockNewsPosts, mockNewsSources, mockPosts, mockSources, mockTags } from './fixtures';
 
@@ -32,6 +33,7 @@ export function resetMockState() {
   state.interestTags = [];
   state.recClicks = [];
   resetAdminState();
+  resetReactions();
 }
 
 function startSession(me: Me, password: string, status = 200) {
@@ -87,13 +89,14 @@ const POPULAR_WEEK_IDS = (() => {
 })();
 
 function decorate(post: PostSummary, member: boolean): PostSummary {
-  const base = { ...post, isPopular: POPULAR_WEEK_IDS.has(post.id) };
+  const base = { ...post, isPopular: POPULAR_WEEK_IDS.has(post.id), ...reactionFields(post.id, member) };
   return member ? { ...base, isBookmarked: state.bookmarks.has(post.id), isRead: state.reads.has(post.id) } : base;
 }
 
 const error = (status: number, code: string, message: string) => HttpResponse.json({ code, message }, { status });
 
 export const handlers = [
+  ...reactionHandlers({ isMember, me: () => state.me, error }),
   http.get('*/api/posts', ({ request }) => {
     const url = new URL(request.url);
     const tagIds = idList(url.searchParams.get('tagIds'));
@@ -255,7 +258,7 @@ export const handlers = [
   http.post('*/api/auth/refresh', () =>
     state.loggedIn && state.me
       ? HttpResponse.json({ accessToken: MOCK_TOKEN, expiresIn: 900, user: state.me })
-      : error(401, 'REFRESH_TOKEN_INVALID', '다시 로그인해야 함'),
+      : error(401, 'REFRESH_TOKEN_INVALID', '다시 로그인해 주세요'),
   ),
   http.post('*/api/auth/logout', () => {
     state.loggedIn = false;
@@ -292,6 +295,7 @@ export const handlers = [
     if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요해요');
     const { password } = (await request.json()) as { password: string };
     if (password !== state.password) return error(403, 'PASSWORD_MISMATCH', '비밀번호가 맞지 않아요');
+    if (state.me) withdrawReactions(state.me.id);
     resetMockState();
     return new HttpResponse(null, { status: 204 });
   }),

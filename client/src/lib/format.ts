@@ -15,6 +15,12 @@ export function formatNumber(n: number) {
   return n.toLocaleString('ko-KR');
 }
 
+export function compactNumber(n: number) {
+  if (n < 1000) return String(n);
+  const k = Math.floor(n / 100) / 10;
+  return k >= 1000 ? `${Math.floor(k / 100) / 10}m` : `${k}k`;
+}
+
 export function toSlug(value: string) {
   return value
     .toLowerCase()

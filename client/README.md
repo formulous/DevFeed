@@ -185,6 +185,16 @@ App
 - 화면에 보이는 문장(빈 상태·오류·안내·토스트·검증·`<title>`·메타 설명·og 이미지)은 해요체로 씀. 버튼·라벨·탭·상태값 같은 짧은 명사는 그대로 둠. README·커밋은 음슴체
 - 서버 오류 메시지는 `errorMessage`로 그대로 보여 줌 (server가 해요체로 바꿨음). 분기는 메시지 문자열이 아니라 `code`로만 함
 
+## 좋아요·댓글 (F-080·F-081, M8, `docs/discussions/026`)
+- 반응 줄 `components/post/ReactionBar.tsx`는 `PostCard` 태그 줄 오른쪽에 붙음 → 최신·추천·인기·검색·북마크·보안 뉴스에 공통 적용, 읽은 기록은 `reactions={false}`
+  - 목록 응답에 `likeCount`가 없으면 반응 줄을 그리지 않음 → server 배포 전 `build:web`에서는 자동으로 숨고, 필드가 오면 바로 보임 (별도 플래그 없음). mock은 필드를 채움
+  - 버튼은 원문 링크 덮개(`a::after`) 위 `z-10`, 댓글 영역은 `article` 밖 형제로 펼쳐서 원문 이동이 일어나지 않음
+- 좋아요 `useToggleLike`(`hooks/usePostActions.ts`): 낙관적 토글 + 글별 직렬화(진행 중 요청이 있으면 마지막 의도만 이어서 보냄), 실패 시 연타 시작 전 값으로 되돌림. 게스트는 로그인 안내
+- 댓글 `components/comments/`: 펼칠 때 `['comments', postId]` 무한 쿼리로 처음 불러옴. 작성·수정·삭제·숨김·답글 더보기는 응답으로 캐시를 직접 고치고(`commentCache.ts`), 응답의 `commentCount`로 목록 항목 수를 맞춤
+  - 삭제 응답 `removed`·`parentRemoved`로 자리 표시("삭제된 댓글이에요")를 남길지 부모까지 지울지 정함
+  - 내용은 텍스트 노드 + `whitespace-pre-wrap`으로만 렌더 (HTML 해석 없음). 입력은 1,000자 카운터, 앞뒤 공백 제거 후 빈 값이면 등록 비활성, `Ctrl/⌘+Enter` 등록
+- mock: `mocks/reactions.ts` (첫 글에 댓글 25개·답글 5개·삭제 자리·숨김·`<script>` 문구, 좋아요 1,234). 캡처 `S-01-comments`(360·1280, 관리자)
+
 ## 좌우 광고 (F-060, `docs/discussions/025`)
 - `components/ads/SideAd.tsx`, `lib/ads.ts`. 게시자 `ca-pub-1750461537555326`, 좌 `3021654585`·우 `2195210969` (반응형 `auto`), `index.html`에 `google-adsense-account` 메타
 - 표시: 화면 폭 1440px 이상(`matchMedia`)이면서 상단 히어로가 있는 화면(최신·추천·인기·보안 뉴스·검색)만. `AppLayout`에서 `main` 좌우에 160px `sticky`(헤더 아래 24px) 배치, 본문 폭은 줄어듦

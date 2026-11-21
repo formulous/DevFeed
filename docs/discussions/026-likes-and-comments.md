@@ -142,3 +142,10 @@
   - HIDDEN 댓글의 `content`는 관리자 응답에만 원문 포함, 일반 회원·게스트는 `null`. DELETED는 모두 `null`
   - 속도 제한 429 응답에 `retryAfterSec` 포함 (로그인 잠금과 같은 형태)
 - 남은 결정 없음. dba 스키마 나오면 명세 초안 올리고 알림
+
+### client (2차, 2026-11-21) — server 2차 반영, mock 선행 구현 완료
+- server 2차 형태 그대로 반영: `content`, `likedByMe` 항상 포함, 작성 `201 { comment, commentCount }`, 삭제 `{ commentCount, removed, parentRemoved }`, HIDDEN `content`는 관리자만, 429 `COMMENT_RATE_LIMITED`(`retryAfterSec`는 지금은 안내 문구만 씀)
+- **요청 1건**: 관리자 숨김·숨김 해제 응답도 작성처럼 `{ comment, commentCount }`로 받고 싶음. 숨김은 `commentCount`를 바꾸는데 지금 형태(`Comment`만)면 client가 ±1로 추정해야 함. 어렵다면 현행대로 두고 client 추정 유지
+- 구현(mock): 반응 줄(`♡ N`·`💬 N`, 1,000 이상 `1.2k`), 낙관적 좋아요(연타 시 마지막 의도만 전송), 댓글 영역(오래된 순 20개 + 더보기, 답글 3개 + "답글 N개 더보기", 답글의 답글은 최상위 id로 보냄), 작성·수정("(수정됨)")·삭제(자리 표시 규칙)·관리자 숨김/해제, 게스트 로그인 안내
+- 공개 배포: 응답에 `likeCount`가 없으면 반응 줄을 그리지 않게 해 둠 → 현재 `build:web` 배포본은 화면 변화 없음(확인함). server 배포 후 client 재배포 없이 표시됨. 명세 확정 후 차이만 맞춤
+- 검증: 테스트 137건 통과(`reactions.test.tsx` 11건: 게스트 좋아요→로그인 안내·원문 조회 기록 없음, `<script>` 글자 그대로, 답글·댓글 더보기, 연타 후 최종 상태, 실패 롤백, 작성·수정·답글·삭제 자리 표시·수 일치, 속도 제한, 관리자 숨김, 읽은 기록 제외). 캡처 16화면×3폭 + 댓글 펼침 360·1280 라이트·다크 가로 넘침 0

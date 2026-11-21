@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient, type InfiniteData, type QueryClient } from '@tanstack/react-query';
 import { deleteBookmark, putBookmark, recordView } from '@/api/posts';
+import { deleteLike, putLike } from '@/api/reactions';
 import type { CursorPage, PostSummary } from '@/api/types';
 import { useAuth } from '@/auth/AuthProvider';
 import { useLoginPrompt } from '@/auth/LoginPromptProvider';
@@ -15,7 +16,7 @@ function patchItems<T extends ListCache>(list: T, postId: number, patch: Partial
   return { ...list, items: list.items.map((item) => (item.id === postId ? { ...item, ...patch } : item)) };
 }
 
-function patchPost(client: QueryClient, postId: number, patch: Partial<PostSummary>) {
+export function patchPost(client: QueryClient, postId: number, patch: Partial<PostSummary>) {
   client.setQueriesData<PostsCache>({ queryKey: POSTS_KEY }, (data) => {
     if (!data) return data;
     if ('pages' in data) return { ...data, pages: data.pages.map((page) => patchItems(page, postId, patch)) };
@@ -67,5 +68,52 @@ export function useOpenPost() {
     if (status !== 'member') return;
     if (!post.isRead) patchPost(client, post.id, { isRead: true });
     client.invalidateQueries({ queryKey: [...POSTS_KEY, 'history'], refetchType: 'inactive' });
+  };
+}
+
+const likeSync = new Map<number, { want: boolean }>();
+
+export function useToggleLike() {
+  const client = useQueryClient();
+  const { status } = useAuth();
+  const { openLoginPrompt } = useLoginPrompt();
+  const toast = useToast();
+
+  const sync = async (postId: number, want: boolean, before: { likedByMe: boolean; likeCount: number }) => {
+    const running = likeSync.get(postId);
+    if (running) {
+      running.want = want;
+      return;
+    }
+    const entry = { want };
+    likeSync.set(postId, entry);
+    try {
+      let sent: boolean;
+      let result;
+      do {
+        sent = entry.want;
+        result = await (sent ? putLike(postId) : deleteLike(postId));
+      } while (entry.want !== sent);
+      patchPost(client, postId, { likedByMe: result.liked, likeCount: result.likeCount });
+    } catch {
+      patchPost(client, postId, before);
+      toast('좋아요를 반영하지 못했어요', 'error');
+    } finally {
+      likeSync.delete(postId);
+    }
+  };
+
+  return (post: PostSummary) => {
+    if (status !== 'member') {
+      openLoginPrompt('좋아요를 누르려면 로그인이 필요해요');
+      return;
+    }
+    const liked = !!post.likedByMe;
+    const count = post.likeCount ?? 0;
+    const next = !liked;
+    patchPost(client, post.id, { likedByMe: next, likeCount: Math.max(0, count + (next ? 1 : -1)) });
+    const running = likeSync.get(post.id);
+    if (running) running.want = next;
+    else sync(post.id, next, { likedByMe: liked, likeCount: count });
   };
 }
