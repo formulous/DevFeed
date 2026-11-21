@@ -125,6 +125,63 @@ paths:
         '204':
           description: 로그아웃 완료
 
+  /auth/passkeys/login/options:
+    post:
+      tags: [auth]
+      summary: 패스키 로그인 옵션 발급 (F-034, 027)
+      description: |
+        W3C PublicKeyCredentialRequestOptionsJSON 그대로 반환 (`@simplewebauthn/browser` startAuthentication 입력).
+        allowCredentials는 비움(기기에서 계정 선택, 자동완성 포함). userVerification required, timeout 300000.
+        챌린지는 1회용, 5분 만료. IP당 분당 10회
+      responses:
+        '200':
+          description: 로그인 옵션
+          headers:
+            Cache-Control:
+              schema: { type: string, example: no-store }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PasskeyRequestOptions' }
+        '429':
+          description: RATE_LIMITED
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /auth/passkeys/login:
+    post:
+      tags: [auth]
+      summary: 패스키 로그인 검증 (F-034, 027)
+      description: |
+        챌린지는 clientDataJSON 안 값으로 찾아 1회 소비함(검증 실패여도 소비됨 → 다시 시도하면 옵션부터 다시 받음).
+        성공하면 /auth/login과 같은 응답·리프레시 쿠키. 비밀번호 잠금(LOGIN_LOCKED)은 적용하지 않음. IP당 분당 10회
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PasskeyLoginRequest' }
+      responses:
+        '200':
+          description: 로그인 성공
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SetRefreshCookie' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401':
+          description: |
+            PASSKEY_NOT_FOUND (등록되지 않았거나 삭제된 패스키),
+            PASSKEY_VERIFICATION_FAILED (챌린지 만료·재사용, origin·RP ID 불일치, 사용자 확인 없음, 서명 실패, 서명 횟수 역행, userHandle 불일치. 원인 구분 안 함)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '429':
+          description: RATE_LIMITED
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
   /me:
     get:
       tags: [me]
@@ -184,6 +241,110 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
+
+  /me/passkeys/registration/options:
+    post:
+      tags: [me]
+      summary: 패스키 등록 옵션 발급 (F-034, 027)
+      description: |
+        W3C PublicKeyCredentialCreationOptionsJSON 그대로 반환 (`@simplewebauthn/browser` startRegistration 입력).
+        excludeCredentials = 이미 등록한 패스키, residentKey required, userVerification required, attestation none, timeout 300000.
+        user.id는 회원별 랜덤 user handle(처음 발급 때 생성 후 고정), user.name은 이메일, user.displayName은 닉네임
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 등록 옵션
+          headers:
+            Cache-Control:
+              schema: { type: string, example: no-store }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PasskeyCreationOptions' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '409':
+          description: PASSKEY_LIMIT_EXCEEDED (이미 10개)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /me/passkeys:
+    get:
+      tags: [me]
+      summary: 내 패스키 목록 (S-10, 027). 최근 만든 순
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 목록 (최대 10개라 페이지 없음)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PasskeyList' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+    post:
+      tags: [me]
+      summary: 패스키 등록 검증·저장 (F-034, 027)
+      description: |
+        챌린지는 요청 회원에게 발급한 등록 챌린지만 1회 소비. name을 생략하면 User-Agent로 "Mac Chrome" 식 이름을 만들고, 알 수 없으면 "패스키 N"
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PasskeyRegisterRequest' }
+      responses:
+        '201':
+          description: 등록됨
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Passkey' }
+        '400':
+          description: |
+            VALIDATION_FAILED (name 1~40자 등, fieldErrors 포함),
+            PASSKEY_VERIFICATION_FAILED (챌린지 만료·재사용·다른 회원 챌린지, origin·RP ID 불일치, 사용자 확인 없음, 형식 오류)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '409':
+          description: PASSKEY_LIMIT_EXCEEDED (이미 10개), PASSKEY_ALREADY_REGISTERED (같은 credential 존재)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /me/passkeys/{passkeyId}:
+    parameters:
+      - $ref: '#/components/parameters/PasskeyId'
+    patch:
+      tags: [me]
+      summary: 패스키 이름 바꾸기 (S-10, 027)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdatePasskeyRequest' }
+      responses:
+        '200':
+          description: 변경 후 패스키
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Passkey' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [me]
+      summary: 패스키 삭제 (S-10, 027). 모두 지워도 이메일 로그인은 유지
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: 삭제됨
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   /me/onboarding/complete:
     post:
@@ -1243,6 +1404,11 @@ components:
       in: path
       required: true
       schema: { $ref: '#/components/schemas/Id' }
+    PasskeyId:
+      name: passkeyId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Id' }
     CommentSize:
       name: size
       in: query
@@ -1352,6 +1518,141 @@ components:
           type: integer
           description: 액세스 토큰 유효 시간(초). 900
         user: { $ref: '#/components/schemas/Me' }
+
+    Base64Url:
+      type: string
+      pattern: '^[A-Za-z0-9_-]*$'
+      description: base64url (패딩 없음)
+
+    PasskeyRequestOptions:
+      type: object
+      description: W3C PublicKeyCredentialRequestOptionsJSON
+      required: [challenge, rpId, timeout, userVerification]
+      properties:
+        challenge: { $ref: '#/components/schemas/Base64Url' }
+        rpId: { type: string, example: formulous.org }
+        timeout: { type: integer, example: 300000 }
+        userVerification: { type: string, enum: [required] }
+        allowCredentials:
+          type: array
+          maxItems: 0
+          items: { $ref: '#/components/schemas/PasskeyDescriptor' }
+
+    PasskeyCreationOptions:
+      type: object
+      description: W3C PublicKeyCredentialCreationOptionsJSON
+      required: [challenge, rp, user, pubKeyCredParams, timeout, excludeCredentials, authenticatorSelection, attestation]
+      properties:
+        challenge: { $ref: '#/components/schemas/Base64Url' }
+        rp:
+          type: object
+          required: [id, name]
+          properties:
+            id: { type: string, example: formulous.org }
+            name: { type: string, example: DevFeed }
+        user:
+          type: object
+          required: [id, name, displayName]
+          properties:
+            id: { $ref: '#/components/schemas/Base64Url' }
+            name: { type: string, description: 이메일 }
+            displayName: { type: string, description: 닉네임 }
+        pubKeyCredParams:
+          type: array
+          description: ES256(-7), EdDSA(-8), RS256(-257)
+          items:
+            type: object
+            required: [type, alg]
+            properties:
+              type: { type: string, enum: [public-key] }
+              alg: { type: integer }
+        timeout: { type: integer, example: 300000 }
+        excludeCredentials:
+          type: array
+          maxItems: 10
+          items: { $ref: '#/components/schemas/PasskeyDescriptor' }
+        authenticatorSelection:
+          type: object
+          required: [residentKey, requireResidentKey, userVerification]
+          properties:
+            residentKey: { type: string, enum: [required] }
+            requireResidentKey: { type: boolean, enum: [true] }
+            userVerification: { type: string, enum: [required] }
+        attestation: { type: string, enum: [none] }
+        extensions:
+          type: object
+          additionalProperties: true
+
+    PasskeyDescriptor:
+      type: object
+      required: [id, type]
+      properties:
+        id: { $ref: '#/components/schemas/Base64Url' }
+        type: { type: string, enum: [public-key] }
+        transports:
+          type: array
+          items: { type: string, example: internal }
+
+    PasskeyCredential:
+      type: object
+      description: W3C RegistrationResponseJSON / AuthenticationResponseJSON (`@simplewebauthn/browser` 반환값 그대로)
+      required: [id, rawId, type, response]
+      properties:
+        id: { $ref: '#/components/schemas/Base64Url' }
+        rawId: { $ref: '#/components/schemas/Base64Url' }
+        type: { type: string, enum: [public-key] }
+        response:
+          type: object
+          description: |
+            등록: clientDataJSON, attestationObject, transports? 등.
+            로그인: clientDataJSON, authenticatorData, signature, userHandle
+          additionalProperties: true
+        authenticatorAttachment: { type: string, nullable: true }
+        clientExtensionResults:
+          type: object
+          additionalProperties: true
+
+    PasskeyLoginRequest:
+      type: object
+      required: [credential]
+      properties:
+        credential: { $ref: '#/components/schemas/PasskeyCredential' }
+
+    PasskeyRegisterRequest:
+      type: object
+      required: [credential]
+      properties:
+        credential: { $ref: '#/components/schemas/PasskeyCredential' }
+        name:
+          type: string
+          minLength: 1
+          maxLength: 40
+          description: 앞뒤 공백 제거 후 1~40자. 생략하면 server가 생성
+          example: Mac Chrome
+
+    UpdatePasskeyRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 40, description: 앞뒤 공백 제거 후 1~40자 }
+
+    Passkey:
+      type: object
+      required: [id, name, createdAt, lastUsedAt]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        name: { type: string, example: MacBook Chrome }
+        createdAt: { type: string, format: date-time }
+        lastUsedAt: { type: string, format: date-time, nullable: true }
+
+    PasskeyList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          maxItems: 10
+          items: { $ref: '#/components/schemas/Passkey' }
 
     Me:
       type: object

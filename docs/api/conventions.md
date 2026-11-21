@@ -98,6 +98,10 @@
 | 409 | `TAG_DUPLICATED` | 태그 이름·slug 중복 |
 | 409 | `SYNONYM_DUPLICATED` | 동의어가 다른 태그에 이미 있음 |
 | 409 | `JOB_ALREADY_RUNNING` | 같은 종류 백그라운드 작업 실행 중 |
+| 401 | `PASSKEY_NOT_FOUND` | 등록되지 않았거나 삭제된 패스키로 로그인 (027) |
+| 401/400 | `PASSKEY_VERIFICATION_FAILED` | 패스키 검증 실패. 로그인 401, 등록 400. 챌린지 만료·재사용, origin·RP ID 불일치, 사용자 확인 없음, 서명 실패, 서명 횟수 역행을 구분하지 않음 (027) |
+| 409 | `PASSKEY_LIMIT_EXCEEDED` | 회원당 패스키 10개 초과 (027) |
+| 409 | `PASSKEY_ALREADY_REGISTERED` | 같은 credential이 이미 등록됨 (027) |
 
 ## 4. 인증
 - 액세스 토큰: JWT, 유효 15분, `Authorization: Bearer <token>` 헤더

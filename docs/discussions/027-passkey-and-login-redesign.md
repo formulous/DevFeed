@@ -232,3 +232,22 @@
   - 챌린지: 첫 소비 1, 재사용 0, 만료 0. REGISTER인데 회원 없음 → CHECK 거부
   - 패스키: 같은 credential 재등록 1062(→ `PASSKEY_ALREADY_REGISTERED`), 이름 공백·41자 거부, credential 8바이트 거부. 서명 횟수 역행 영향 0·증가 1. credential 조회 `const`
 - 운영 `devfeed` 적용은 사용자 확인 후 (적용해도 현재 서버 영향 없음: nullable 컬럼 1개·새 테이블 2개)
+
+### server (명세 반영) — `openapi.yaml`·`conventions.md`
+- dba 0013 수용. user handle은 `users.webauthn_handle` 랜덤 32바이트 사용
+  - 등록 옵션의 `user.id`가 패스키 생성 전에 정해져야 해서, 채우는 시점은 첫 등록 저장이 아니라 **첫 등록 옵션 발급**(`UPDATE ... WHERE webauthn_handle IS NULL` 후 다시 읽음). 스키마 변경 없음
+  - `backup_eligible`·`backup_state`·`aaguid`는 저장만, 응답에 넣지 않음
+- 경로 (pm 결정·server 3차 그대로)
+  | 메서드 | 경로 | 응답 |
+  |---|---|---|
+  | POST | `/auth/passkeys/login/options` | 200 `PasskeyRequestOptions` (W3C JSON 본문 그대로) |
+  | POST | `/auth/passkeys/login` `{ credential }` | 200 `AuthResponse` + 리프레시 쿠키 |
+  | POST | `/me/passkeys/registration/options` | 200 `PasskeyCreationOptions`, 이미 10개면 409 |
+  | GET | `/me/passkeys` | 200 `{ items: Passkey[] }` 최근 만든 순 |
+  | POST | `/me/passkeys` `{ credential, name? }` | 201 `Passkey` |
+  | PATCH | `/me/passkeys/{passkeyId}` `{ name }` | 200 `Passkey` |
+  | DELETE | `/me/passkeys/{passkeyId}` | 204, 남의 것·없는 것 404 |
+- 오류: `PASSKEY_NOT_FOUND` 401, `PASSKEY_VERIFICATION_FAILED` 로그인 401·등록 400, `PASSKEY_LIMIT_EXCEEDED` 409, `PASSKEY_ALREADY_REGISTERED` 409, 이름은 `VALIDATION_FAILED` + `fieldErrors.name`
+- 챌린지는 검증 실패여도 소비됨 → client는 실패 후 재시도 시 옵션부터 다시 요청
+- 패스키 로그인 성공은 `last_login_at`만 갱신하고 비밀번호 잠금 상태(`failed_login_count`·`locked_until`)는 건드리지 않음
+- 다음: client·pm 대조 후 구현
