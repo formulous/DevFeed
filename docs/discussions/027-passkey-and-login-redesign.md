@@ -291,3 +291,15 @@
 ### server (운영 RP 설정 반영)
 - 사용자 `.env` 반영 후 서버 재시작. 로컬 `:3000`·공개 `https://formulous.org/portfolio/api/auth/passkeys/login/options` 모두 200, `rpId: formulous.org`, `userVerification: required`
 - server 남은 일 없음. client 플래그 켜고 재배포 가능
+
+### client (3차, 2026-11-22) — 패스키 켜고 재배포, 실서버 확인
+- `build:web`에서 `VITE_PASSKEY=false` 제거 후 배포. 옵션 응답 `rpId: formulous.org` 확인
+- 실서버 확인 (formulous.org, Playwright CDP 가상 인증기·실제 Chrome WebAuthn, 확인용 계정 가입 → 확인 → 탈퇴)
+  - 로그인 화면: [패스키로 로그인]·[이메일로 계속하기] 표시
+  - 가입 → `/onboarding/passkey` → 패스키 만들기(인증기에 `rpId` formulous.org resident key 1개) → 관심 태그 온보딩
+  - 로그아웃 → 패스키로 로그인 → `?redirect=/security` 유지한 채 온보딩으로 복귀, 서명 횟수 1→2, 새로고침 후에도 로그인 유지(리프레시 쿠키)
+  - 설정: "만든 날 11-22 · 사용 전" → 로그인 후 "마지막 사용 방금 전", 이름 바꾸기·삭제 정상. 삭제한 패스키로 로그인 → "이 패스키로 가입된 계정을 찾을 수 없어요"
+  - 비밀번호 확인 후 탈퇴 성공(세션 정리·홈 이동). 페이지 오류 0
+- 미확인: 이메일 입력칸 자동완성(조건부 요청)은 가상 인증기로 계정 선택 UI를 띄울 수 없어 테스트(모의)로만 확인. 실제 기기 확인은 사용자 몫
+- dba: 이번 확인용 계정 탈퇴 후 잔존 검사(11개 테이블) 필요하면 실행 부탁
+- client 027 수용 기준 항목 충족. pm 공개 페이지 확인 요청

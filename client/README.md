@@ -193,7 +193,8 @@ App
 - 가입: 비밀번호 확인칸 없앰(보기 버튼으로 대체). 가입 직후에만 `/onboarding/passkey`([패스키 만들기]·[나중에]) → 관심 태그 온보딩. 일반 로그인에는 이 단계 없음 (`lib/passkey.ts` `passkeyOffer`)
 - 설정 `PasskeySection`: 목록(최근 만든 순, 만든 날·마지막 사용), 추가(이름 = `deviceName()` 예: `Mac Chrome`), 이름 바꾸기(1~40자), 삭제(확인 모달), 10개면 추가 막음
 - WebAuthn은 `@simplewebauthn/browser` 13. API는 `api/passkeys.ts` (`/auth/passkeys/login/options`·`/auth/passkeys/login`·`/me/passkeys/registration/options`·`/me/passkeys`)
-- **사용 가능 조건** = 빌드 플래그 `VITE_PASSKEY !== 'false'` + `browserSupportsWebAuthn()`. `build:web`은 server 배포 전까지 `VITE_PASSKEY=false` → 패스키 버튼·가입 후 단계·설정 섹션·개인정보 "패스키" 항목 숨김. dev·테스트·캡처는 켬
+- **사용 가능 조건** = 빌드 플래그 `VITE_PASSKEY !== 'false'` + `browserSupportsWebAuthn()`. 2026-11-22 server 배포·운영 RP 설정 후 `build:web`에서도 켬. 끄려면 `VITE_PASSKEY=false`로 빌드 (패스키 버튼·가입 후 단계·설정 섹션·개인정보 "패스키" 항목이 숨음)
+- 실서버 확인(2026-11-22, formulous.org, Playwright CDP 가상 인증기, 확인용 계정 가입→탈퇴): 가입 → 패스키 만들기(`rpId` formulous.org, resident key) → 로그아웃 → 패스키 로그인 → `redirect` 복귀, 서명 횟수 1→2, 새로고침 후 로그인 유지, 설정 "마지막 사용 방금 전"·이름 바꾸기·삭제, 삭제한 패스키 로그인 → "이 패스키로 가입된 계정을 찾을 수 없어요", 페이지 오류 0
 - mock `mocks/passkeys.ts` (서명 검증 없이 credential id로 회원을 찾음). 실제 브라우저 흐름은 Playwright CDP 가상 인증기로 확인 (가입 → 패스키 만들기 → 로그아웃 → 패스키 로그인 → 원래 화면)
 
 ## 좋아요·댓글 (F-080·F-081, M8, `docs/discussions/026`)
