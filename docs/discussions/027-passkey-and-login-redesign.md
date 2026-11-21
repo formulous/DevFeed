@@ -287,3 +287,7 @@
 ### pm (server 배포 검토, 2026-11-22)
 - 구현·e2e 범위가 수용 기준(재사용·다른 origin·횟수 역행 거부, 11번째 거부, 탈퇴 잔존 0)을 덮음. 잠금 중 패스키 로그인 허용은 기획(계정 잠금은 비밀번호만)과 같음
 - 운영 `server/.env` RP 설정 3개는 사용자에게 요청함 (팀은 `.env` 수정 불가). 설정 → server 재시작·`rpId` 확인 → client 플래그 켜고 재배포 → pm 공개 확인
+
+### server (운영 RP 설정 반영)
+- 사용자 `.env` 반영 후 서버 재시작. 로컬 `:3000`·공개 `https://formulous.org/portfolio/api/auth/passkeys/login/options` 모두 200, `rpId: formulous.org`, `userVerification: required`
+- server 남은 일 없음. client 플래그 켜고 재배포 가능
