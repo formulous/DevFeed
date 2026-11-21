@@ -1,7 +1,7 @@
 # 테이블 명세
 
 - 작성: dba
-- 상태: v1.1 (M7, 2026-11-20). 마이그레이션 0001~0010 기준. `devfeed`·`devfeed_perf`·`devfeed_test` 적용 완료
+- 상태: v1.2 (M8, 2026-11-21). 마이그레이션 0001~0012 기준. `0012`는 `devfeed_perf`·`devfeed_test` 적용, `devfeed` 적용은 사용자 확인 후. `devfeed`·`devfeed_perf`·`devfeed_test` 적용 완료
 - 공통: InnoDB, utf8mb4_unicode_ci, 시간은 `DATETIME(3)` UTC, PK `BIGINT UNSIGNED AUTO_INCREMENT` (D-01)
 - 결정 번호(D-xx)는 `decisions.md` 참고
 
@@ -91,6 +91,8 @@
 | published_at | DATETIME(3) | NOT NULL | 없음·미래면 수집 시각으로 대체해 저장 |
 | original_published_at | DATETIME(3) | NULL | 피드 원래 발행일 |
 | view_count | INT UNSIGNED | NOT NULL, 기본 0 | 24시간 중복 제외 후 +1 (D-08) |
+| like_count | INT UNSIGNED | NOT NULL, 기본 0 | `0012`. `post_likes` 행 수. 좋아요 쓰기와 같은 트랜잭션에서 증감 (D-21) |
+| comment_count | INT UNSIGNED | NOT NULL, 기본 0 | `0012`. `VISIBLE` 댓글+답글 수. 삭제·숨김 제외 (D-21) |
 | created_at | DATETIME(3) | NOT NULL | 수집 시각 |
 | updated_at | DATETIME(3) | NOT NULL | 재수집 갱신 시각 |
 
@@ -129,6 +131,41 @@
 - `ft_post_search_title (title_tokens)`: 제목 가중치
 - `ft_post_search_all (title_tokens, body_tokens)`: 전체 관련도
 - 필요 서버 설정: `innodb_ft_min_token_size=2`, `innodb_ft_enable_stopword=OFF` (`db/conf/devfeed.cnf`)
+
+## post_likes — `0012`
+| 컬럼 | 타입 | 제약 | 설명·이유 |
+|---|---|---|---|
+| user_id | BIGINT UNSIGNED | PK, FK → users (RESTRICT) | 탈퇴 시 server가 카운터 감소 후 삭제 (D-16) |
+| post_id | BIGINT UNSIGNED | PK, FK → posts CASCADE | |
+| created_at | DATETIME(3) | NOT NULL | |
+
+인덱스
+- PK `(user_id, post_id)`: 멱등 토글(`INSERT IGNORE`·`DELETE` 영향 행 수), `likedByMe` 카드 ID 조회
+- `idx_post_likes_post (post_id)`: FK, 글별 재계산(정합성 검사)
+
+## comments — `0012`
+| 컬럼 | 타입 | 제약 | 설명·이유 |
+|---|---|---|---|
+| id | BIGINT UNSIGNED | PK | 작성 순서 = 커서 키 |
+| post_id | BIGINT UNSIGNED | FK → posts CASCADE | 답글도 부모와 같은 글 |
+| parent_id | BIGINT UNSIGNED | NULL, FK → comments CASCADE | NULL이면 댓글, 값이 있으면 답글. 1단계만 (server 보장, 정합성 검사) |
+| user_id | BIGINT UNSIGNED | NULL, FK → users (RESTRICT) | `DELETED` 자리 표시만 NULL |
+| body | VARCHAR(1000) | NULL | 원문 텍스트 그대로(이스케이프 안 함), 1~1,000자. `DELETED`면 NULL |
+| status | ENUM('VISIBLE','HIDDEN','DELETED') | NOT NULL, 기본 VISIBLE | `DELETED`는 답글 있는 댓글의 자리 표시 |
+| reply_count | INT UNSIGNED | NOT NULL, 기본 0 | 남아 있는 답글 행 수(VISIBLE+HIDDEN). "답글 N개 더보기", 자리 표시 판단 |
+| edited_at | DATETIME(3) | NULL | "(수정됨)" |
+| hidden_at / hidden_by | DATETIME(3) / BIGINT UNSIGNED | NULL, `hidden_by` FK → users SET NULL | 관리자 숨김. `HIDDEN`일 때만 `hidden_at` 있음 |
+| created_at / updated_at | DATETIME(3) | NOT NULL | |
+
+제약
+- `ck_comments_status_body`: `DELETED` ↔ `body`·`user_id` NULL, 그 외는 둘 다 필수·1자 이상
+- `ck_comments_hidden`: `status = 'HIDDEN'` ↔ `hidden_at IS NOT NULL`
+
+인덱스
+- `idx_comments_post_parent (post_id, parent_id, id)`: 글의 댓글 오래된 순 커서 (`parent_id IS NULL AND id > ?`)
+- `idx_comments_parent (parent_id, id)`: 답글 처음 3개(부모 20개 한 번에 `ROW_NUMBER`), 답글 더보기 커서, FK
+- `idx_comments_user_created (user_id, created_at)`: 속도 제한(1분 5개·하루 200개), 탈퇴 처리, FK
+- `idx_comments_hidden_by (hidden_by)`: FK
 
 ## users — `0004`
 | 컬럼 | 타입 | 제약 | 설명·이유 |

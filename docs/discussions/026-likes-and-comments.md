@@ -161,3 +161,36 @@
 - 공개 배포 방식 승인: 응답에 `likeCount`가 없으면 반응 줄을 숨기는 방식이라 server 배포 전 공개 화면 변화 없음(pm 확인 기준 충족). 단 server는 카운트 필드와 좋아요·댓글 API를 **한 번에** 배포할 것 (필드만 먼저 나가면 버튼이 동작하지 않는 화면이 노출됨)
 - mock 캡처 확인(1280 라이트·360 다크 댓글 펼침): 답글 들여쓰기·삭제 자리 표시·관리자 숨김 표시·입력 카운터 정상, 문구 해요체
 - 다음: dba 스키마 → server 명세·구현 → 운영 마이그레이션(사용자 확인) → 배포 후 pm 공개 확인
+
+### dba (1차) — 스키마 `0012`·측정·탈퇴 처리 (2026-11-21)
+- server 1차 제안을 거의 그대로 채택함. `db/migrations/0012_create_likes_and_comments.sql`
+  | 대상 | 내용 |
+  |---|---|
+  | `posts` | `like_count`, `comment_count` `INT UNSIGNED NOT NULL DEFAULT 0` (`INSTANT`) |
+  | `post_likes` | PK `(user_id, post_id)`, `idx_post_likes_post`, `created_at` |
+  | `comments` | `post_id`, `parent_id`(NULL=댓글), `user_id`(NULL=자리 표시), `body VARCHAR(1000)`, `status VISIBLE·HIDDEN·DELETED`, `reply_count`, `edited_at`, `hidden_at`·`hidden_by`, 인덱스 `(post_id, parent_id, id)`·`(parent_id, id)`·`(user_id, created_at)` |
+- server 제안과 다르게/더 정한 것
+  - `reply_count` = **남아 있는 답글 행 수 (VISIBLE + HIDDEN)**. 숨긴 답글도 자리 표시로 보이므로 "답글 N개 더보기"와 자리 표시 판단 모두 이 값 하나로 씀
+  - 답글은 삭제하면 항상 행 삭제 (답글은 자식이 없음). 자리 표시는 최상위 댓글만 생김
+  - CHECK: `DELETED` ↔ `body`·`user_id` NULL / 그 외 둘 다 필수·1자 이상, `HIDDEN` ↔ `hidden_at` 있음. 작성자가 숨긴 댓글을 지우면 `hidden_at`·`hidden_by`도 비워야 함
+  - **`user_id` FK는 RESTRICT** (server 선호대로 `ON DELETE` 자동 처리 안 함). 탈퇴 처리를 빠뜨리면 `users` 삭제가 FK 오류로 실패 → 카운터 어긋남·댓글 원문 잔존을 DB가 막음. `hidden_by`만 `SET NULL` (관리자 탈퇴 대비)
+- 쓰기·탈퇴·정합성 SQL: `db/queries/reactions.sql` (server는 같은 순서로 구현 부탁)
+  - 좋아요: `INSERT IGNORE`/`DELETE` → 영향 행 1일 때만 카운터 ±1
+  - 댓글 작성: 부모 행 `FOR UPDATE` 확인(같은 글·최상위·`DELETED` 아님) → `INSERT` → 부모 `reply_count + 1` → `comment_count + 1`
+  - 삭제·숨김 규칙과 `comment_count` 증감 표 (decisions D-21·D-22)
+  - 탈퇴: 좋아요 카운터 감소 → 좋아요 삭제 → `comment_count` 감소 → 부모 `reply_count` 감소 → 답글 삭제 → 답글 있는 댓글 자리 표시 → 나머지 댓글 삭제 → 비게 된 자리 표시 정리 → (기존 D-16 순서) → `users` 삭제
+  - 정합성 검사 6항목: 좋아요·댓글·답글 수 불일치, 2단계 이상 답글, 빈 자리 표시, `DELETED` 답글 → e2e·운영 점검에 사용
+- `db/queries/withdrawal-check.sql`에 `post_likes`·`comments` 추가함 (계약 파일, server e2e 확인 부탁)
+- 측정 (`devfeed_perf` 글 14만, 좋아요 50만·댓글 10만·답글 5만, 한 글에 댓글 2,000개, DB p95)
+  | 쿼리 | p95 |
+  |---|---|
+  | 카드 20건 + 카운터 | 0.03ms (기존 카드 조회와 같음) |
+  | `likedByMe` 20건 | 0.03ms |
+  | 댓글 첫 페이지 / 1,000개 뒤 커서 | 0.07 / 0.01ms |
+  | 답글 처음 3개 × 부모 20개 (`ROW_NUMBER`) | 0.14ms |
+  | 작성자 닉네임 80명 | 0.47ms |
+  | 속도 제한 (1분·24시간) | 0.00ms |
+  - 피드·검색 쿼리는 바뀌지 않음 (카운터가 카드 조회의 `posts` 행에 있음) → 기존 p95 유지
+- 검증: `devfeed_test`·`devfeed_perf` up → down → up 통과. CHECK·길이·FK 거부 확인. 좋아요 동시 20개 요청 2회 후 행 0/1·카운터 일치. 탈퇴(댓글 15·좋아요 50) 109ms, 잔존 0·정합성 0
+- 한계 (pm 참고): 속도 제한을 DB 행으로 세므로 작성 후 삭제한 댓글은 하루 200개 계산에서 빠짐. 1분 5개는 유지돼 스팸 속도는 막힘. 필요하면 Next에서 작성 로그로 보완
+- 다음: server 명세 검토. 운영 `devfeed`에 `0012` 적용은 사용자 확인 후 (적용해도 현재 서버 영향 없음: 컬럼 기본값 0, 새 테이블만 추가)

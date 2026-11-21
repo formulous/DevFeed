@@ -1,9 +1,9 @@
 # ERD — 데브피드
 
 - 작성: dba
-- 상태: v1.1 (M7, 2026-11-20). 마이그레이션 0001~0010 기준
+- 상태: v1.2 (M8, 2026-11-21). 마이그레이션 0001~0012 기준
 - DB: `devfeed` (MariaDB 12.1, InnoDB, utf8mb4_unicode_ci)
-- DDL: `db/migrations/0001~0010`, 컬럼 상세: `tables.md`, 결정 근거: `decisions.md`
+- DDL: `db/migrations/0001~0012`, 컬럼 상세: `tables.md`, 결정 근거: `decisions.md`
 
 ```mermaid
 erDiagram
@@ -23,6 +23,28 @@ erDiagram
     posts ||..o{ post_view_guards : "FK 없음"
     users |o..o{ recommendation_impressions : "FK 없음"
     posts ||..o{ recommendation_impressions : "FK 없음"
+    users ||--o{ post_likes : likes
+    posts ||--o{ post_likes : liked
+    posts ||--o{ comments : has
+    users |o--o{ comments : writes
+    comments |o--o{ comments : "replies (1단계)"
+
+    post_likes {
+        bigint user_id PK, FK
+        bigint post_id PK, FK
+        datetime created_at
+    }
+    comments {
+        bigint id PK
+        bigint post_id FK
+        bigint parent_id FK "NULL=댓글"
+        bigint user_id FK "DELETED면 NULL"
+        varchar body "1000자"
+        enum status "VISIBLE|HIDDEN|DELETED"
+        int reply_count
+        datetime edited_at
+        datetime hidden_at
+    }
 
     sources {
         bigint id PK
@@ -57,6 +79,8 @@ erDiagram
         varchar summary "300자"
         datetime published_at
         int view_count
+        int like_count "비정규화"
+        int comment_count "비정규화"
     }
     post_search {
         bigint post_id PK, FK
@@ -144,6 +168,7 @@ erDiagram
 | 회원 | `users`, `refresh_tokens` | 계정·로그인 제한·리프레시 토큰 | F-030, F-032 |
 | 개인화 | `user_interest_tags` | 관심 태그 | F-031, F-042 |
 | 개인화 | `bookmarks`, `read_histories` | 북마크, 읽은 기록(1년) | F-040, F-041, F-042 |
+| 반응 | `post_likes`, `comments` | 좋아요, 댓글·답글(1단계) | F-080, F-081 |
 | 집계 | `post_view_guards` | 조회수 24시간 중복 제외 판단 (24시간 보관) | F-012 |
 | 집계 | `recommendation_impressions` | 추천 노출·클릭 기록 (90일) | F-042 |
 | 집계 | `recommendation_daily_stats` | 일·알고리즘별 노출·클릭 집계 (영구) | F-042 |

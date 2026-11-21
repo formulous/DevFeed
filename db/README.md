@@ -7,9 +7,9 @@
 db/
 ├── conf/devfeed.cnf     # MariaDB 서버 설정 (FULLTEXT 토큰 2자, stopword 끔, UTC)
 ├── perf/                # 성능 측정용 대량 시드 생성기, 측정 스크립트
-├── queries/            # feed.sql(007·021 분야·보안 뉴스·kind 정합성 검사), personal.sql·withdrawal-check.sql(012), recommendation.sql(013) 기준 쿼리
+├── queries/            # feed.sql(007·021 분야·보안 뉴스·kind 정합성 검사), reactions.sql(026 좋아요·댓글·탈퇴·정합성 검사), personal.sql·withdrawal-check.sql(012), recommendation.sql(013) 기준 쿼리
 ├── ops/                 # launchd 일일 백업 템플릿·설치 스크립트
-├── migrations/          # 0001~0011, -- migrate:up / -- migrate:down
+├── migrations/          # 0001~0012, -- migrate:up / -- migrate:down
 ├── scripts/migrate.sh   # 컨테이너에 마이그레이션 적용
 ├── scripts/seed.sh      # seeds/*.sql 순서대로 적용 (재실행 안전)
 ├── scripts/perf-seed.sh # 측정 DB(devfeed_perf)에 글 10만·회원 1만 생성
@@ -73,10 +73,12 @@ MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_feed.py   # 피드 쿼리 p5
 MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_search.py # 검색 쿼리 p50/p95 (현행·권장·LIKE 기준선)
 MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_recommendation.py # 추천 선호도·후보 쿼리 p50/p95
 MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_field.py  # 분야·기업/개인·보안 뉴스 쿼리 p50/p95 (021)
+MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_reactions.py # 좋아요·댓글 쿼리 p50/p95 (026)
 ```
 - DB `devfeed_perf`는 미리 생성 (`utf8mb4_unicode_ci`). 개발 DB `devfeed`와 분리해 합성 글이 섞이지 않게 함
 - 글 10만, post_tags 약 20만, 회원 1만, 북마크 약 50만, 읽은 기록 약 190만. 디스크 약 800MB
 - 글 텍스트는 `devfeed` 실제 글 단어를 재조합. 토큰은 서버 `tokenizer.ts`와 같은 규칙 (`perf/generate_posts.py`)
+- 좋아요 50만·댓글 10만·답글 5만 합성: `perf/reactions.sql` (약 4분)
 - 보안 뉴스 합성 4만 건(2년 분포, `보안` 태그 + 원본 1순위 태그): `003` 시드 후 `perf/news.sql` 실행
 - 고정 시드라 재생성해도 같은 분포. 측정 결과는 discussion 007 (피드), 010 (검색), 013 (추천), 021 (분야·보안 뉴스, `decisions.md` D-19)
 
@@ -103,3 +105,9 @@ MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_field.py  # 분야·기업/�
 - `devfeed_perf` up → down → up, down 후 태그·동의어 내용 해시 원본 일치. 갱신 시드 재실행 결과와 up 결과 일치
 - 태깅 영향 (`scripts/tag-rename-impact.py`, 운영 글 2,588건): 손실 0, 추가 6건(정답), 순서 변경 2건
 - `devfeed` 적용: 적용 전후 해시가 perf 검증과 동일, 동의어 266 → 279, `post_tags` 변화 없음
+
+## 검증 기록 (2026-11-21, `0012`, 026)
+- `devfeed_test`·`devfeed_perf` up → down → up 통과
+- CHECK 거부: 빈 본문, `HIDDEN`인데 `hidden_at` 없음 / 1,001자 거부(1406) / 처리 안 한 회원 삭제 FK 거부(1451)
+- 좋아요 동시 20개 요청 2회: 행·카운터 일치. 탈퇴 처리 후 잔존 0·정합성 0
+- `devfeed` 적용은 사용자 확인 대기
