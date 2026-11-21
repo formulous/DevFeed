@@ -32,3 +32,7 @@ mark {
     scrollbar-color: rgb(148 163 184 / 0.7) transparent;
   }
 }
+
+ins.adsbygoogle[data-ad-status='unfilled'] {
+  display: none !important;
+}

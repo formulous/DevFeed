@@ -185,6 +185,14 @@ App
 - 화면에 보이는 문장(빈 상태·오류·안내·토스트·검증·`<title>`·메타 설명·og 이미지)은 해요체로 씀. 버튼·라벨·탭·상태값 같은 짧은 명사는 그대로 둠. README·커밋은 음슴체
 - 서버 오류 메시지는 `errorMessage`로 그대로 보여 줌 (server가 해요체로 바꿨음). 분기는 메시지 문자열이 아니라 `code`로만 함
 
+## 좌우 광고 (F-060, `docs/discussions/025`)
+- `components/ads/SideAd.tsx`, `lib/ads.ts`. 게시자 `ca-pub-1750461537555326`, 좌 `3021654585`·우 `2195210969` (반응형 `auto`), `index.html`에 `google-adsense-account` 메타
+- 표시: 화면 폭 1440px 이상(`matchMedia`)이면서 상단 히어로가 있는 화면(최신·추천·인기·보안 뉴스·검색)만. `AppLayout`에서 `main` 좌우에 160px `sticky`(헤더 아래 24px) 배치, 본문 폭은 줄어듦
+- 1440px 미만·그 밖의 화면은 광고 컴포넌트를 그리지 않아 스크립트 요청도 없음
+- `adsbygoogle.js`는 첫 광고 마운트 때 `<head>`에 1회 추가(같은 src가 있으면 건너뜀). `push({})`는 `ins`마다 1회(`data-ad-requested`), 탭 이동 때는 `AppLayout`이 유지돼 다시 요청하지 않음
+- 미게재(`data-ad-status="unfilled"`)는 CSS로 숨기고, 차단 시 높이 0이라 빈 상자 없음. 자동 광고·피드 중간 광고는 쓰지 않음 (AdSense 콘솔의 자동 광고도 꺼 둬야 함)
+- S-11 개인정보 안내에 광고 쿠키 항목·Google 광고 정책/설정 링크
+
 ## 주요 처리 방식
 - 원문 이동(F-012): 카드는 `<a href={원문} target="_blank" rel="noopener noreferrer">`. 클릭 시 `fetch(keepalive)`로 조회 기록 API 호출. 기록 실패가 이동을 막지 않음
 - 하이라이트(F-022): 서버 HTML을 쓰지 않고, 검색어를 토큰으로 나눠 클라이언트에서 `<mark>` 요소로 렌더링 (`dangerouslySetInnerHTML` 금지)

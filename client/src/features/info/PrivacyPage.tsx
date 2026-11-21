@@ -27,6 +27,17 @@ export function PrivacyPage() {
           1년 동안 둬요. 이름·이메일 등 개인을 알 수 있는 정보는 담기지 않아요.
         </p>
       </Item>
+      <Item title="광고 쿠키">
+        <p>Google 광고를 보여주기 위해 Google과 파트너가 쿠키를 사용할 수 있어요. 맞춤 광고는 Google 광고 설정에서 끌 수 있어요.</p>
+        <p className="flex flex-wrap gap-x-3">
+          <a href="https://policies.google.com/technologies/ads?hl=ko" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">
+            Google 광고 정책
+          </a>
+          <a href="https://adssettings.google.com/" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">
+            Google 광고 설정
+          </a>
+        </p>
+      </Item>
       <Item title="탈퇴">
         <p>탈퇴하면 계정 정보, 북마크, 읽은 기록, 관심 태그를 바로 삭제해요.</p>
         <p>단, 장애 복구용 일일 백업에는 탈퇴 회원 데이터가 최대 14일 남고, 그 뒤 백업과 함께 자동으로 삭제돼요.</p>

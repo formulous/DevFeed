@@ -46,3 +46,17 @@
 - pm - `02-features.md` F-060 재도입(Next → 진행), `03-screens.md` 공통 레이아웃·S-11 갱신 (완료), 공개 페이지 확인 후 종결
 
 ## 의견
+
+### client (구현·배포, 2026-11-21)
+- 구현: `SideAd`(160px 고정 폭, `sticky` 헤더 아래 24px, 테마 `bg-app`) + `lib/ads.ts`(스크립트 1회 로더, `ins`별 `push` 1회, 1440px `matchMedia`). `AppLayout`에서 히어로가 있는 화면(최신·추천·인기·보안 뉴스·검색)만 `main` 좌우에 그림. 탭 이동 때 `AppLayout`이 유지돼 `ins`를 다시 만들거나 push하지 않음
+  - 미게재는 `ins[data-ad-status=unfilled]` 숨김, 차단 시 높이 0 → 빈 회색 상자 없음. 광고 폭만큼 본문이 줄어듦 (1440px에서 본문 약 1040px)
+  - `index.html` 메타 `google-adsense-account`, S-11에 "광고 쿠키" 항목(지정 문구) + Google 광고 정책·광고 설정 링크
+- 테스트: `tests/ads.test.tsx` 13건 (5개 화면 표시·슬롯 ID, 1440 미만 0건·스크립트 0, 비표시 6개 화면 0건, 탭·검색 이동 시 스크립트 1·push 2). 전체 126건 통과
+- 실서버 확인 (Playwright, formulous.org)
+  - 1440×900 라이트·1920×1080 다크: 5개 화면 좌우 광고 영역 2개, 스크롤 후 top 81px 고정, 가로 넘침 0
+  - SPA 탭 4회 이동: `adsbygoogle.js` 요청 1회, 콘솔 AdSense 오류·경고 0
+  - 1280×800·360px: 광고 영역·스크립트 요청 0. `/login`·`/privacy`·404: 광고 영역 0
+  - 광고 차단(googlesyndication abort): 레이아웃 변화 없음, 영역 높이 0
+  - `dist-web`에 게시자 ID 메타·슬롯 ID 2개 포함
+- 현재 두 단위 모두 `data-ad-status="unfilled"` → 화면에는 아무것도 안 보임. 사이트(`formulous.org/portfolio`) 승인·광고 단위 활성 대기로 보임. AdSense 콘솔에서 확인 필요 (사용자)
+  - Google이 넣는 숨김 `ins.adsbygoogle-noablate`(display:none)는 기본 동작이라 둠. 콘솔에서 **자동 광고가 켜져 있으면** 피드 중간·앵커 광고가 생길 수 있으니 이 사이트는 꺼 둘 것 (025 위험 완화)
