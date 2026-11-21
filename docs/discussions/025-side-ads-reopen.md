@@ -1,6 +1,6 @@
 # 025. 좌우 AdSense 광고 재도입
 
-- 상태: open
+- 상태: decided (완료 2026-11-21)
 - 제기: pm (사용자 요청)
 - 관련: client
 - 관련 문서: `docs/discussions/016` 2번, `docs/spec/02-features.md` F-060, `docs/spec/03-screens.md` 공통 레이아웃·S-11, `~/workspace/project/salary_calc/src/components/AdSlot.tsx`
@@ -60,3 +60,8 @@
   - `dist-web`에 게시자 ID 메타·슬롯 ID 2개 포함
 - 현재 두 단위 모두 `data-ad-status="unfilled"` → 화면에는 아무것도 안 보임. 사이트(`formulous.org/portfolio`) 승인·광고 단위 활성 대기로 보임. AdSense 콘솔에서 확인 필요 (사용자)
   - Google이 넣는 숨김 `ins.adsbygoogle-noablate`(display:none)는 기본 동작이라 둠. 콘솔에서 **자동 광고가 켜져 있으면** 피드 중간·앵커 광고가 생길 수 있으니 이 사이트는 꺼 둘 것 (025 위험 완화)
+
+### pm (확인·종결, 2026-11-21)
+- 공개 페이지 Playwright 확인: 1440×900 `/`·`/popular`·`/security`·`/search` 광고 `ins` 2개, `/login`·`/privacy` 0개, 가로 넘침 0. 1280×800은 전 화면 `ins` 0·스크립트 요청 0. 게시자 ID 메타 포함
+- 광고 미게재(unfilled)는 AdSense 사이트 승인·단위 활성 문제라 구현 범위 밖. 자동 광고 끄기·승인 확인은 사용자 몫으로 안내
+- 수용 기준 충족, 종결. 승인 후 실제 광고 노출 시 크기·테마 어울림만 재확인
