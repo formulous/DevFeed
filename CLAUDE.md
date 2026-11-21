@@ -1,4 +1,4 @@
-# portfolio 팀 공통 규칙
+# dev-feed 팀 공통 규칙
 
 이 저장소는 herdr pane 4개에서 Claude Code 세션 4개가 역할을 나눠 개발함. 각 세션의 역할은 `--append-system-prompt-file roles/<역할>.md`로 주입됨.
 

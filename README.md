@@ -2,7 +2,7 @@
 
 국내 기술 블로그 36곳의 RSS를 주기적으로 모아, 한곳에서 읽고 한글로 검색하고 관심사에 맞춰 추천받는 개발자용 리더.
 
-- 서비스: https://formulous.org/portfolio/
+- 서비스: https://formulous.org/dev-feed/
 - 1인 기획·개발·운영. 기획 → 스키마 → API 명세 → 화면 순서의 계약 우선 개발
 
 ## 주요 기능
@@ -17,8 +17,8 @@
 ## 아키텍처
 ```
 브라우저 ── Cloudflare ── nginx (맥미니)
-                          ├─ /portfolio/      → React 빌드 결과 (정적)
-                          └─ /portfolio/api/  → NestJS (launchd 상시 실행)
+                          ├─ /dev-feed/       → React 빌드 결과 (정적)
+                          └─ /dev-feed/api/   → NestJS (launchd 상시 실행)
                                                   ├─ 수집 스케줄러 (DB 선점 잠금)
                                                   └─ MariaDB 12.1 (Docker)
 ```
@@ -88,7 +88,7 @@
 ### 구조
 
 ```
-portfolio/
+portfolio/             # 로컬 폴더명 (프로젝트명 dev-feed, 028)
 ├── CLAUDE.md          # 팀 공통 규칙 (소유권, 소통, 진행 순서)
 ├── roles/             # 역할 프롬프트 (pm, client, server, dba)
 ├── docs/
@@ -118,7 +118,7 @@ herdr                                     # herdr TUI 실행
 ./herdr/start.sh --kickoff
 ```
 
-- `portfolio` workspace에 2x2 pane이 생기고 agent `pm`, `server`, `client`, `dba`가 실행됨
+- `dev-feed` workspace에 2x2 pane이 생기고 agent `pm`, `server`, `client`, `dba`가 실행됨
 - 각 세션은 `--append-system-prompt-file roles/<이름>.md`로 역할을 주입받음
 - 처음 실행할 때는 각 pane에서 Claude Code 폴더 신뢰 확인 창에 응답해야 함. 응답 후 스크립트가 안내하는 `herdr agent prompt pm ...` 명령으로 kickoff를 보냄
 - `--kickoff`를 빼면 agent만 띄우고 작업 지시는 하지 않음
