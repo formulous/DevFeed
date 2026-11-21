@@ -198,6 +198,40 @@ describe('F-080·F-081 반응 줄 (026)', () => {
     expect(countButton()).toHaveAccessibleName(`댓글 ${start}개`);
   });
 
+  it('내 댓글이 숨겨지면 수정 없이 삭제만 할 수 있음', async () => {
+    await seedLogin('user@devfeed.dev');
+    server.use(
+      http.get('*/api/posts/:id/comments', ({ params }) =>
+        HttpResponse.json({
+          items: [
+            {
+              id: 1,
+              postId: Number(params.id),
+              parentId: null,
+              status: 'HIDDEN',
+              content: null,
+              author: null,
+              createdAt: '2026-11-19T10:00:00.000Z',
+              editedAt: null,
+              mine: true,
+              replyCount: 0,
+              replies: [],
+              repliesNextCursor: null,
+            },
+          ],
+          nextCursor: null,
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderWithApp(<App />, '/');
+    const region = await openComments(user);
+    const item = within((await region.findByText('관리자가 숨긴 댓글이에요')).closest('li')!);
+    expect(item.getByRole('button', { name: '삭제' })).toBeInTheDocument();
+    expect(item.queryByRole('button', { name: '수정' })).toBeNull();
+    expect(item.queryByRole('button', { name: '답글 달기' })).toBeNull();
+  });
+
   it('읽은 기록 화면에는 반응 줄이 없음', async () => {
     await seedLogin('user@devfeed.dev');
     mockState.reads.set(busy.id, new Date().toISOString());

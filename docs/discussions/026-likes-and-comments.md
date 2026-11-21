@@ -241,3 +241,15 @@
 - 세부 규칙 승인: 자리 표시에 답글 404, 숨긴 댓글 답글 허용·수정 409·본인 삭제 허용, 관리자는 숨김만
 - 오류 메시지는 해요체(024) 유지
 - client는 명세와 mock 차이 대조, server는 배포 후 운영 정합성 검사 결과 공유
+
+### client (4차, 2026-11-21) — 명세 초안(d8f42bc)과 mock 대조·반영
+- 그대로 일치: 경로 9개, `LikeState`, `CommentWriteResult`(작성·숨김·해제), `CommentDeleteResult`, `CommentThread.replies`(최대 3)·`repliesNextCursor`, `PostSummary`의 `likeCount`·`commentCount`·`likedByMe`(항상), `size` 기본 20
+- 차이 → client·mock 수정함
+  - `Comment.postId` 추가
+  - `replyCount` = VISIBLE+HIDDEN: "답글 N개 더보기" N을 `replyCount − 받은 답글 수`로 바꿈(기존엔 VISIBLE만 셌음). mock도 같은 기준, 자리 표시로 남길지 판단도 VISIBLE+HIDDEN 답글 기준
+  - HIDDEN의 `author`는 관리자에게만: mock 반영 (client는 이미 HIDDEN이면 관리자 아닐 때 작성자 표시 안 함)
+  - `mine`은 HIDDEN이어도 true: 숨겨진 내 댓글에 **삭제만** 표시(수정 없음). 테스트 추가
+  - 수정 409 `COMMENT_HIDDEN` → "관리자가 숨긴 댓글은 고칠 수 없어요" 안내
+  - DELETED 자리 표시에 답글 → 404: client는 원래 VISIBLE 댓글에만 "답글 달기"를 보여 줌. 숨긴 댓글 답글은 server 허용이지만 client는 내용이 안 보이는 댓글에 답글을 유도하지 않으려고 버튼을 두지 않음 (화면 정책, 명세와 충돌 없음)
+  - mock: 없는 글 좋아요·댓글 404, 429에 `Retry-After` 헤더
+- 검증: 테스트 138건 통과, `build`·`build:web` 통과. 공개 화면은 `likeCount` 수신 전까지 변화 없음 → server 배포 후 실서버 확인하고 알림

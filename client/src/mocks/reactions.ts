@@ -81,6 +81,8 @@ function commentsOf(postId: number) {
   return list;
 }
 
+const postExists = (id: number) => mockPosts.some((p) => p.id === id) || mockNewsPosts.some((p) => p.id === id);
+
 const baseLikes = (postId: number) => (postId === BUSY_POST_ID ? 1234 : postId % 5 === 0 ? 0 : (postId * 13) % 40);
 
 export function likeCount(postId: number) {
@@ -116,12 +118,11 @@ const findComment = (id: number) => {
   return null;
 };
 
-const visibleReplies = (list: MockComment[], id: number) => list.filter((r) => r.parentId === id && r.status === 'VISIBLE');
 const shownReplies = (list: MockComment[], id: number) => list.filter((r) => r.parentId === id);
 
 function removeOrMark(postId: number, c: MockComment) {
   const list = commentsOf(postId);
-  if (c.parentId === null && visibleReplies(list, c.id).length > 0) {
+  if (c.parentId === null && shownReplies(list, c.id).length > 0) {
     Object.assign(c, { status: 'DELETED', content: '', authorId: null });
     return { removed: false, parentRemoved: false };
   }
@@ -155,14 +156,15 @@ export function reactionHandlers({ isMember, me, error }: Ctx) {
     const content = c.status === 'VISIBLE' || (c.status === 'HIDDEN' && v.admin) ? c.content : null;
     const base: Comment = {
       id: c.id,
+      postId: c.postId,
       parentId: c.parentId,
       status: c.status,
       content,
-      author: c.status === 'DELETED' || c.authorId === null ? null : { id: c.authorId, nickname: c.nickname },
+      author: content === null || c.authorId === null ? null : { id: c.authorId, nickname: c.nickname },
       createdAt: c.createdAt,
       editedAt: c.editedAt,
       mine: c.status !== 'DELETED' && c.authorId !== null && c.authorId === v.userId,
-      replyCount: visibleReplies(list, c.id).length,
+      replyCount: c.parentId === null ? replies.length : 0,
     };
     if (!withReplies || c.parentId !== null) return base;
     return {
@@ -187,6 +189,7 @@ export function reactionHandlers({ isMember, me, error }: Ctx) {
   const likeRoute = (liked: boolean) => ({ request, params }: { request: Request; params: Record<string, unknown> }) => {
     if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요해요');
     const id = Number(params.id);
+    if (!postExists(id)) return error(404, 'NOT_FOUND', '대상을 찾을 수 없어요');
     if (liked) store.likes.add(id);
     else store.likes.delete(id);
     return HttpResponse.json({ liked, likeCount: likeCount(id) });
@@ -198,6 +201,7 @@ export function reactionHandlers({ isMember, me, error }: Ctx) {
 
     http.get('*/api/posts/:id/comments', ({ request, params }) => {
       const postId = Number(params.id);
+      if (!postExists(postId)) return error(404, 'NOT_FOUND', '대상을 찾을 수 없어요');
       const list = commentsOf(postId);
       const v = view(request);
       const page = cursorSlice(list.filter((c) => c.parentId === null), new URL(request.url));
@@ -223,16 +227,18 @@ export function reactionHandlers({ isMember, me, error }: Ctx) {
       if (store.recent.length >= RATE_PER_MINUTE) {
         return HttpResponse.json(
           { code: 'COMMENT_RATE_LIMITED', message: '잠시 후 다시 남겨 주세요', retryAfterSec: 60 },
-          { status: 429 },
+          { status: 429, headers: { 'Retry-After': '60' } },
         );
       }
       const postId = Number(params.id);
+      if (!postExists(postId)) return error(404, 'NOT_FOUND', '대상을 찾을 수 없어요');
       const list = commentsOf(postId);
       let parentId: number | null = null;
       if (body.parentId) {
         const parent = list.find((c) => c.id === body.parentId);
-        if (!parent) return error(404, 'NOT_FOUND', '대상을 찾을 수 없어요');
-        parentId = parent.parentId ?? parent.id;
+        const top = parent && (parent.parentId === null ? parent : list.find((p) => p.id === parent.parentId));
+        if (!top || top.status === 'DELETED') return error(404, 'NOT_FOUND', '대상을 찾을 수 없어요');
+        parentId = top.id;
       }
       store.recent.push(now);
       const c: MockComment = {
@@ -254,8 +260,9 @@ export function reactionHandlers({ isMember, me, error }: Ctx) {
       const v = view(request);
       if (v.userId === null) return error(401, 'UNAUTHENTICATED', '로그인이 필요해요');
       const found = findComment(Number(params.id));
-      if (!found || found.c.status !== 'VISIBLE') return error(404, 'NOT_FOUND', '대상을 찾을 수 없어요');
+      if (!found || found.c.status === 'DELETED') return error(404, 'NOT_FOUND', '대상을 찾을 수 없어요');
       if (found.c.authorId !== v.userId) return error(403, 'FORBIDDEN', '권한이 없어요');
+      if (found.c.status === 'HIDDEN') return error(409, 'COMMENT_HIDDEN', '관리자가 숨긴 댓글은 수정할 수 없어요');
       const content = validate(((await request.json()) as { content?: unknown }).content);
       if (!content) return invalid();
       Object.assign(found.c, { content, editedAt: new Date().toISOString() });

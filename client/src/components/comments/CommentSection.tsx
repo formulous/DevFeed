@@ -17,6 +17,7 @@ function failMessage(error: unknown, fallback: string) {
   if (error instanceof ApiError) {
     if (error.code === 'COMMENT_RATE_LIMITED') return '잠시 후 다시 남겨 주세요';
     if (error.code === 'NOT_FOUND') return '이미 삭제된 글이나 댓글이에요';
+    if (error.code === 'COMMENT_HIDDEN') return '관리자가 숨긴 댓글은 고칠 수 없어요';
     return error.message || fallback;
   }
   return fallback;
@@ -93,11 +94,13 @@ function CommentItem({ comment, actions, isAdmin, isMember, onReply, onDelete }:
         {showMeta && <time dateTime={comment.createdAt}>{relativeTime(comment.createdAt)}</time>}
         {showMeta && comment.editedAt && <span className="text-fg-muted">(수정됨)</span>}
         <span className="ml-auto flex gap-2.5">
-          {visible && comment.mine && !editing && (
+          {comment.mine && !editing && comment.status !== 'DELETED' && (
             <>
-              <button type="button" className={action} onClick={() => setEditing(true)}>
-                수정
-              </button>
+              {visible && (
+                <button type="button" className={action} onClick={() => setEditing(true)}>
+                  수정
+                </button>
+              )}
               <button type="button" className={action} onClick={() => onDelete(comment)}>
                 삭제
               </button>
@@ -148,8 +151,7 @@ function CommentItem({ comment, actions, isAdmin, isMember, onReply, onDelete }:
 function Thread({ comment, ...rest }: Omit<ItemProps, 'onReply'> & { comment: Comment }) {
   const [replying, setReplying] = useState(false);
   const replies = comment.replies ?? [];
-  const shown = replies.filter((r) => r.status === 'VISIBLE').length;
-  const remaining = Math.max(0, comment.replyCount - shown);
+  const remaining = Math.max(0, comment.replyCount - replies.length);
   const openReply = () => setReplying(true);
 
   return (
