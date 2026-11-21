@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { PASSKEY_ENABLED } from '@/lib/passkey';
 
 function Item({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -27,6 +28,12 @@ export function PrivacyPage() {
           1년 동안 둬요. 이름·이메일 등 개인을 알 수 있는 정보는 담기지 않아요.
         </p>
       </Item>
+      {PASSKEY_ENABLED && (
+        <Item title="패스키">
+          <p>패스키를 쓰면 기기가 만든 공개키만 저장해요. 지문·얼굴 정보는 기기 밖으로 나가지 않아요.</p>
+          <p>패스키 이름, 만든 날, 마지막 사용 시각을 함께 보관하고, 패스키를 지우거나 탈퇴하면 바로 삭제해요.</p>
+        </Item>
+      )}
       <Item title="광고 쿠키">
         <p>Google 광고를 보여주기 위해 Google과 파트너가 쿠키를 사용할 수 있어요. 맞춤 광고는 Google 광고 설정에서 끌 수 있어요.</p>
         <p className="flex flex-wrap gap-x-3">

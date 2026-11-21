@@ -12,6 +12,8 @@ import { useToast } from '@/components/common/Toast';
 import { errorMessage, fieldErrorMap } from '@/lib/errors';
 import { interestTagsQuery } from './queries';
 import { TagPicker } from './TagPicker';
+import { PasskeySection } from './PasskeySection';
+import { passkeyAvailable } from '@/lib/passkey';
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -222,6 +224,7 @@ export function SettingsPage() {
       <Section title="관심 태그">
         <InterestTags />
       </Section>
+      {passkeyAvailable() && <PasskeySection />}
       <Section title="계정">
         <div className="flex gap-2">
           <Button variant="outlined" width={80} height={36} content="로그아웃" onClick={() => logout()} />

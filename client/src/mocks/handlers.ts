@@ -3,6 +3,7 @@ import { http, HttpResponse } from 'msw';
 import type { Me, PostSummary } from '@/api/types';
 import { resetAdminState } from './adminFixtures';
 import { adminHandlers } from './adminHandlers';
+import { passkeyHandlers, resetPasskeys, setPasskeyPassword } from './passkeys';
 import { reactionFields, reactionHandlers, resetReactions, withdrawReactions } from './reactions';
 import { fieldByApi } from '@/lib/fields';
 import { mockExtraSources, mockNewsPosts, mockNewsSources, mockPosts, mockSources, mockTags } from './fixtures';
@@ -34,12 +35,14 @@ export function resetMockState() {
   state.recClicks = [];
   resetAdminState();
   resetReactions();
+  resetPasskeys();
 }
 
 function startSession(me: Me, password: string, status = 200) {
   state.loggedIn = true;
   state.me = me;
   state.password = password;
+  setPasskeyPassword(password);
   return HttpResponse.json({ accessToken: MOCK_TOKEN, expiresIn: 900, user: me }, { status });
 }
 
@@ -97,6 +100,7 @@ const error = (status: number, code: string, message: string) => HttpResponse.js
 
 export const handlers = [
   ...reactionHandlers({ isMember, me: () => state.me, error }),
+  ...passkeyHandlers({ isMember, me: () => state.me, startSession: (me, password) => startSession(me, password), error }),
   http.get('*/api/posts', ({ request }) => {
     const url = new URL(request.url);
     const tagIds = idList(url.searchParams.get('tagIds'));

@@ -52,7 +52,7 @@ export function OnboardingPage() {
     });
 
   return (
-    <section className="rounded-[var(--radius-lg)] border border-line bg-surface p-6 shadow-[var(--shadow-sm)]">
+    <section className="w-full max-w-md rounded-[var(--radius-lg)] border border-line bg-surface p-6 shadow-[var(--shadow-sm)]">
       <h1 className="text-xl font-bold">관심 있는 기술을 골라 주세요</h1>
       <p className="mb-5 mt-1 text-sm text-fg-secondary">
         {INTEREST_MIN}개 이상 고르면 추천이 정확해져요 (최대 {INTEREST_MAX}개)

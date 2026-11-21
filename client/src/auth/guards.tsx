@@ -3,6 +3,7 @@ import { Navigate, useLocation, useSearchParams } from 'react-router';
 import { useAuth } from './AuthProvider';
 import { FullPageSpinner } from '@/components/common/FullPageSpinner';
 import { EmptyState } from '@/components/common/EmptyState';
+import { passkeyOffer } from '@/lib/passkey';
 
 export function safeRedirect(value: string | null) {
   if (!value || !value.startsWith('/') || value.startsWith('//')) return '/';
@@ -37,6 +38,9 @@ export function GuestOnly({ children }: { children: ReactNode }) {
   if (status === 'member') {
     const raw = params.get('redirect');
     const target = safeRedirect(raw);
+    if (me && !me.onboardingCompleted && passkeyOffer.pending()) {
+      return <Navigate to={raw ? `/onboarding/passkey?redirect=${encodeURIComponent(target)}` : '/onboarding/passkey'} replace />;
+    }
     if (me && !me.onboardingCompleted) {
       return <Navigate to={raw ? `/onboarding/tags?redirect=${encodeURIComponent(target)}` : '/onboarding/tags'} replace />;
     }

@@ -36,3 +36,28 @@ mark {
 ins.adsbygoogle[data-ad-status='unfilled'] {
   display: none !important;
 }
+
+.auth-glow {
+  background: radial-gradient(60% 100% at 50% 0%, var(--auth-glow), transparent 70%);
+}
+
+@keyframes auth-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.auth-enter {
+  animation: auth-enter 180ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-enter {
+    animation: none;
+  }
+}

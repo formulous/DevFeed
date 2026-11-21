@@ -3,6 +3,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import * as authApi from '@/api/auth';
 import { onAuthLost, refreshAccessToken, setAccessToken, takeRefreshedUser } from '@/api/http';
 import { signup as signupApi } from '@/api/me';
+import { passkeyLogin } from '@/api/passkeys';
+import type { AuthenticationResponseJSON } from '@simplewebauthn/browser';
 import type { AuthResponse, Me, SignupInput } from '@/api/types';
 
 type AuthStatus = 'loading' | 'guest' | 'member';
@@ -13,6 +15,7 @@ interface AuthContextValue {
   signedOutByUser: boolean;
   login: (email: string, password: string) => Promise<Me>;
   signup: (input: SignupInput) => Promise<Me>;
+  loginWithPasskey: (credential: AuthenticationResponseJSON) => Promise<Me>;
   logout: () => Promise<void>;
   updateMe: (patch: Partial<Me>) => void;
   clearSession: () => void;
@@ -73,6 +76,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [startSession],
   );
 
+  const loginWithPasskey = useCallback(
+    async (credential: AuthenticationResponseJSON) => startSession(await passkeyLogin(credential)),
+    [startSession],
+  );
+
   const signup = useCallback(async (input: SignupInput) => startSession(await signupApi(input)), [startSession]);
 
   const updateMe = useCallback((patch: Partial<Me>) => setMe((prev) => (prev ? { ...prev, ...patch } : prev)), []);
@@ -89,8 +97,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clearSession]);
 
   const value = useMemo(
-    () => ({ status, me, signedOutByUser, login, signup, logout, updateMe, clearSession }),
-    [status, me, signedOutByUser, login, signup, logout, updateMe, clearSession],
+    () => ({ status, me, signedOutByUser, login, signup, loginWithPasskey, logout, updateMe, clearSession }),
+    [status, me, signedOutByUser, login, signup, loginWithPasskey, logout, updateMe, clearSession],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

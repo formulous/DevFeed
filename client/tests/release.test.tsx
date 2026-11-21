@@ -40,7 +40,7 @@ describe('S-11 개인정보 안내', () => {
     renderWithApp(<App />, '/signup');
     await screen.findByRole('button', { name: '가입하기' });
     const links = screen.getAllByRole('link', { name: '개인정보 안내' });
-    expect(links.length).toBe(2);
+    expect(links.length).toBe(1);
     links.forEach((l) => expect(l).toHaveAttribute('href', '/privacy'));
   });
 });

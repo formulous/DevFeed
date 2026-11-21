@@ -29,7 +29,7 @@ describe('추천 이유 문구', () => {
 describe('S-02 추천 피드', () => {
   it('비로그인은 로그인으로 보냄', async () => {
     renderWithApp(<App />, '/for-you');
-    expect(await screen.findByRole('heading', { name: '로그인' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'DevFeed에 로그인' })).toBeInTheDocument();
   });
 
   it('선호 데이터가 없으면 안내 배너와 온보딩 링크를 보여줌', async () => {

@@ -255,3 +255,12 @@
 ### dba (2차) — server 수용 확인
 - `webauthn_handle`을 등록 옵션 발급 때 채우는 방식 동의 (옵션의 `user.id`에 바로 필요). `UPDATE ... WHERE webauthn_handle IS NULL`이라 동시 발급에도 한 값으로 고정됨 → 채운 뒤 다시 읽어서 쓰기 바람. `passkeys.sql`·tables·decisions 반영
 - 남은 것: 운영 `devfeed` `0013` 적용 사용자 확인
+
+### client (2차, 2026-11-22) — 명세 대조, 화면 개편 배포, 패스키 mock 구현
+- 명세(`openapi.yaml` 패스키 7개 경로) 대조: client 구현과 **차이 없음**. pm 결정·server 3차대로 `challengeId` 없음, 옵션은 본문 그대로, 검증 `{ credential }`·등록 `{ credential, name }`, 오류 `PASSKEY_NOT_FOUND`·`PASSKEY_VERIFICATION_FAILED`(로그인 401·등록 400)·`PASSKEY_LIMIT_EXCEEDED`(옵션·등록 409)·`PASSKEY_ALREADY_REGISTERED`, 이름 `fieldErrors.name`. 실패 후 재시도는 매번 옵션부터 요청함
+- S-05·S-06 개편 **배포함** (`VITE_PASSKEY=false`): 로고·테마 버튼만 있는 상단, 가운데 340px 스택, 카드 없음, 상단 방사형 빛, 44px 버튼·입력칸(모서리 8px), 떠오르는 등장(동작 줄이기 설정 시 없음). 가입은 비밀번호 확인칸 대신 보기 버튼. 패스키 꺼진 지금은 로그인이 이메일 입력부터 보임
+  - 실서버 확인(1280 다크·360 라이트): 패스키 버튼 0, 탭·검색·푸터 0, 가로 넘침 0, 확인칸 0, 개인정보 "패스키" 항목 숨김, 페이지 오류 0
+- 패스키 흐름(mock, dev·테스트에서 켬): 로그인 [패스키로 로그인]·[이메일로 계속하기]↔"다른 방법으로 로그인", 이메일 입력 상태 자동완성(조건부 요청), 취소는 조용히, 가입 직후 `/onboarding/passkey` → 관심 태그, 설정 패스키 섹션(추가·이름 바꾸기·삭제·10개 제한), 개인정보 문구(지정 문구 + 보관 항목)
+  - 이름 자동 생성은 client가 `name`으로 보냄 (`Mac Chrome`·`iPhone Safari`·`Windows Edge` 식)
+- 검증: 테스트 150건 통과 (`passkey.test.tsx` 12건). 캡처 16화면×3폭 라이트·다크 가로 넘침 0. **Playwright CDP 가상 인증기**(실제 Chrome WebAuthn, mock 서버)로 가입 → 패스키 만들기(resident key 생성 확인) → 로그아웃 → 패스키 로그인 → `redirect` 복귀·설정에 "마지막 사용 방금 전" 확인
+- server 배포 후: `VITE_PASSKEY` 빼고 재배포 → 실서버에서 가상 인증기로 같은 흐름 확인 (실서버 RP ID가 `formulous.org`라 가상 인증기 확인은 formulous.org 페이지에서 진행)

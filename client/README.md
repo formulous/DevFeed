@@ -185,6 +185,17 @@ App
 - 화면에 보이는 문장(빈 상태·오류·안내·토스트·검증·`<title>`·메타 설명·og 이미지)은 해요체로 씀. 버튼·라벨·탭·상태값 같은 짧은 명사는 그대로 둠. README·커밋은 음슴체
 - 서버 오류 메시지는 `errorMessage`로 그대로 보여 줌 (server가 해요체로 바꿨음). 분기는 메시지 문자열이 아니라 `code`로만 함
 
+## 로그인·가입 화면과 패스키 (S-05·S-06·F-034, M9, `docs/discussions/027`)
+- `AuthLayout`: 왼쪽 로고·오른쪽 테마 버튼만, 탭·검색·푸터 없음. 화면 가운데 340px 한 줄, 상단 방사형 빛(`--auth-glow`, 다크에서만 눈에 띔), 들어올 때 180ms 떠오름(`prefers-reduced-motion`이면 생략). 하단 "개인정보 안내" 링크 하나
+  - 공통 부품 `components/auth/AuthPanel.tsx`: `AuthPanel`(로고+제목), `AuthButton`(44px, 모서리 8px), `AuthInput`(44px, 자리 표시 문구 라벨, 비밀번호 보기 버튼), `AuthError`
+- 로그인: 패스키 사용 가능하면 [패스키로 로그인]·[이메일로 계속하기] → 이메일 입력 상태(`autocomplete="username webauthn"` + 자동완성 조건부 요청, 화면을 떠나면 취소) ↔ "다른 방법으로 로그인". 사용 불가면 처음부터 이메일 입력
+  - 패스키 취소(`NotAllowedError`·중단)는 조용히 원래 상태, `PASSKEY_NOT_FOUND`는 "이 패스키로 가입된 계정을 찾을 수 없어요"
+- 가입: 비밀번호 확인칸 없앰(보기 버튼으로 대체). 가입 직후에만 `/onboarding/passkey`([패스키 만들기]·[나중에]) → 관심 태그 온보딩. 일반 로그인에는 이 단계 없음 (`lib/passkey.ts` `passkeyOffer`)
+- 설정 `PasskeySection`: 목록(최근 만든 순, 만든 날·마지막 사용), 추가(이름 = `deviceName()` 예: `Mac Chrome`), 이름 바꾸기(1~40자), 삭제(확인 모달), 10개면 추가 막음
+- WebAuthn은 `@simplewebauthn/browser` 13. API는 `api/passkeys.ts` (`/auth/passkeys/login/options`·`/auth/passkeys/login`·`/me/passkeys/registration/options`·`/me/passkeys`)
+- **사용 가능 조건** = 빌드 플래그 `VITE_PASSKEY !== 'false'` + `browserSupportsWebAuthn()`. `build:web`은 server 배포 전까지 `VITE_PASSKEY=false` → 패스키 버튼·가입 후 단계·설정 섹션·개인정보 "패스키" 항목 숨김. dev·테스트·캡처는 켬
+- mock `mocks/passkeys.ts` (서명 검증 없이 credential id로 회원을 찾음). 실제 브라우저 흐름은 Playwright CDP 가상 인증기로 확인 (가입 → 패스키 만들기 → 로그아웃 → 패스키 로그인 → 원래 화면)
+
 ## 좋아요·댓글 (F-080·F-081, M8, `docs/discussions/026`)
 - 반응 줄 `components/post/ReactionBar.tsx`는 `PostCard` 태그 줄 오른쪽에 붙음 → 최신·추천·인기·검색·북마크·보안 뉴스에 공통 적용, 읽은 기록은 `reactions={false}`
   - 목록 응답에 `likeCount`가 없으면 반응 줄을 그리지 않음 → server 배포 전 `build:web`에서는 자동으로 숨고, 필드가 오면 바로 보임 (별도 플래그 없음). mock은 필드를 채움

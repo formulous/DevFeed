@@ -19,18 +19,17 @@ const iso = (daysAgo: number, hour = 12) => {
 
 describe('S-06 회원가입', () => {
   it('입력 규칙을 검사함', () => {
-    const errors = validateSignup({ email: 'x', password: 'abcdefgh', passwordConfirm: 'zz', nickname: 'a' });
+    const errors = validateSignup({ email: 'x', password: 'abcdefgh', nickname: 'a' });
     expect(errors).toEqual({
       email: '이메일 형식이 아니에요',
       password: '영문과 숫자를 모두 넣어 주세요',
-      passwordConfirm: '비밀번호가 일치하지 않아요',
       nickname: '닉네임은 2~20자로 입력해 주세요',
     });
-    expect(validateSignup({ email: 'a@b.co', password: 'abcd1234', passwordConfirm: 'abcd1234', nickname: '지훈' })).toEqual({});
-    expect(validateSignup({ email: 'a@b.co', password: 'abcd 1234', passwordConfirm: 'abcd 1234', nickname: '지훈' }).password).toBe(
+    expect(validateSignup({ email: 'a@b.co', password: 'abcd1234', nickname: '지훈' })).toEqual({});
+    expect(validateSignup({ email: 'a@b.co', password: 'abcd 1234', nickname: '지훈' }).password).toBe(
       '공백과 한글은 쓸 수 없어요',
     );
-    expect(validateSignup({ email: 'a@b.co', password: '비번abcd1234', passwordConfirm: '비번abcd1234', nickname: '지훈' }).password).toBe(
+    expect(validateSignup({ email: 'a@b.co', password: '비번abcd1234', nickname: '지훈' }).password).toBe(
       '공백과 한글은 쓸 수 없어요',
     );
   });
@@ -38,7 +37,6 @@ describe('S-06 회원가입', () => {
   async function fill(user: ReturnType<typeof userEvent.setup>, email: string) {
     await user.type(await screen.findByLabelText('이메일'), email);
     await user.type(screen.getByLabelText('비밀번호'), 'abcd1234');
-    await user.type(screen.getByLabelText('비밀번호 확인'), 'abcd1234');
     await user.type(screen.getByLabelText('닉네임'), '지훈');
     await user.click(screen.getByRole('button', { name: '가입하기' }));
   }

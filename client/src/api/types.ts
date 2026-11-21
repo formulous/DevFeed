@@ -258,3 +258,10 @@ export interface RecommendationPage extends CursorPage<RecommendedPost> {
   recommendationId: string;
   fallback: boolean;
 }
+
+export interface Passkey {
+  id: number;
+  name: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+}

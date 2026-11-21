@@ -10,6 +10,7 @@ const TITLES: [string, string][] = [
   ['/security', '보안 뉴스'],
   ['/login', '로그인'],
   ['/signup', '회원가입'],
+  ['/onboarding/passkey', '패스키 만들기'],
   ['/onboarding/tags', '관심 태그 선택'],
   ['/me/bookmarks', '북마크'],
   ['/me/history', '읽은 기록'],

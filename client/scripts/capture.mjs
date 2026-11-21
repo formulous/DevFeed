@@ -16,7 +16,7 @@ const SCREENS = [
   { id: 'S-03', path: '/popular', auth: false, ready: 'article' },
   { id: 'S-04', path: '/search?q=%EC%A0%95%EB%A6%AC', auth: false, ready: 'article' },
   { id: 'S-14', path: '/security', auth: false, ready: 'article' },
-  { id: 'S-05', path: '/login', auth: false, ready: 'form' },
+  { id: 'S-05', path: '/login', auth: false, ready: 'h1' },
   { id: 'S-06', path: '/signup', auth: false, ready: 'form' },
   { id: 'S-11', path: '/privacy', auth: false, ready: 'article' },
   { id: 'S-07', path: '/onboarding/tags', auth: true, ready: '[aria-label="태그 목록"]' },
@@ -39,9 +39,12 @@ async function spaNavigate(page, path) {
 
 async function login(page, base) {
   await page.goto(`${base}/login`);
+  const byEmail = page.getByRole('button', { name: '이메일로 계속하기' });
+  await page.getByLabel('이메일').or(byEmail).first().waitFor();
+  if (await byEmail.isVisible()) await byEmail.click();
   await page.getByLabel('이메일').fill('admin@devfeed.dev');
   await page.getByLabel('비밀번호', { exact: true }).fill('pw1234');
-  await page.getByRole('button', { name: '로그인' }).click();
+  await page.getByRole('button', { name: '로그인', exact: true }).click();
   await page.waitForURL(`${base}/`);
   await page.evaluate(() => {
     const s = window.__devfeedMock;

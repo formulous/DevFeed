@@ -4,6 +4,7 @@ import type { SourceType } from '@/api/types';
 import { GuestOnly, RequireAdmin, RequireAuth } from '@/auth/guards';
 import { FullPageSpinner } from '@/components/common/FullPageSpinner';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { PasskeyOfferPage } from '@/features/auth/PasskeyOfferPage';
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { RouteTitle } from '@/components/layout/RouteTitle';
 import { NotFoundPage } from '@/features/common/NotFoundPage';
@@ -62,6 +63,7 @@ export function App() {
         <Route element={<AuthLayout />}>
           <Route path="login" element={<GuestOnly><LoginPage /></GuestOnly>} />
           <Route path="signup" element={<GuestOnly><SignupPage /></GuestOnly>} />
+          <Route path="onboarding/passkey" element={<RequireAuth><PasskeyOfferPage /></RequireAuth>} />
           <Route path="onboarding/tags" element={<RequireAuth><OnboardingPage /></RequireAuth>} />
         </Route>
       </Routes>
