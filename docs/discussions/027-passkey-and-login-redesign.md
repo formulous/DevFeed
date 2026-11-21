@@ -189,3 +189,28 @@
 - client `VITE_PASSKEY` 플래그 방식 승인: 레이아웃 개편 먼저 배포, 패스키 UI는 server 배포 후 플래그 켜고 재배포
 - 운영 `.env`의 `WEBAUTHN_RP_ID`·`WEBAUTHN_RP_NAME`·`WEBAUTHN_ORIGINS`는 사용자가 직접 넣음 (server가 키 이름·값 안내)
 - 다음: dba 스키마 → server 명세 → client 대조 → 구현
+
+### server (2차) — client 1차와 맞춤 (server 1차 API 초안을 이 내용으로 대체)
+- client 1차와 server 1차가 동시에 작성됨. client 제안을 대부분 수용해 아래로 확정 예정 (명세에 그대로 반영)
+- 수용
+  - 경로·형태: client 표 그대로 (`/auth/passkey/options`, `/auth/passkey/verify`, `/me/passkeys/options`, `/me/passkeys`, 목록 `{ items }` 최근 만든 순, PATCH 200 Passkey)
+  - `challengeId` 방식: 옵션 응답 `{ challengeId, options }`, 검증 요청 `{ challengeId, credential }`. `options`·`credential`은 W3C JSON(base64url), `@simplewebauthn/browser` 13과 그대로 맞음
+  - 이름: client가 `name` 전송, 없으면 server 기본값 "패스키 N" (server User-Agent 해석은 하지 않음)
+  - 오류 코드 분리: `PASSKEY_CHALLENGE_EXPIRED`(만료·재사용·없는 challengeId) 별도, `PASSKEY_VERIFICATION_FAILED`(origin·RP ID·서명·사용자 확인 없음·횟수 역행), `PASSKEY_NOT_FOUND`, `PASSKEY_LIMIT_EXCEEDED`, `PASSKEY_ALREADY_REGISTERED`(등록 시 같은 credential id), 속도 제한은 기존 `RATE_LIMITED`
+  - 둘 다 401/409 구분은 server 1차 그대로, `PASSKEY_CHALLENGE_EXPIRED`는 400
+- dba 챌린지 테이블 수정 (challengeId 방식 반영)
+  - `id` BINARY(16) PK (랜덤, 응답에 base64url로 나감), `challenge` BINARY(32), `purpose`, `user_id` NULL FK CASCADE, `expires_at` 인덱스, `created_at`
+  - 소비: `DELETE FROM webauthn_challenges WHERE id = ? AND purpose = ? AND expires_at > ? RETURNING challenge, user_id` 한 문장 (MariaDB 지원) → 행이 없으면 `PASSKEY_CHALLENGE_EXPIRED`. 등록은 `user_id`가 요청 회원과 같은지 추가 확인
+  - 검증 실패해도 챌린지는 이미 지워져 재시도 시 옵션부터 다시 받음 (client는 실패 시 옵션 재요청)
+- pm 결정 대기: 검증 라이브러리 사용 여부(server 1차 1번). 결정과 dba 스키마가 나오면 명세 작성
+
+### server (3차) — pm 결정 따름, server 2차 철회
+- pm 결정이 server 2차보다 먼저 기록돼 있음. **server 2차는 철회하고 pm 결정(= server 1차 기준)으로 진행**
+  - 경로: `/auth/passkeys/login/options`, `/auth/passkeys/login`, `/me/passkeys/registration/options`, `/me/passkeys`, `/me/passkeys/{passkeyId}`
+  - `challengeId` 없음: server가 `clientDataJSON.challenge`의 sha256으로 챌린지 행을 찾아 `DELETE`로 1회 소비
+  - 오류: 만료·재사용·origin·서명·횟수 역행 모두 `PASSKEY_VERIFICATION_FAILED`. `PASSKEY_CHALLENGE_EXPIRED` 없음
+  - 이름: client 전송 우선, 없으면 server가 User-Agent로 생성
+- client 1차에서 그대로 쓰는 것: 옵션·응답은 W3C JSON(`@simplewebauthn/browser` 13 형태), 목록 `{ items }` 최근 만든 순, PATCH 200 Passkey, `fieldErrors.name`
+  - 옵션 응답은 `options` 객체를 감싸지 않고 본문 그대로, 검증 요청은 `{ credential, name? }`(등록) / `{ credential }`(로그인)
+- dba 챌린지 테이블은 server 1차안(`challenge_hash` PK) 그대로
+- 다음: dba 스키마 나오면 명세 작성 후 client·pm 대조 요청
