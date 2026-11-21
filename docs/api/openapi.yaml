@@ -15,6 +15,7 @@ tags:
   - name: catalog
   - name: recommendations
   - name: security-news
+  - name: reactions
   - name: admin
   - name: ops
 
@@ -420,6 +421,189 @@ paths:
           description: 기록 완료
         '401': { $ref: '#/components/responses/TokenExpired' }
         '404': { $ref: '#/components/responses/NotFound' }
+
+  /posts/{postId}/like:
+    parameters:
+      - $ref: '#/components/parameters/PostId'
+    put:
+      tags: [reactions]
+      summary: 좋아요 켜기 (F-080, 026). 멱등
+      description: |
+        원하는 상태를 지정하는 방식. 이미 좋아요한 글이면 변화 없이 같은 응답.
+        같은 회원이 동시에 여러 번 보내도 좋아요는 1개, likeCount는 실제 좋아요 수와 같음.
+        블로그 글·보안 뉴스 모두 가능
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 반영 후 상태
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LikeState' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [reactions]
+      summary: 좋아요 끄기 (F-080, 026). 멱등
+      description: 좋아요하지 않은 글이면 변화 없이 같은 응답
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 반영 후 상태
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LikeState' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /posts/{postId}/comments:
+    parameters:
+      - $ref: '#/components/parameters/PostId'
+    get:
+      tags: [reactions]
+      summary: 댓글 목록 (F-081, 026). 오래된 순, 답글 처음 3개 포함
+      description: |
+        최상위 댓글을 오래된 순으로 커서 페이지네이션. 각 댓글에 답글 처음 3개(`replies`)와
+        이어 받을 커서(`repliesNextCursor`, 더 없으면 null)를 붙임.
+        `DELETED`(답글이 남은 삭제 댓글)·`HIDDEN`(관리자 숨김)도 자리를 차지하므로 목록에 나옴.
+        게스트도 읽을 수 있음
+      security:
+        - {}
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/CommentSize'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommentThreadPage' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/TokenExpired' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [reactions]
+      summary: 댓글·답글 작성 (F-081, 026)
+      description: |
+        `parentId`가 없으면 댓글, 있으면 답글. 답글의 답글은 그 답글의 최상위 댓글에 다는 것으로 처리함
+        (client가 최상위 ID를 보내도 되고, 답글 ID를 보내면 server가 부모로 올림).
+        `DELETED` 자리 표시에는 답글을 달 수 없음(404). 본문은 앞뒤 공백을 제거한 뒤 1~1,000자,
+        원문 그대로 저장(HTML 해석·이스케이프 없음, client가 텍스트로 렌더링).
+        속도 제한: 회원당 1분 5개·24시간 200개
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateCommentRequest' }
+      responses:
+        '201':
+          description: 작성됨
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommentWriteResult' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404':
+          description: NOT_FOUND (글 없음, 부모 댓글 없음·다른 글의 댓글·삭제 자리 표시)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '429':
+          description: COMMENT_RATE_LIMITED. `Retry-After` 헤더 동시 설정
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RateLimitedError' }
+
+  /comments/{commentId}/replies:
+    parameters:
+      - $ref: '#/components/parameters/CommentId'
+    get:
+      tags: [reactions]
+      summary: 답글 더보기 (F-081, 026). 오래된 순
+      description: 첫 요청의 cursor는 댓글 목록의 `repliesNextCursor`. 답글 ID를 넣으면 404
+      security:
+        - {}
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/CommentSize'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommentPage' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/TokenExpired' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /comments/{commentId}:
+    parameters:
+      - $ref: '#/components/parameters/CommentId'
+    patch:
+      tags: [reactions]
+      summary: 댓글·답글 수정 (F-081, 026). 본인만
+      description: 수정하면 `editedAt`이 갱신됨. 관리자가 숨긴 댓글은 수정할 수 없음(409 COMMENT_HIDDEN)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateCommentRequest' }
+      responses:
+        '200':
+          description: 수정됨
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Comment' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403':
+          description: FORBIDDEN (남의 댓글)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: NOT_FOUND (없음·삭제 자리 표시)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: COMMENT_HIDDEN (관리자가 숨긴 댓글)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    delete:
+      tags: [reactions]
+      summary: 댓글·답글 삭제 (F-081, 026). 본인만
+      description: |
+        답글은 항상 완전히 삭제. 댓글은 남은 답글이 있으면 `DELETED` 자리 표시로 남고("삭제된 댓글이에요"),
+        없으면 완전히 삭제. 자리 표시의 마지막 답글을 지우면 자리 표시도 삭제(`parentRemoved: true`).
+        숨긴 댓글도 본인은 삭제할 수 있음
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 삭제됨
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommentDeleteResult' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403':
+          description: FORBIDDEN (남의 댓글)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: NOT_FOUND (없음·이미 삭제 자리 표시)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   /search:
     get:
@@ -951,6 +1135,42 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /admin/comments/{commentId}/hidden:
+    parameters:
+      - $ref: '#/components/parameters/CommentId'
+    put:
+      tags: [admin]
+      summary: 댓글 숨김 (F-081, 026). 멱등
+      description: |
+        숨긴 댓글은 일반 사용자에게 "관리자가 숨긴 댓글이에요"로 보이고 commentCount에서 빠짐.
+        이미 숨긴 댓글이면 변화 없이 같은 응답. 삭제 자리 표시는 404
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 반영 후 상태 (comment는 관리자 기준이라 content 포함)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommentWriteResult' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [admin]
+      summary: 댓글 숨김 해제 (F-081, 026). 멱등
+      description: 숨기지 않은 댓글이면 변화 없이 같은 응답. 삭제 자리 표시는 404
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 반영 후 상태
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommentWriteResult' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1018,6 +1238,15 @@ components:
       in: path
       required: true
       schema: { $ref: '#/components/schemas/Id' }
+    CommentId:
+      name: commentId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Id' }
+    CommentSize:
+      name: size
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
     SourceId:
       name: sourceId
       in: path
@@ -1227,7 +1456,7 @@ components:
 
     PostSummary:
       type: object
-      required: [id, title, summary, url, thumbnailUrl, publishedAt, source, tags, isPopular]
+      required: [id, title, summary, url, thumbnailUrl, publishedAt, source, tags, isPopular, likeCount, commentCount, likedByMe]
       properties:
         id: { $ref: '#/components/schemas/Id' }
         title: { type: string }
@@ -1253,6 +1482,17 @@ components:
         isPopular:
           type: boolean
           description: 최근 7일 인기 글 상위 20건(`/posts/popular?period=WEEK`과 같은 집합, 조회수 1 이상)에 들면 true. 10분 캐시라 최대 10분 늦게 반영됨 (020)
+        likeCount:
+          type: integer
+          minimum: 0
+          description: 좋아요 수 (026). 인기 글 목록은 10분 캐시라 다른 사용자 반영이 최대 10분 늦음
+        commentCount:
+          type: integer
+          minimum: 0
+          description: 보이는 댓글 + 답글 수 (026). 삭제·숨김 제외
+        likedByMe:
+          type: boolean
+          description: 내가 좋아요한 글이면 true (026). 비회원 요청은 항상 false (isBookmarked와 달리 항상 포함)
         isBookmarked:
           type: boolean
           description: 회원 요청일 때만 포함
@@ -1268,6 +1508,142 @@ components:
           type: array
           items: { $ref: '#/components/schemas/PostSummary' }
         nextCursor: { type: string, nullable: true }
+
+    LikeState:
+      type: object
+      required: [liked, likeCount]
+      properties:
+        liked: { type: boolean }
+        likeCount: { type: integer, minimum: 0 }
+
+    CommentStatus:
+      type: string
+      enum: [VISIBLE, HIDDEN, DELETED]
+      description: DELETED = 답글이 남은 삭제 댓글 자리 표시, HIDDEN = 관리자 숨김
+
+    Comment:
+      type: object
+      required: [id, postId, parentId, status, content, author, createdAt, editedAt, mine, replyCount]
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        postId: { $ref: '#/components/schemas/Id' }
+        parentId:
+          type: integer
+          format: int64
+          nullable: true
+          description: null이면 댓글, 값이 있으면 답글 (항상 최상위 댓글 ID)
+        status: { $ref: '#/components/schemas/CommentStatus' }
+        content:
+          type: string
+          nullable: true
+          maxLength: 1000
+          description: 원문 텍스트(줄바꿈 포함). DELETED는 null, HIDDEN은 관리자 요청에만 원문·그 외 null
+        author:
+          type: object
+          nullable: true
+          required: [id, nickname]
+          properties:
+            id: { $ref: '#/components/schemas/Id' }
+            nickname: { type: string }
+          description: DELETED는 null, HIDDEN은 관리자 요청에만 포함·그 외 null
+        createdAt: { type: string, format: date-time }
+        editedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: 값이 있으면 "(수정됨)" 표시
+        mine:
+          type: boolean
+          description: 내 댓글이면 true (HIDDEN 포함, DELETED·비회원은 false). 수정·삭제 메뉴 표시용
+        replyCount:
+          type: integer
+          minimum: 0
+          description: 남은 답글 수(VISIBLE + HIDDEN). 답글이면 0
+
+    CommentThread:
+      allOf:
+        - $ref: '#/components/schemas/Comment'
+        - type: object
+          required: [replies, repliesNextCursor]
+          properties:
+            replies:
+              type: array
+              maxItems: 3
+              description: 답글 처음 3개, 오래된 순
+              items: { $ref: '#/components/schemas/Comment' }
+            repliesNextCursor:
+              type: string
+              nullable: true
+              description: 남은 답글이 있으면 `/comments/{id}/replies`의 첫 cursor
+
+    CommentThreadPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/CommentThread' }
+        nextCursor: { type: string, nullable: true }
+
+    CommentPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Comment' }
+        nextCursor: { type: string, nullable: true }
+
+    CreateCommentRequest:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+          description: 앞뒤 공백 제거 후 1~1,000자
+        parentId:
+          type: integer
+          format: int64
+          minimum: 1
+          description: 답글이면 부모 댓글 ID (답글 ID면 그 최상위로 올림)
+
+    UpdateCommentRequest:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+          description: 앞뒤 공백 제거 후 1~1,000자
+
+    CommentWriteResult:
+      type: object
+      required: [comment, commentCount]
+      properties:
+        comment: { $ref: '#/components/schemas/Comment' }
+        commentCount:
+          type: integer
+          minimum: 0
+          description: 반영 후 글의 commentCount
+
+    CommentDeleteResult:
+      type: object
+      required: [commentCount, removed, parentRemoved]
+      properties:
+        commentCount: { type: integer, minimum: 0 }
+        removed:
+          type: boolean
+          description: true면 완전히 삭제, false면 DELETED 자리 표시로 남음
+        parentRemoved:
+          type: boolean
+          description: 답글 삭제로 자리 표시 부모까지 삭제됐으면 true
+
+    RateLimitedError:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          required: [retryAfterSec]
+          properties:
+            retryAfterSec: { type: integer, minimum: 1 }
 
     PopularPost:
       allOf:

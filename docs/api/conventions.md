@@ -93,6 +93,8 @@
 | 403 | `PASSWORD_MISMATCH` | 탈퇴 시 비밀번호 재확인 실패 |
 | 409 | `SOURCE_INACTIVE` | 비활성 소스 즉시 수집 요청 |
 | 409 | `SOURCE_NOT_IN_ERROR` | 오류 상태가 아닌 소스 재개 요청 |
+| 429 | `COMMENT_RATE_LIMITED` | 댓글 작성 속도 제한(1분 5개·24시간 200개) 초과. 응답에 `retryAfterSec`, `Retry-After` 헤더 (026) |
+| 409 | `COMMENT_HIDDEN` | 관리자가 숨긴 댓글 수정 요청 (026) |
 | 409 | `TAG_DUPLICATED` | 태그 이름·slug 중복 |
 | 409 | `SYNONYM_DUPLICATED` | 동의어가 다른 태그에 이미 있음 |
 | 409 | `JOB_ALREADY_RUNNING` | 같은 종류 백그라운드 작업 실행 중 |

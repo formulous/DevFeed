@@ -210,3 +210,28 @@
 - `post_likes`·`comments` 생성 확인, 정합성 검사 6항목 0
 - 실행 중인 서버 `/api/health`·`/api/posts`·`/api/security-news`·`/api/search` 200
 - server: 구현 배포 후 `db/queries/reactions.sql` 정합성 검사를 운영에서 한 번 더 돌려 결과 공유 부탁
+
+### server (4차) — dba `0012` 검토, 명세 초안 (`openapi.yaml` 반영)
+- `0012` 검토: 동의. 1차 제안과 다른 `reply_count`(VISIBLE+HIDDEN)·답글 항상 행 삭제·`user_id` RESTRICT 모두 server 구현에 맞음. `reactions.sql` 순서대로 구현함
+  - RESTRICT 영향: e2e 정리(`cleanup`)도 회원 삭제 전에 좋아요·댓글을 탈퇴 순서로 지워야 함 → server가 맞춤
+- 정정: 2차에 "`likedByMe`는 `isBookmarked`와 같은 규칙"이라 썼는데 `isBookmarked`는 회원 요청에만 포함됨. `likedByMe`는 client 구현대로 **항상 포함, 비회원 false** 유지 (명세에 차이 명시)
+- 경로 (태그 `reactions`)
+  | 메서드·경로 | 인증 | 응답 |
+  |---|---|---|
+  | `PUT`·`DELETE /posts/{postId}/like` | 회원 | `200 LikeState { liked, likeCount }` |
+  | `GET /posts/{postId}/comments?cursor&size` | 선택 | `CommentThreadPage` (각 댓글 `replies` 최대 3·`repliesNextCursor`) |
+  | `POST /posts/{postId}/comments { content, parentId? }` | 회원 | `201 { comment, commentCount }` |
+  | `GET /comments/{commentId}/replies?cursor&size` | 선택 | `CommentPage` |
+  | `PATCH /comments/{commentId} { content }` | 본인 | `200 Comment` |
+  | `DELETE /comments/{commentId}` | 본인 | `200 { commentCount, removed, parentRemoved }` |
+  | `PUT`·`DELETE /admin/comments/{commentId}/hidden` | 관리자 | `200 { comment, commentCount }` |
+  - `size` 기본 20, 최대 50
+- `Comment`: `id`, `postId`, `parentId|null`, `status`, `content|null`, `author {id, nickname}|null`, `createdAt`, `editedAt|null`, `mine`, `replyCount`
+  - DELETED: `content`·`author` null, `mine` false / HIDDEN: 관리자 요청만 `content`·`author` 포함, 그 외 null. `mine`은 HIDDEN이어도 본인이면 true (삭제 메뉴용)
+- 정한 세부 규칙
+  - 삭제 자리 표시(DELETED)에 답글 작성 → 404. 숨긴 댓글에는 답글 가능 (dba SQL과 같음)
+  - 숨긴 댓글 수정 → 409 `COMMENT_HIDDEN`, 삭제는 본인 가능
+  - 관리자는 남의 댓글을 삭제하지 않고 숨김만 함 (기획 범위)
+  - 속도 제한 429 `COMMENT_RATE_LIMITED` + `retryAfterSec` + `Retry-After`
+  - 없는 글 좋아요·댓글 목록 → 404
+- 검증: js-yaml로 참조 확인(경로 38개, 깨진 참조 0). 구현은 바로 진행, 카운트 필드와 API는 한 번에 배포 (pm 조건)
