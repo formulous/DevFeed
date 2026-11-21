@@ -56,7 +56,7 @@ NestJS 12 + TypeORM(MariaDB, mysql2) API 서버. 명세는 `../docs/api/openapi.
   - 한계: 한도 카운터는 서버 메모리라 재시작하면 초기화됨 (단일 인스턴스 전제)
   - 배포 경로 확인 (015): 외부 경로와 로컬 호출을 번갈아 보내 `X-RateLimit-Remaining`이 따로 줄어드는지 확인. 같이 줄면 프록시가 실제 IP를 넘기지 못하는 것임 (Cloudflare Tunnel은 nginx에 127.0.0.1로 접속하므로 `set_real_ip_from 127.0.0.1` 필요)
     ```bash
-    curl -sI https://formulous.org/portfolio/api/tags?size=1 | grep -i ratelimit-remaining
+    curl -sI https://formulous.org/dev-feed/api/tags?size=1 | grep -i ratelimit-remaining
     curl -sI http://127.0.0.1:3000/api/tags?size=1 | grep -i ratelimit-remaining
     ```
 
@@ -105,12 +105,12 @@ npm test                   # Jest 단위 테스트
 server/deploy/install.sh     # 최초 1회: npm ci → build → ~/Library/LaunchAgents에 등록 → 헬스 체크
 server/deploy/deploy.sh      # 코드 갱신 후: npm ci → build → 재시작(kickstart -k) → 헬스 체크
 server/deploy/uninstall.sh   # 해제 (서버·로그 회전 에이전트 모두)
-launchctl print gui/$(id -u)/org.formulous.portfolio-server   # 상태
+launchctl print gui/$(id -u)/org.formulous.dev-feed-server   # 상태
 tail -f server/logs/server.log server/logs/server.err.log      # 로그 (gitignore)
 ```
 - 설치 전 `:3000`에 수동 실행 중인 서버가 있으면 `install.sh`가 중단함 (먼저 종료)
 - `.env`는 서버 디렉터리 기준으로 읽음 (`WorkingDirectory`). Node는 설치 시점의 `command -v node` 경로로 고정
-- 로그 회전: 별도 에이전트 `org.formulous.portfolio-logrotate`가 매시간 `deploy/rotate-logs.sh` 실행
+- 로그 회전: 별도 에이전트 `org.formulous.dev-feed-logrotate`가 매시간 `deploy/rotate-logs.sh` 실행
   - `server.log`·`server.err.log`·`logrotate.log`가 10MB를 넘거나 마지막 회전 후 24시간이 지나면 `*.1.gz`로 복사·압축 후 원본을 비움(copytruncate), 7세대 보관
   - 서버 재시작 불필요: launchd가 로그를 이어쓰기(`O_APPEND`) 모드로 열어서 원본을 비워도 파일 끝부터 이어 씀 (`lsof +fg`로 `AP` 플래그 확인)
   - 한계: 복사와 비우기 사이에 쓰인 몇 줄은 잃을 수 있음

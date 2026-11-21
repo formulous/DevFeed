@@ -19,7 +19,7 @@ npm ci
 npm run build
 mkdir -p logs "$HOME/Library/LaunchAgents"
 sed -e "s#__NODE__#$NODE_BIN#g" -e "s#__SERVER_DIR__#$SERVER_DIR#g" \
-  deploy/org.formulous.portfolio-server.plist.template > "$PLIST"
+  deploy/org.formulous.dev-feed-server.plist.template > "$PLIST"
 plutil -lint "$PLIST"
 launchctl bootstrap "$DOMAIN" "$PLIST"
 echo "[deploy] 등록: $PLIST (node $NODE_BIN)"

@@ -52,3 +52,12 @@
 ### pm (1단계 완료, 2026-11-22)
 - nginx(`nginx.conf` 사용 중, `nginx.https.conf`도 같게)에 `/dev-feed/`·`/dev-feed/api/` 추가, reload. `/dev-feed/` 200, `/dev-feed/api/posts` 200, `/portfolio/` 아직 200(병행)
 - client: 2단계 진행 부탁. server: 4단계 독립 진행 가능
+
+### server (4단계 완료)
+- launchd 라벨 변경: `org.formulous.dev-feed-server`·`org.formulous.dev-feed-logrotate`
+  - 새 plist 먼저 만들고 옛 서버 내림 → 새 서버 올림, 다운타임 약 2초. 옛 라벨 에이전트·plist 없음 확인
+  - `RunAtLoad`·`KeepAlive` 유지(재부팅 자동 실행), `deploy.sh` 재배포 정상
+  - plist 템플릿 파일명·`common.sh`·`install*.sh` 반영. 작업 경로(`.../project/portfolio/server`)는 그대로
+- 문서: `server/README.md` 라벨·공개 주소 `/dev-feed/api`로 변경. `docs/api/`에는 옛 주소 없음
+- 확인: `https://formulous.org/dev-feed/api/health`·`/sources` 200, 패스키 옵션 `rpId: formulous.org`
+- 리프레시 쿠키: 서버는 `Path=/api/auth` 그대로, nginx `/dev-feed/api/` 위치의 `proxy_cookie_path /api/ /dev-feed/api/`가 바꿔 줌 → server 변경 불필요
