@@ -46,6 +46,12 @@ export class Post {
   @Column({ name: 'view_count', type: 'int', unsigned: true, default: 0 })
   viewCount: number;
 
+  @Column({ name: 'like_count', type: 'int', unsigned: true, default: 0 })
+  likeCount: number;
+
+  @Column({ name: 'comment_count', type: 'int', unsigned: true, default: 0 })
+  commentCount: number;
+
   @Column({ name: 'created_at', type: 'datetime', precision: 3, insert: false, update: false })
   createdAt: Date;
 

@@ -6,6 +6,8 @@ export interface PostRow {
   thumbnail_url: string | null;
   published_at: Date;
   view_count: number;
+  like_count: number;
+  comment_count: number;
   source_id: number | string;
   source_name: string;
   source_logo_url: string | null;
@@ -28,6 +30,9 @@ export interface PostSummary {
   source: { id: number; name: string; logoUrl: string | null; type: 'COMPANY' | 'PERSONAL' };
   tags: { id: number; name: string }[];
   isPopular: boolean;
+  likeCount: number;
+  commentCount: number;
+  likedByMe: boolean;
   isBookmarked?: boolean;
   isRead?: boolean;
 }
@@ -35,6 +40,7 @@ export interface PostSummary {
 export interface UserFlags {
   bookmarked: Set<number>;
   read: Set<number>;
+  liked: Set<number>;
 }
 
 export function assembleCards(
@@ -71,6 +77,9 @@ export function assembleCards(
       },
       tags: tagsByPost.get(id) ?? [],
       isPopular: popular.has(id),
+      likeCount: Number(row.like_count),
+      commentCount: Number(row.comment_count),
+      likedByMe: flags?.liked.has(id) ?? false,
       viewCount: row.view_count,
     };
     if (flags) {

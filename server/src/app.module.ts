@@ -13,6 +13,7 @@ import { HealthModule } from './health/health.module';
 import { AppConfigModule } from './config/config.module';
 import { CrawlModule } from './crawl/crawl.module';
 import { PostsModule } from './posts/posts.module';
+import { ReactionsModule } from './reactions/reactions.module';
 import { RecommendationsModule } from './recommendations/recommendations.module';
 import { SearchModule } from './search/search.module';
 
@@ -26,7 +27,7 @@ import { SearchModule } from './search/search.module';
         skipIf: () => !env.rateLimitEnabled,
       }),
     }),
-    HealthModule, DatabaseModule, ScheduleModule.forRoot(), AuthModule, CrawlModule, AdminModule, CatalogModule, PostsModule, SearchModule, RecommendationsModule],
+    HealthModule, DatabaseModule, ScheduleModule.forRoot(), AuthModule, CrawlModule, AdminModule, CatalogModule, PostsModule, SearchModule, RecommendationsModule, ReactionsModule],
   providers: [
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
     { provide: APP_GUARD, useClass: ThrottlerGuard },

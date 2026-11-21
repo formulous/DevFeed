@@ -100,6 +100,7 @@ export class PostsService {
         ...card,
         isBookmarked: flags?.bookmarked.has(card.id) ?? false,
         isRead: flags?.read.has(card.id) ?? false,
+        likedByMe: flags?.liked.has(card.id) ?? false,
       })),
     };
   }

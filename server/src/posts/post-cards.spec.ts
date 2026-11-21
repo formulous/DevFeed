@@ -8,6 +8,8 @@ const row = (id: number) => ({
   thumbnail_url: null,
   published_at: new Date('2026-11-19T00:00:00Z'),
   view_count: id * 10,
+  like_count: id,
+  comment_count: id * 2,
   source_id: '1',
   source_name: 's',
   source_logo_url: null,
@@ -27,7 +29,7 @@ describe('assembleCards', () => {
   });
 
   it('회원이면 북마크·읽음 플래그를 붙임', () => {
-    const [card] = assembleCards([1], [row(1)], [], { bookmarked: new Set([1]), read: new Set() });
+    const [card] = assembleCards([1], [row(1)], [], { bookmarked: new Set([1]), read: new Set(), liked: new Set() });
     expect(card).toMatchObject({ isBookmarked: true, isRead: false });
     expect(withoutViewCount(card)).not.toHaveProperty('viewCount');
   });
@@ -36,6 +38,13 @@ describe('assembleCards', () => {
     const cards = assembleCards([1, 2], [row(1), row(2)], [], undefined, new Set([2]));
     expect(cards.map((c) => c.isPopular)).toEqual([false, true]);
     expect(assembleCards([1], [row(1)], [])[0].isPopular).toBe(false);
+  });
+
+  it('좋아요·댓글 수는 항상, likedByMe는 비회원 false (026)', () => {
+    const [guest] = assembleCards([1], [row(1)], []);
+    expect(guest).toMatchObject({ likeCount: 1, commentCount: 2, likedByMe: false });
+    const [member] = assembleCards([1], [row(1)], [], { bookmarked: new Set(), read: new Set(), liked: new Set([1]) });
+    expect(member.likedByMe).toBe(true);
   });
 
   it('사라진 글은 건너뜀', () => {

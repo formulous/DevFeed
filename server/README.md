@@ -67,13 +67,14 @@ src/
 ├── config/            # 환경변수 로드·검증
 ├── common/            # 에러 형식, 예외 필터, 검증 파이프, 커서, DB 설정
 ├── auth/              # 로그인·리프레시·로그아웃, JWT 가드, @Roles
-├── entities/          # DDL 0001~0004 매핑 (synchronize: false)
+├── entities/          # DDL 매핑 (synchronize: false), 0012 post_likes·comments 포함
 ├── ingest/            # 순수 함수: URL 정규화, 텍스트·요약, 토큰화, 태깅, 피드 파싱·fetch, 백오프
 ├── crawl/             # 스케줄러, 수집 실행, 글 저장·재색인, 태그 사전 캐시, 일일 정리
 ├── admin/             # 관리자 컨트롤러·서비스, 백그라운드 작업(재태깅)
 ├── me/                # GET /me
 ├── catalog/           # 공개 태그·소스 목록, 태그 글 수 캐시
 ├── posts/             # 피드·분야·인기 글·보안 뉴스·조회 기록, 카드 조립
+├── reactions/         # 좋아요·댓글·관리자 숨김, 탈퇴 시 반응 정리
 └── scripts/           # 관리자 계정 생성, 개발용 토큰 발급
 ```
 
@@ -160,6 +161,14 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - 관리자 소스: 목록 `?kind=`, 등록 시 `kind`·`region` 검증(뉴스는 `source_type = COMPANY`로 저장), 수정 시 `kind` 불가, 블로그 `region`·뉴스 `type` 400
   - 성능 (`devfeed_perf` 블로그 10만 + 뉴스, `perf/field-latency.js`, 페이지 21건 DB 시간): 분야 7개 단독 p95 0.5~2.9ms, 분야 + 개인 탭 최악 9.3ms, 최신 1.0ms, 보안 뉴스 0.4ms
 - 오류 메시지 말투 (024): 사용자에게 보이는 `message`·`fieldErrors[].message`는 해요체 (예: `로그인이 필요해요`, `2~20자로 입력해 주세요`). `code`·응답 형태는 그대로. 환경변수·스크립트·로그 같은 내부 메시지는 음슴체 유지
+- M8 좋아요·댓글 (026, 스키마 `0012`)
+  - 모든 `PostSummary`에 `likeCount`·`commentCount`(`posts` 카운터 컬럼, 카드 조회에 조인 추가 없음)·`likedByMe`(회원 플래그 조회에 `post_likes` PK 조회 1회, 비회원 `false`)
+  - 좋아요 `PUT`·`DELETE /api/posts/{id}/like`: 원하는 상태 지정, `INSERT IGNORE`/`DELETE` 영향 행이 1일 때만 카운터 증감
+  - 댓글: 목록(오래된 순 커서, 답글 3개 `ROW_NUMBER`로 한 번에), 답글 더보기, 작성(답글의 답글은 최상위로), 수정(숨김 409), 삭제(답글 있으면 자리 표시, 마지막 답글 삭제 시 자리 표시 정리), 관리자 숨김·해제(멱등)
+  - 잠금 순서: 회원 행(작성 시 속도 제한 직렬화) → 글 행 → 부모 댓글 → 댓글. 글 행을 먼저 `FOR UPDATE`로 잡아 같은 글 동시 쓰기의 FK 공유 잠금 → 카운터 갱신 데드락을 없앰 (측정 중 발견: 20개 동시 요청 일부 500)
+  - 속도 제한: DB의 최근 24시간 작성 시각으로 1분 5개·하루 200개, 429 `COMMENT_RATE_LIMITED` + `retryAfterSec` + `Retry-After`
+  - 탈퇴: `reactions/withdraw-reactions.ts`가 `db/queries/reactions.sql` 순서대로 카운터 감소 → 좋아요·답글 삭제 → 자리 표시·삭제 → 빈 자리 표시 정리 (FK RESTRICT라 빠뜨리면 회원 삭제 실패)
+  - 성능 (`devfeed_perf` 글 14만·좋아요 50만·댓글 15만, `perf/reactions-latency.js`, API p95): 최신 피드 게스트 2.5·회원 3.5·회원 10동시 7.8ms, 검색 "개발" 37~38·10동시 137.5ms, 댓글 2,000개 글 첫 페이지 2.0·10동시 6.9ms → 기준 300ms 이하
 - 태그 영어 표기 (023)
   - 태그 분류 값을 영어로 바꿈 (`Backend`·`Frontend`·`Data`·`Database`·`Infra`·`Cloud`·`Mobile`·`Security`·`Architecture`·`Design` 등). dba `0011` 적용 후 `posts/fields.ts`는 영어 값만 묶음 (전환 기간에는 한글·영어 병행 배포로 무중단 전환)
   - 태그 ID 유지, 이름만 영어로 바꾸고 한글 이름은 동의어로 보존 → 자동 태깅·검색(`post_search`에 이름 + 동의어 색인) 결과 유지
@@ -179,6 +188,7 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   node perf/search-profile.js           # 검색 쿼리 단계별 DB 시간
   node perf/search-accuracy.js          # 검색 정확성 (개발 서버 :3000 + devfeed, 읽기 전용)
   node perf/field-latency.js            # 분야·유형·보안 뉴스 피드 쿼리 DB 시간 (빌드 필요)
+  node perf/reactions-latency.js        # 좋아요·댓글 필드 포함 목록·댓글 API (측정 회원을 만들고 끝에 탈퇴)
   ```
 - 각 스크립트는 연결된 DB 이름을 확인하고 다르면 중단함 (`perf/_db.js`)
 
@@ -240,8 +250,8 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - `server/.env.test`가 있으면 그것을, 없으면 `.env`를 읽음. `.env`를 쓸 때는 `DB_DATABASE=devfeed_test npm run test:e2e`
   - 테스트가 실패해 데이터가 남으면 `db/scripts/test-db-reset.sh`(dba)로 초기화
 - 각 테스트가 소스·태그·글·회원을 직접 만들고 끝나면 지움 (실행 후 테스트 DB 0행 확인)
-- 현재 46건
-  - 탈퇴 잔존 (002 필수): `db/queries/withdrawal-check.sql`(dba)을 그대로 읽어 실행. 탈퇴 전 7개 테이블에 데이터가 있음을 확인한 뒤 탈퇴 → 7개 테이블 0건, 추천 로그 `user_id` NULL, 조회수 유지. 비밀번호 틀림 403, 탈퇴 후 로그인·리프레시·남은 토큰 거부
+- 현재 53건
+  - 탈퇴 잔존 (002 필수): `db/queries/withdrawal-check.sql`(dba)을 그대로 읽어 실행. 탈퇴 전 9개 테이블(좋아요·댓글 포함)에 데이터가 있음을 확인한 뒤 탈퇴 → 9개 테이블 0건, 추천 로그 `user_id` NULL, 조회수 유지. 비밀번호 틀림 403, 탈퇴 후 로그인·리프레시·남은 토큰 거부
   - 회원 흐름: 가입 검증·중복 → 관심 태그(개수·없는 태그 검증) → 온보딩 완료 → 북마크(멱등·커서·태그 필터·피드 플래그·해제) → 조회 → 읽은 기록(순서·개별·전체 삭제) → 닉네임 변경, 온보딩 건너뛰기, 북마크 5,000건 제한
   - 인증: 리프레시 교체, 30초 이내 재사용 401, 30초 지난 재사용 시 계열 전체 폐기, 로그아웃, 5회 실패 잠금
   - 추천: 콜드 스타트, 개인화(이유·제외·채움·다양성·커서), 다른 회원 커서 거부, 클릭 1회 기록·타인 클릭 무시, 일별 집계
@@ -255,4 +265,5 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - 관리자 보안 뉴스 소스: 지역 누락·블로그 지역 400, 종류 변경 400, 지역 수정, `?kind=` 필터, 수집 시 요약 150자·썸네일 없음·검색 색인 없음·`post_tags.kind`·날짜만 있는 발행일
   - 태그 영어화 (023): 한글 이름 → 영어 이름 + 한글 동의어로 바꾸고 재태깅해도 태그 글(제목·피드 카테고리 매칭)·한글 검색 결과 동일, 영어 검색 일치, 영어 분류 값도 같은 분야
   - 오류 메시지 해요체 (024): 검증·중복 가입·로그인 실패·미인증·검색어·커서·분야·404 응답의 `code` 유지, `message`·`fieldErrors` 해요체
+  - 좋아요·댓글 (026): 게스트 401·없는 글 404, 같은 회원 20개 동시 요청(켜기·끄기 섞음/켜기만) 후 행·카운터 일치, 카드 `likeCount`·`likedByMe`, 작성 검증(공백·1,001자)·원문 그대로·답글의 답글 승격·다른 글 부모 404, 목록 커서·답글 3개·이어 받기, 수정 본인만·`editedAt`, 관리자 숨김 수 감소·멱등·내용 가림·숨김 수정 409, 삭제 자리 표시·자리 표시 정리, 속도 제한 429·`Retry-After`, 탈퇴 후 잔존 0·자리 표시·수 일치, 정합성 검사 6항목(`db/queries/reactions.sql`) 0
   - 스모크: `GET /api/sources`

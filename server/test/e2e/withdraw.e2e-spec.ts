@@ -12,13 +12,15 @@ describe('F-032 탈퇴 후 개인 데이터 잔존 (002 결정 필수)', () => {
     await t.close();
   });
 
-  it('개인 데이터 7개 테이블 잔존 0건, 추천 로그 익명화, 조회수 유지', async () => {
+  it('개인 데이터 9개 테이블 잔존 0건, 추천 로그 익명화, 조회수 유지', async () => {
     const { tagIds, postIds } = await createFixtures(t, 3);
     const user = await signup(t, 'withdraw');
 
     expect((await api(t, 'PUT', '/me/interest-tags', { token: user.token, body: { tagIds: tagIds.slice(0, 3) } })).status).toBe(200);
     expect((await api(t, 'PUT', `/me/bookmarks/${postIds[0]}`, { token: user.token })).status).toBe(204);
     expect((await api(t, 'POST', `/posts/${postIds[1]}/views`, { token: user.token })).status).toBe(204);
+    expect((await api(t, 'PUT', `/posts/${postIds[0]}/like`, { token: user.token })).status).toBe(200);
+    expect((await api(t, 'POST', `/posts/${postIds[0]}/comments`, { token: user.token, body: { content: '탈퇴 전 댓글' } })).status).toBe(201);
     await t.db.query(
       `INSERT INTO recommendation_impressions (request_id, user_id, post_id, algorithm, position, shown_at)
        VALUES (UNHEX(REPLACE(UUID(), '-', '')), ?, ?, 'TAG_V1', 1, UTC_TIMESTAMP(3))`,
@@ -34,6 +36,8 @@ describe('F-032 탈퇴 후 개인 데이터 잔존 (002 결정 필수)', () => {
       read_histories: 1,
       recommendation_impressions: 1,
       post_view_guards: 1,
+      post_likes: 1,
+      comments: 1,
     });
 
     const wrong = await api(t, 'POST', '/me/withdraw', { token: user.token, body: { password: 'wrong999' } });
@@ -53,6 +57,8 @@ describe('F-032 탈퇴 후 개인 데이터 잔존 (002 결정 필수)', () => {
       read_histories: 0,
       recommendation_impressions: 0,
       post_view_guards: 0,
+      post_likes: 0,
+      comments: 0,
     });
 
     const [impression] = (await t.db.query('SELECT user_id FROM recommendation_impressions WHERE post_id = ?', [

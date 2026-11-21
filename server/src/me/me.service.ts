@@ -8,6 +8,7 @@ import { viewerKey } from '../common/visitor/visitor';
 import type { UserRole } from '../entities/user.entity';
 import { withoutViewCount } from '../posts/post-cards';
 import { PostCardsService } from '../posts/post-cards.service';
+import { removeReactions } from '../reactions/withdraw-reactions';
 import { BOOKMARK_LIMIT, bookmarkListQuery, historyListQuery } from './personal-list';
 
 export interface MeResponse {
@@ -190,6 +191,7 @@ export class MeService {
     await this.dataSource.transaction(async (manager) => {
       await manager.query('UPDATE recommendation_impressions SET user_id = NULL WHERE user_id = ?', [userId]);
       await manager.query('DELETE FROM post_view_guards WHERE viewer_key = ?', [viewerKey({ userId })]);
+      await removeReactions(manager, userId);
       await manager.query('DELETE FROM users WHERE id = ?', [userId]);
     });
   }

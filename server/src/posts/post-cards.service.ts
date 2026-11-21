@@ -15,7 +15,7 @@ export class PostCardsService {
     const marks = ids.map(() => '?').join(', ');
     const [posts, tags, flags, popular] = await Promise.all([
       this.dataSource.query(
-        `SELECT p.id, p.title, p.summary, p.url, p.thumbnail_url, p.published_at, p.view_count,
+        `SELECT p.id, p.title, p.summary, p.url, p.thumbnail_url, p.published_at, p.view_count, p.like_count, p.comment_count,
                 s.id AS source_id, s.name AS source_name, s.logo_url AS source_logo_url, s.source_type
            FROM posts p JOIN sources s ON s.id = p.source_id
           WHERE p.id IN (${marks})`,
@@ -34,7 +34,7 @@ export class PostCardsService {
 
   async flags(userId: number, ids: number[]): Promise<UserFlags> {
     const marks = ids.map(() => '?').join(', ');
-    const [bookmarked, read] = await Promise.all([
+    const [bookmarked, read, liked] = await Promise.all([
       this.dataSource.query(`SELECT post_id FROM bookmarks WHERE user_id = ? AND post_id IN (${marks})`, [
         userId,
         ...ids,
@@ -43,10 +43,15 @@ export class PostCardsService {
         userId,
         ...ids,
       ]) as Promise<{ post_id: number | string }[]>,
+      this.dataSource.query(`SELECT post_id FROM post_likes WHERE user_id = ? AND post_id IN (${marks})`, [
+        userId,
+        ...ids,
+      ]) as Promise<{ post_id: number | string }[]>,
     ]);
     return {
       bookmarked: new Set(bookmarked.map((r) => Number(r.post_id))),
       read: new Set(read.map((r) => Number(r.post_id))),
+      liked: new Set(liked.map((r) => Number(r.post_id))),
     };
   }
 }

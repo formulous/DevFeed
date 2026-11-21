@@ -26,3 +26,18 @@ export function decodeCursor(raw: string): TimeIdCursor {
     throw Errors.invalidCursor();
   }
 }
+
+export function encodeIdCursor(id: number): string {
+  return Buffer.from(JSON.stringify({ i: id })).toString('base64url');
+}
+
+export function decodeIdCursor(raw: string): number {
+  try {
+    const parsed: unknown = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8'));
+    const i = (parsed as { i?: unknown } | null)?.i;
+    if (typeof i !== 'number' || !Number.isSafeInteger(i) || i < 1) throw new Error('shape');
+    return i;
+  } catch {
+    throw Errors.invalidCursor();
+  }
+}

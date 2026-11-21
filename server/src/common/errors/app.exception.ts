@@ -50,6 +50,9 @@ export const Errors = {
       'SYNONYM_DUPLICATED',
       synonym ? `동의어 '${synonym}'이(가) 다른 태그에 이미 있어요` : '동의어가 다른 태그에 이미 있어요',
     ),
+  commentRateLimited: (retryAfterSec: number) =>
+    new AppException(429, 'COMMENT_RATE_LIMITED', '잠시 후 다시 남겨 주세요', { retryAfterSec }),
+  commentHidden: () => new AppException(409, 'COMMENT_HIDDEN', '관리자가 숨긴 댓글은 수정할 수 없어요'),
   jobAlreadyRunning: () =>
     new AppException(409, 'JOB_ALREADY_RUNNING', '같은 작업이 이미 실행 중이에요'),
 };

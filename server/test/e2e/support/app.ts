@@ -7,6 +7,7 @@ import { DataSource } from 'typeorm';
 import { AppModule } from '../../../src/app.module';
 import { configureApp } from '../../../src/app.setup';
 import { viewerKey } from '../../../src/common/visitor/visitor';
+import { removeReactions } from '../../../src/reactions/withdraw-reactions';
 
 export interface TestApp {
   app: INestApplication;
@@ -113,6 +114,8 @@ export async function createFixtures(t: TestApp, postCount = 3) {
 
 export async function cleanup(t: TestApp): Promise<void> {
   const like = `e2e-${t.runId}-%`;
+  const users = (await t.db.query('SELECT id FROM users WHERE email LIKE ?', [like])) as { id: number | string }[];
+  for (const { id } of users) await t.db.transaction((manager) => removeReactions(manager, Number(id)));
   await t.db.query('DELETE FROM users WHERE email LIKE ?', [like]);
   const sources = (await t.db.query('SELECT id FROM sources WHERE feed_url LIKE ?', [
     `https://e2e-${t.runId}.test/%`,
@@ -147,4 +150,14 @@ export async function residualPersonalData(t: TestApp, userId: number): Promise<
   } finally {
     await runner.release();
   }
+}
+
+const REACTIONS_CHECK = (() => {
+  const sql = readFileSync(join(__dirname, '..', '..', '..', '..', 'db', 'queries', 'reactions.sql'), 'utf8');
+  return sql.slice(sql.indexOf('-- 026 consistency check')).split('\n').filter((line) => !line.trim().startsWith('--')).join('\n').trim().replace(/;$/, '');
+})();
+
+export async function reactionMismatches(t: TestApp): Promise<Record<string, number>> {
+  const [row] = (await t.db.query(REACTIONS_CHECK)) as Record<string, number | string>[];
+  return Object.fromEntries(Object.entries(row).map(([k, v]) => [k, Number(v)]));
 }
