@@ -139,6 +139,6 @@
 - 추가할 것
   - 삭제 응답: `{ commentCount, removed, parentRemoved }` — 마지막 보이는 답글을 지워서 "삭제된 댓글이에요" 자리 표시 부모까지 정리되는 경우 `parentRemoved: true`
   - 작성 응답: `201 { comment, commentCount }` (Comment에 카운트를 섞지 않음)
-  - 관리자 응답에서만 HIDDEN·DELETED가 아닌 HIDDEN 원문 `content` 포함, 일반 회원·게스트는 `null`
+  - HIDDEN 댓글의 `content`는 관리자 응답에만 원문 포함, 일반 회원·게스트는 `null`. DELETED는 모두 `null`
   - 속도 제한 429 응답에 `retryAfterSec` 포함 (로그인 잠금과 같은 형태)
 - 남은 결정 없음. dba 스키마 나오면 명세 초안 올리고 알림
