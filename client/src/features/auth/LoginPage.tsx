@@ -47,12 +47,15 @@ export function LoginPage() {
       .then(async (credential) => {
         if (!active || !credential) return;
         setPending('passkey');
-        await loginWithPasskey(credential);
+        try {
+          await loginWithPasskey(credential);
+        } catch (err) {
+          if (active) setPasskeyMessage(passkeyError(err));
+        } finally {
+          if (active) setPending(null);
+        }
       })
-      .catch((err) => {
-        if (active && !isPasskeyCancel(err)) setPasskeyMessage(passkeyError(err));
-      })
-      .finally(() => active && setPending(null));
+      .catch(() => undefined);
     return () => {
       active = false;
       cancelPasskeyCeremony();

@@ -1,6 +1,8 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { server } from '@/mocks/node';
 import { App } from '@/App';
 import { deviceName } from '@/lib/passkey';
 import { mockPasskeys, seedPasskey } from '@/mocks/passkeys';
@@ -97,6 +99,50 @@ describe('S-05 로그인 개편·F-034 패스키 (027)', () => {
     await waitFor(() => expect(webauthn.startAuthentication).toHaveBeenCalledWith(expect.objectContaining({ useBrowserAutofill: true })));
     pick(assertion('cred-admin'));
     await waitFor(() => expect(currentLocation).toBe('/security'));
+  });
+
+  it.each([
+    ['AbortError'],
+    ['NotSupportedError'],
+    ['InvalidStateError'],
+    ['SecurityError'],
+    ['Error'],
+  ])('자동완성 요청이 %s로 끝나도 오류를 보이지 않음', async (name) => {
+    webauthn.autofill = true;
+    webauthn.startAuthentication.mockRejectedValue(Object.assign(new Error('x'), { name }));
+    const user = userEvent.setup();
+    renderWithApp(<App />, '/login');
+    await user.click(await screen.findByRole('button', { name: '이메일로 계속하기' }));
+    await waitFor(() => expect(webauthn.startAuthentication).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 20));
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('자동완성 옵션 요청이 실패해도 조용함, 고른 패스키가 서버에서 거부되면 안내함', async () => {
+    webauthn.autofill = true;
+    server.use(http.post('*/api/auth/passkeys/login/options', () => HttpResponse.json({ code: 'INTERNAL', message: 'x' }, { status: 500 }), { once: true }));
+    const user = userEvent.setup();
+    const view = renderWithApp(<App />, '/login');
+    await user.click(await screen.findByRole('button', { name: '이메일로 계속하기' }));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(webauthn.startAuthentication).not.toHaveBeenCalled();
+    view.unmount();
+
+    webauthn.startAuthentication.mockResolvedValue(assertion('unknown'));
+    renderWithApp(<App />, '/login');
+    await user.click(await screen.findByRole('button', { name: '이메일로 계속하기' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('이 패스키로 가입된 계정을 찾을 수 없어요');
+  });
+
+  it('자동완성 미지원이면 요청하지 않음', async () => {
+    webauthn.autofill = false;
+    const user = userEvent.setup();
+    renderWithApp(<App />, '/login');
+    await user.click(await screen.findByRole('button', { name: '이메일로 계속하기' }));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(webauthn.startAuthentication).not.toHaveBeenCalled();
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('가입 → 패스키 만들기 → 로그아웃 → 패스키 로그인', async () => {
