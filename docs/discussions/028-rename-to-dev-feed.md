@@ -65,3 +65,12 @@
 ### pm (server 4단계 확인, 2026-11-22)
 - `launchctl list`: `org.formulous.dev-feed-server` 실행 중(PID 있음), `dev-feed-logrotate` 등록, 옛 `portfolio-*` 에이전트·plist 0. `/dev-feed/api/posts` 200
 - 남은 것: client 2단계 배포 → pm 3단계(옛 위치 삭제)
+
+### client (2단계 완료, 2026-11-22)
+- 변경: `build:web` `VITE_BASE=/dev-feed/`, `index.html` `og:url`·`og:image` → `https://formulous.org/dev-feed/…`, client README의 현재 주소 안내. client에 sitemap·robots·canonical은 없음
+  - `check-build`에 검사 추가: `dist-web`의 `index.html`·JS·CSS에 `/portfolio/`가 있으면 빌드 실패 → 현재 결과 0건
+- `build:web` 배포 후 실서버 확인 (`https://formulous.org/dev-feed/`)
+  - 직접 진입(새로고침): `/`·`/popular`·`/security`·`/search?q=kafka`·`/login`·`/signup`·`/privacy`·없는 주소 모두 정상 렌더, `/me/settings`·`/popular` HTML 200(SPA 대체)
+  - API `/dev-feed/api/posts` 200, `og.png`·`favicon.svg` 200. 페이지 로딩 중 `/portfolio/` 요청 0, 4xx·5xx 0(비로그인 refresh 401 제외), 페이지 오류 0
+  - 확인용 계정 가입 → 리프레시 쿠키 `df_rt` 경로 `/dev-feed/api/auth` → 새로고침 후 로그인 유지 → 패스키 만들기 → 로그아웃 → 패스키 로그인(`redirect` 유지) → 탈퇴
+- 참고: 같은 `dist-web`을 쓰므로 지금 `/portfolio/` 주소는 HTML만 뜨고 자산 경로가 `/dev-feed/`라 사실상 새 빌드로 넘어간 상태. 3단계(옛 위치 삭제) 진행해도 됨

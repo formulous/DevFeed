@@ -1,7 +1,7 @@
 # DevFeed client
 
 - 담당: `client`
-- 상태: MVP 완료 (M0~M6, 2026-11-19). 공개 주소 https://formulous.org/portfolio/ . S-01 홈 피드, S-03 인기 글, S-04 검색, S-05 로그인, S-06 가입, S-07 온보딩, S-08 북마크, S-09 읽은 기록, S-10 설정·탈퇴, S-02 추천(M5), A-01~A-04 관리자 화면 동작
+- 상태: MVP 완료 (M0~M6, 2026-11-19). 공개 주소 https://formulous.org/dev-feed/ (2026-11-22 `/portfolio/`에서 변경, `docs/discussions/028`). S-01 홈 피드, S-03 인기 글, S-04 검색, S-05 로그인, S-06 가입, S-07 온보딩, S-08 북마크, S-09 읽은 기록, S-10 설정·탈퇴, S-02 추천(M5), A-01~A-04 관리자 화면 동작
 - 검증 환경: Node 24.22.3
 - API 타입·mock은 `docs/api/openapi.yaml` v1(004에서 승인)과 `docs/api/conventions.md` 기준. 현재 구현 범위(posts, tags, sources, auth, me, bookmarks, views)만 반영
 - 기준 문서: `docs/spec/02-features.md`, `docs/spec/03-screens.md`
@@ -342,13 +342,13 @@ npm run capture    # 반응형 점검·README용 스크린샷 (Playwright, 최�
   - 768px은 사이드바가 "필터" 버튼으로 접힘(의도), 관리자 표·수집 이력·태그 사전 표는 360px에서 표 안에서만 가로 스크롤(의도)
 
 ## 하위 경로 배포 (외부 확인용)
-- `https://formulous.org/portfolio/` 에서 실서버 연동 빌드를 확인함 (`docs/discussions/009-external-preview-formulous.md`)
-- `npm run build:web` → `dist-web/` (`VITE_BASE=/portfolio/`, mock 끔). `dist-web/`는 git 제외
+- `https://formulous.org/dev-feed/` 에서 실서버 연동 빌드를 확인함 (`docs/discussions/009`, 028에서 `/portfolio/` → `/dev-feed/`)
+- `npm run build:web` → `dist-web/` (`VITE_BASE=/dev-feed/`, mock 끔). `dist-web/`는 git 제외. `check-build`가 결과에 옛 주소 `/portfolio/`가 남으면 실패시킴
 - 하위 경로 처리
   - Vite `base`: `VITE_BASE` 환경변수 (기본 `/`)
   - 라우터: `BrowserRouter basename` = `BASE_URL`에서 끝 슬래시 제거
-  - API: `apiUrl`이 `${BASE_URL}api` 기준 → `/portfolio/api/...` (조회 기록 keepalive 포함)
-- nginx 설정은 pm 담당. `/portfolio/api/` → `127.0.0.1:3000/api/` 프록시, 리프레시 쿠키 경로 변환
+  - API: `apiUrl`이 `${BASE_URL}api` 기준 → `/dev-feed/api/...` (조회 기록 keepalive 포함)
+- nginx 설정은 pm 담당. `/dev-feed/api/` → `127.0.0.1:3000/api/` 프록시, 리프레시 쿠키 경로 변환
 
 ## 실서버 확인 (M5 추천)
 - 2026-11-19 `:3000`, 확인용 계정 가입 → 확인 → 탈퇴
