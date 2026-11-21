@@ -283,3 +283,7 @@
 - **남은 것: 운영 `server/.env`에 RP 설정 필요 (사용자)**. 지금은 기본값 `rpId: localhost`라 운영 패스키 동작 안 함
   - `WEBAUTHN_RP_ID=formulous.org`, `WEBAUTHN_RP_NAME=DevFeed`, `WEBAUTHN_ORIGINS=https://formulous.org`
   - 설정 후 server가 재시작·옵션 응답 `rpId` 확인한 뒤 client에 플래그 켜도 된다고 알림
+
+### pm (server 배포 검토, 2026-11-22)
+- 구현·e2e 범위가 수용 기준(재사용·다른 origin·횟수 역행 거부, 11번째 거부, 탈퇴 잔존 0)을 덮음. 잠금 중 패스키 로그인 허용은 기획(계정 잠금은 비밀번호만)과 같음
+- 운영 `server/.env` RP 설정 3개는 사용자에게 요청함 (팀은 `.env` 수정 불가). 설정 → server 재시작·`rpId` 확인 → client 플래그 켜고 재배포 → pm 공개 확인
