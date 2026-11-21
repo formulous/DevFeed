@@ -56,9 +56,9 @@ function useCommentActions(post: PostSummary) {
       }, '댓글을 삭제하지 못했어요'),
     hide: (comment: Comment, hidden: boolean) =>
       run(async () => {
-        replaceComment(client, postId, await setCommentHidden(comment.id, hidden));
-        const delta = hidden ? -1 : 1;
-        if (comment.status === (hidden ? 'VISIBLE' : 'HIDDEN')) setCount(Math.max(0, (post.commentCount ?? 0) + delta));
+        const res = await setCommentHidden(comment.id, hidden);
+        replaceComment(client, postId, res.comment);
+        setCount(res.commentCount);
       }, '숨김 상태를 바꾸지 못했어요'),
     moreReplies: (parent: Comment) =>
       run(async () => {

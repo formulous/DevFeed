@@ -65,10 +65,12 @@ export interface LikeResult {
   likeCount: number;
 }
 
-export interface CommentCreated {
+export interface CommentWithCount {
   comment: Comment;
   commentCount: number;
 }
+
+export type CommentCreated = CommentWithCount;
 
 export interface CommentRemoved {
   commentCount: number;

@@ -183,13 +183,19 @@ describe('F-080·F-081 반응 줄 (026)', () => {
     await seedLogin('admin@devfeed.dev');
     const user = userEvent.setup();
     renderWithApp(<App />, '/');
+    const card = within(await busyCard());
+    const countButton = () => card.getByRole('button', { name: /^댓글 \d+개$/ });
+    await waitFor(() => expect(countButton()).toBeInTheDocument());
+    const start = Number(countButton().getAttribute('aria-label')!.match(/\d+/)![0]);
     const region = await openComments(user);
     expect(await region.findByText('광고성 댓글')).toBeInTheDocument();
     const first = within(region.getByText(/리밸런싱 시간 줄이는 설정/).closest('div')!);
     await user.click(first.getByRole('button', { name: '숨김' }));
     await waitFor(() => expect(region.getAllByText('관리자가 숨긴 댓글이에요')).toHaveLength(2));
+    expect(countButton()).toHaveAccessibleName(`댓글 ${start - 1}개`);
     await user.click(region.getAllByRole('button', { name: '숨김 해제' })[0]);
     await waitFor(() => expect(region.getAllByText('관리자가 숨긴 댓글이에요')).toHaveLength(1));
+    expect(countButton()).toHaveAccessibleName(`댓글 ${start}개`);
   });
 
   it('읽은 기록 화면에는 반응 줄이 없음', async () => {

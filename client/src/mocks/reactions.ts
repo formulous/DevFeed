@@ -280,7 +280,7 @@ export function reactionHandlers({ isMember, me, error }: Ctx) {
         const found = findComment(Number(params.id));
         if (!found || found.c.status === 'DELETED') return error(404, 'NOT_FOUND', '대상을 찾을 수 없어요');
         found.c.status = hidden ? 'HIDDEN' : 'VISIBLE';
-        return HttpResponse.json(toApi(found.c, v, found.list, false));
+        return HttpResponse.json({ comment: toApi(found.c, v, found.list, false), commentCount: commentCount(found.postId) });
       }),
     ),
   ];

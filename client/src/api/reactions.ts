@@ -1,5 +1,5 @@
 import { request } from './http';
-import type { Comment, CommentCreated, CommentRemoved, CursorPage, LikeResult } from './types';
+import type { Comment, CommentCreated, CommentWithCount, CommentRemoved, CursorPage, LikeResult } from './types';
 
 export const COMMENT_PAGE_SIZE = 20;
 export const COMMENT_MAX = 1000;
@@ -33,5 +33,5 @@ export function deleteComment(commentId: number) {
 }
 
 export function setCommentHidden(commentId: number, hidden: boolean) {
-  return request<Comment>(`/admin/comments/${commentId}/hidden`, { method: hidden ? 'PUT' : 'DELETE' });
+  return request<CommentWithCount>(`/admin/comments/${commentId}/hidden`, { method: hidden ? 'PUT' : 'DELETE' });
 }

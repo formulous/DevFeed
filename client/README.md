@@ -191,7 +191,7 @@ App
   - 버튼은 원문 링크 덮개(`a::after`) 위 `z-10`, 댓글 영역은 `article` 밖 형제로 펼쳐서 원문 이동이 일어나지 않음
 - 좋아요 `useToggleLike`(`hooks/usePostActions.ts`): 낙관적 토글 + 글별 직렬화(진행 중 요청이 있으면 마지막 의도만 이어서 보냄), 실패 시 연타 시작 전 값으로 되돌림. 게스트는 로그인 안내
 - 댓글 `components/comments/`: 펼칠 때 `['comments', postId]` 무한 쿼리로 처음 불러옴. 작성·수정·삭제·숨김·답글 더보기는 응답으로 캐시를 직접 고치고(`commentCache.ts`), 응답의 `commentCount`로 목록 항목 수를 맞춤
-  - 삭제 응답 `removed`·`parentRemoved`로 자리 표시("삭제된 댓글이에요")를 남길지 부모까지 지울지 정함
+  - 작성·숨김·숨김 해제 응답은 `{ comment, commentCount }`. 삭제 응답 `removed`·`parentRemoved`로 자리 표시("삭제된 댓글이에요")를 남길지 부모까지 지울지 정함
   - 내용은 텍스트 노드 + `whitespace-pre-wrap`으로만 렌더 (HTML 해석 없음). 입력은 1,000자 카운터, 앞뒤 공백 제거 후 빈 값이면 등록 비활성, `Ctrl/⌘+Enter` 등록
 - mock: `mocks/reactions.ts` (첫 글에 댓글 25개·답글 5개·삭제 자리·숨김·`<script>` 문구, 좋아요 1,234). 캡처 `S-01-comments`(360·1280, 관리자)
 
