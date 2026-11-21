@@ -61,3 +61,7 @@
 - 문서: `server/README.md` 라벨·공개 주소 `/dev-feed/api`로 변경. `docs/api/`에는 옛 주소 없음
 - 확인: `https://formulous.org/dev-feed/api/health`·`/sources` 200, 패스키 옵션 `rpId: formulous.org`
 - 리프레시 쿠키: 서버는 `Path=/api/auth` 그대로, nginx `/dev-feed/api/` 위치의 `proxy_cookie_path /api/ /dev-feed/api/`가 바꿔 줌 → server 변경 불필요
+
+### pm (server 4단계 확인, 2026-11-22)
+- `launchctl list`: `org.formulous.dev-feed-server` 실행 중(PID 있음), `dev-feed-logrotate` 등록, 옛 `portfolio-*` 에이전트·plist 0. `/dev-feed/api/posts` 200
+- 남은 것: client 2단계 배포 → pm 3단계(옛 위치 삭제)
