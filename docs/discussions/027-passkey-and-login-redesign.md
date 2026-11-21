@@ -214,3 +214,21 @@
   - 옵션 응답은 `options` 객체를 감싸지 않고 본문 그대로, 검증 요청은 `{ credential, name? }`(등록) / `{ credential }`(로그인)
 - dba 챌린지 테이블은 server 1차안(`challenge_hash` PK) 그대로
 - 다음: dba 스키마 나오면 명세 작성 후 client·pm 대조 요청
+
+### dba (1차) — 스키마 `0013` (pm 결정·server 3차 기준)
+- `db/migrations/0013_create_passkeys.sql`, 쿼리 예시 `db/queries/passkeys.sql`
+  | 대상 | 내용 |
+  |---|---|
+  | `webauthn_challenges` | server 1차안 그대로: `challenge_hash BINARY(32)` PK, `purpose`, `user_id` NULL FK CASCADE(CHECK: REGISTER만 필수), `expires_at` 인덱스, `created_at` |
+  | `user_passkeys` | `credential_id VARBINARY(1023)` UK(16바이트 이상 CHECK), `public_key VARBINARY(2048)`, `sign_count INT UNSIGNED`, `transports VARCHAR(255)`, `aaguid BINARY(16)`, `backup_eligible`·`backup_state` BOOLEAN, `name VARCHAR(40)`(공백 아닌 1자 이상 CHECK), `created_at`·`last_used_at`·`updated_at`, `(user_id, created_at)` 인덱스, FK CASCADE |
+  | `users` | `webauthn_handle BINARY(32) NULL UNIQUE` |
+- server 3번과 다른 점
+  - **user handle은 `users.id` 대신 `users.webauthn_handle` 랜덤 32바이트** 권장: 표준이 식별 정보 없는 랜덤값을 권장하고, 순번 id면 인증기(동기화되는 비밀번호 관리자 포함)에 가입 순서·회원 수가 남음. 첫 등록 트랜잭션에서 `NULL`이면 채우고 이후 고정. 로그인은 credential id로 찾고 userHandle이 이 값과 같은지만 확인. server가 `users.id` 방식을 꼭 원하면 의견 주기 바람 (컬럼만 비워 두면 됨)
+  - `backed_up` 대신 `backup_eligible`·`backup_state` 두 플래그 (등록 응답의 BE·BS 그대로). 화면 표시는 안 함 (pm 결정과 같음)
+  - `public_key` 2048, `transports` 255로 여유 (가변 길이라 저장 비용 같음)
+- 동작 규칙 (`passkeys.sql`): 챌린지 소비 `DELETE ... WHERE challenge_hash = ? AND purpose = ? AND expires_at > now` 영향 행 1 / 발급 때 만료 행 100개 정리 / 서명 횟수 `WHERE (? > sign_count OR (? = 0 AND sign_count = 0))` 영향 행 0이면 거부 / 등록은 `users` 행 `FOR UPDATE` → 개수 확인 → 삽입
+- 탈퇴: 두 테이블 FK CASCADE (파생 카운터 없음). `withdrawal-check.sql`에 `user_passkeys`·`webauthn_challenges` 추가 → server e2e 잔존 검사 11개 테이블
+- 검증 (`devfeed_test`·`devfeed_perf` up → down → up 통과)
+  - 챌린지: 첫 소비 1, 재사용 0, 만료 0. REGISTER인데 회원 없음 → CHECK 거부
+  - 패스키: 같은 credential 재등록 1062(→ `PASSKEY_ALREADY_REGISTERED`), 이름 공백·41자 거부, credential 8바이트 거부. 서명 횟수 역행 영향 0·증가 1. credential 조회 `const`
+- 운영 `devfeed` 적용은 사용자 확인 후 (적용해도 현재 서버 영향 없음: nullable 컬럼 1개·새 테이블 2개)

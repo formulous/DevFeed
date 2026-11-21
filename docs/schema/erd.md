@@ -1,9 +1,9 @@
 # ERD — 데브피드
 
 - 작성: dba
-- 상태: v1.2 (M8, 2026-11-21). 마이그레이션 0001~0012 기준
+- 상태: v1.3 (M9, 2026-11-22). 마이그레이션 0001~0013 기준
 - DB: `devfeed` (MariaDB 12.1, InnoDB, utf8mb4_unicode_ci)
-- DDL: `db/migrations/0001~0012`, 컬럼 상세: `tables.md`, 결정 근거: `decisions.md`
+- DDL: `db/migrations/0001~0013`, 컬럼 상세: `tables.md`, 결정 근거: `decisions.md`
 
 ```mermaid
 erDiagram
@@ -24,6 +24,24 @@ erDiagram
     users |o..o{ recommendation_impressions : "FK 없음"
     posts ||..o{ recommendation_impressions : "FK 없음"
     users ||--o{ post_likes : likes
+    users ||--o{ user_passkeys : has
+    users |o--o{ webauthn_challenges : "REGISTER만"
+
+    user_passkeys {
+        bigint id PK
+        bigint user_id FK
+        varbinary credential_id UK
+        varbinary public_key
+        int sign_count
+        varchar name "40자"
+        datetime last_used_at
+    }
+    webauthn_challenges {
+        binary challenge_hash PK "SHA-256"
+        enum purpose "REGISTER|LOGIN"
+        bigint user_id FK
+        datetime expires_at "5분"
+    }
     posts ||--o{ post_likes : liked
     posts ||--o{ comments : has
     users |o--o{ comments : writes
@@ -166,6 +184,7 @@ erDiagram
 | 태그 | `tags`, `tag_synonyms` | 태그 사전과 동의어 | F-005, A-04 |
 | 태그 | `post_tags` | 글-태그 연결, 노출 순서, 태그 필터용 정렬 키 | F-005, F-011 |
 | 회원 | `users`, `refresh_tokens` | 계정·로그인 제한·리프레시 토큰 | F-030, F-032 |
+| 회원 | `user_passkeys`, `webauthn_challenges` | 패스키 공개키·서명 횟수, 1회용 챌린지(5분) | F-034 |
 | 개인화 | `user_interest_tags` | 관심 태그 | F-031, F-042 |
 | 개인화 | `bookmarks`, `read_histories` | 북마크, 읽은 기록(1년) | F-040, F-041, F-042 |
 | 반응 | `post_likes`, `comments` | 좋아요, 댓글·답글(1단계) | F-080, F-081 |

@@ -7,9 +7,9 @@
 db/
 ├── conf/devfeed.cnf     # MariaDB 서버 설정 (FULLTEXT 토큰 2자, stopword 끔, UTC)
 ├── perf/                # 성능 측정용 대량 시드 생성기, 측정 스크립트
-├── queries/            # feed.sql(007·021 분야·보안 뉴스·kind 정합성 검사), reactions.sql(026 좋아요·댓글·탈퇴·정합성 검사), personal.sql·withdrawal-check.sql(012), recommendation.sql(013) 기준 쿼리
+├── queries/            # feed.sql(007·021 분야·보안 뉴스·kind 정합성 검사), reactions.sql(026 좋아요·댓글·탈퇴·정합성 검사), passkeys.sql(027 패스키·챌린지), personal.sql·withdrawal-check.sql(012), recommendation.sql(013) 기준 쿼리
 ├── ops/                 # launchd 일일 백업 템플릿·설치 스크립트
-├── migrations/          # 0001~0012, -- migrate:up / -- migrate:down
+├── migrations/          # 0001~0013, -- migrate:up / -- migrate:down
 ├── scripts/migrate.sh   # 컨테이너에 마이그레이션 적용
 ├── scripts/seed.sh      # seeds/*.sql 순서대로 적용 (재실행 안전)
 ├── scripts/perf-seed.sh # 측정 DB(devfeed_perf)에 글 10만·회원 1만 생성
@@ -111,3 +111,9 @@ MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_reactions.py # 좋아요·�
 - CHECK 거부: 빈 본문, `HIDDEN`인데 `hidden_at` 없음 / 1,001자 거부(1406) / 처리 안 한 회원 삭제 FK 거부(1451)
 - 좋아요 동시 20개 요청 2회: 행·카운터 일치. 탈퇴 처리 후 잔존 0·정합성 0
 - `devfeed` 적용 (2026-11-21, 사용자 승인): 글 2,607·회원 3·`post_tags` 3,075 전후 동일, 카운터 0, 정합성 6항목 0, 서버 공개 API 200
+
+## 검증 기록 (2026-11-22, `0013`, 027)
+- `devfeed_test`·`devfeed_perf` up → down → up 통과
+- 챌린지: 첫 소비 1, 재사용 0, 만료 0. REGISTER인데 회원 없음 CHECK 거부
+- 패스키: credential 중복 1062, 이름 공백 CHECK·41자 1406, credential 8바이트 CHECK 거부. 서명 횟수 역행 영향 0·증가 1. credential 조회 `const`
+- `devfeed` 적용은 사용자 확인 대기

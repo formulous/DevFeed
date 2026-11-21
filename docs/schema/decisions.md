@@ -1,7 +1,7 @@
 # 스키마 결정 기록
 
 - 작성: dba
-- 상태: v1.2 (M8, 2026-11-21). D-21·D-22 추가 (026). 각 결정의 합의 discussion 번호를 본문에 표기. D-18~D-20 추가 (021)
+- 상태: v1.3 (M9, 2026-11-22). D-21·D-22 (026), D-23 (027) 추가. 각 결정의 합의 discussion 번호를 본문에 표기. D-18~D-20 추가 (021)
 - 기준 문서: `docs/spec/01~04`
 
 ## D-01. 공통 규칙
@@ -265,3 +265,16 @@
 - 측정 (`devfeed_perf`, 좋아요 50만·댓글 10만·답글 5만, 한 글에 댓글 2,000개, `db/perf/measure_reactions.py`, DB p95): 댓글 첫 페이지 0.07ms, 1,000개 뒤 커서 0.01ms, 답글 3개 × 부모 20개 0.14ms, 작성자 80명 0.47ms, 속도 제한 0.00ms, `likedByMe` 0.03ms
 - 탈퇴: 댓글 15개·좋아요 50개 회원 처리 109ms, 잔존 0, 정합성 6항목 0 (롤백 측정)
 - 용량: 댓글 1건 평균 약 0.5KB(본문+인덱스), 10만 건 50MB 이하. 보관 기한 없음 (글 단위 데이터)
+
+## D-23. 패스키·WebAuthn 챌린지 (`0013`, 027)
+- 패스키 `user_passkeys`: credential id로 찾는 테이블. `credential_id VARBINARY(1023)` 그대로 UNIQUE (키 1,025바이트, InnoDB 한도 3,072 안). 해시 컬럼(D-05 방식)은 길이가 보통 16~64바이트라 이득 없어 기각
+  - 저장하는 것은 공개키·서명 횟수·메타데이터뿐. 생체 정보·개인키는 없음 (S-11 안내 근거)
+  - 탈퇴: FK CASCADE (카운터 같은 파생 값이 없어 D-16 RESTRICT 대상 아님). `withdrawal-check.sql`에 두 테이블 추가
+- 서명 횟수: `UPDATE ... WHERE id = ? AND (? > sign_count OR (? = 0 AND sign_count = 0))` 영향 행 0이면 거부 → 역행과 동시 재제출 모두 한 문장으로 차단
+- 10개 제한: 등록 트랜잭션에서 `users` 행 `FOR UPDATE` 후 개수 확인 (026 잠금 순서와 같이 회원 행 먼저)
+- user handle: `users.webauthn_handle BINARY(32)` 랜덤값 (server 제안 `users.id` 대신)
+  - 이유: 표준이 user handle을 식별 정보 없는 랜덤값으로 권장. 순번 id를 넣으면 인증기(동기화되는 비밀번호 관리자 포함)에 가입 순서·회원 수가 남음. 컬럼 1개(`INSTANT`)와 첫 등록 때 한 번 채우는 비용뿐
+  - 로그인은 credential id로 찾고, 응답의 userHandle이 그 회원의 `webauthn_handle`과 같은지만 확인
+- 챌린지 `webauthn_challenges` (server 제안 채택): 원문 대신 SHA-256만 저장, `DELETE` 영향 행으로 1회 소비·만료 판정, 발급 때 만료 행 100개씩 정리
+  - 메모리 대비 장점: 재시작에도 유지, 원자적 1회 소비가 DB 한 문장. 비용: 로그인 시도마다 쓰기 2회 (IP 속도 제한 분당 10이라 최대 분당 수십 행)
+  - 별도 `challengeId` 없이 clientDataJSON의 challenge 값 자체가 키 (client 제안의 `challengeId`는 챌린지 문자열을 그대로 쓰면 됨)

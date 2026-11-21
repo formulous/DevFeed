@@ -9,4 +9,6 @@ UNION ALL SELECT 'read_histories', COUNT(*) FROM read_histories WHERE user_id = 
 UNION ALL SELECT 'recommendation_impressions', COUNT(*) FROM recommendation_impressions WHERE user_id = @uid
 UNION ALL SELECT 'post_view_guards', COUNT(*) FROM post_view_guards WHERE viewer_key = @vkey
 UNION ALL SELECT 'post_likes', COUNT(*) FROM post_likes WHERE user_id = @uid
-UNION ALL SELECT 'comments', COUNT(*) FROM comments WHERE user_id = @uid;
+UNION ALL SELECT 'comments', COUNT(*) FROM comments WHERE user_id = @uid
+UNION ALL SELECT 'user_passkeys', COUNT(*) FROM user_passkeys WHERE user_id = @uid
+UNION ALL SELECT 'webauthn_challenges', COUNT(*) FROM webauthn_challenges WHERE user_id = @uid;

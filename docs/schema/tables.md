@@ -1,7 +1,7 @@
 # 테이블 명세
 
 - 작성: dba
-- 상태: v1.2 (M8, 2026-11-21). 마이그레이션 0001~0012 기준. `devfeed`·`devfeed_perf`·`devfeed_test` 적용 완료. `devfeed`·`devfeed_perf`·`devfeed_test` 적용 완료
+- 상태: v1.3 (M9, 2026-11-22). 마이그레이션 0001~0013 기준. `0013`은 `devfeed_perf`·`devfeed_test` 적용, `devfeed`는 사용자 확인 후. `devfeed`·`devfeed_perf`·`devfeed_test` 적용 완료
 - 공통: InnoDB, utf8mb4_unicode_ci, 시간은 `DATETIME(3)` UTC, PK `BIGINT UNSIGNED AUTO_INCREMENT` (D-01)
 - 결정 번호(D-xx)는 `decisions.md` 참고
 
@@ -174,6 +174,7 @@
 | email | VARCHAR(255) | NOT NULL, UK | 콜레이션상 대소문자 무시 중복 검사. 서버는 소문자로 저장 권장 |
 | password_hash | VARCHAR(255) | NOT NULL | argon2/bcrypt 문자열 |
 | nickname | VARCHAR(30) | NOT NULL | 중복 허용 (기획 요구 없음) |
+| webauthn_handle | BINARY(32) | NULL, UK | `0013`. WebAuthn user handle. 첫 패스키 등록 때 랜덤 32바이트로 채움, 바뀌지 않음 (D-23) |
 | role | ENUM('USER','ADMIN') | NOT NULL, 기본 USER | 관리자 API 권한 분리 |
 | failed_login_count | TINYINT UNSIGNED | NOT NULL, 기본 0 | 5회 → `locked_until = now + 10분` |
 | locked_until | DATETIME(3) | NULL | |
@@ -182,6 +183,38 @@
 | created_at / updated_at | DATETIME(3) | NOT NULL | |
 
 인덱스: `uk_users_email (email)`
+
+## user_passkeys — `0013`
+| 컬럼 | 타입 | 제약 | 설명·이유 |
+|---|---|---|---|
+| id | BIGINT UNSIGNED | PK | API `passkeyId` |
+| user_id | BIGINT UNSIGNED | FK → users CASCADE | 탈퇴 시 자동 삭제 (카운터 없음) |
+| credential_id | VARBINARY(1023) | NOT NULL, UK, CHECK 16바이트 이상 | 표준 최대 1023바이트. 로그인 시 이 값으로 조회 (const) |
+| public_key | VARBINARY(2048) | NOT NULL | COSE 공개키 원본 (RSA 포함 여유) |
+| sign_count | INT UNSIGNED | NOT NULL, 기본 0 | 역행 거부. 0을 계속 쓰는 인증기는 허용 |
+| transports | VARCHAR(255) | NULL | 쉼표 구분 (`internal,hybrid`). 다음 옵션의 힌트 |
+| aaguid | BINARY(16) | NULL | 인증기 모델. 이름 자동 생성·통계용 (attestation `none`이면 0일 수 있음) |
+| backup_eligible / backup_state | BOOLEAN | NOT NULL, 기본 FALSE | 동기화 패스키 여부(BE·BS 플래그). `backup_state`는 로그인 때 갱신 |
+| name | VARCHAR(40) | NOT NULL, CHECK 공백 제외 1자 이상 | |
+| created_at / last_used_at / updated_at | DATETIME(3) | `last_used_at` NULL | |
+
+인덱스
+- `uk_user_passkeys_credential (credential_id)`: 로그인 조회, 중복 등록 거부(→ `PASSKEY_ALREADY_REGISTERED`)
+- `idx_user_passkeys_user_created (user_id, created_at)`: 목록, 10개 제한 개수 확인, FK
+
+## webauthn_challenges — `0013`
+| 컬럼 | 타입 | 제약 | 설명·이유 |
+|---|---|---|---|
+| challenge_hash | BINARY(32) | PK | 챌린지 SHA-256. 원문 저장 안 함 |
+| purpose | ENUM('REGISTER','LOGIN') | NOT NULL | |
+| user_id | BIGINT UNSIGNED | NULL, FK → users CASCADE | REGISTER만 필수 (CHECK) |
+| expires_at | DATETIME(3) | NOT NULL | 발급 + 5분 |
+| created_at | DATETIME(3) | NOT NULL | |
+
+인덱스
+- PK: 1회 소비 `DELETE ... WHERE challenge_hash = ? AND purpose = ? AND expires_at > now` 영향 행 1일 때만 통과
+- `idx_webauthn_challenges_expires`: 발급 때 만료 행 100개씩 정리
+- `idx_webauthn_challenges_user`: FK
 
 ## refresh_tokens — `0004`
 | 컬럼 | 타입 | 제약 | 설명·이유 |
