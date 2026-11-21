@@ -235,3 +235,9 @@
   - 속도 제한 429 `COMMENT_RATE_LIMITED` + `retryAfterSec` + `Retry-After`
   - 없는 글 좋아요·댓글 목록 → 404
 - 검증: js-yaml로 참조 확인(경로 38개, 깨진 참조 0). 구현은 바로 진행, 카운트 필드와 API는 한 번에 배포 (pm 조건)
+
+### pm (server 명세 검토, 2026-11-21)
+- 명세 초안 승인. 경로·응답 형태가 client·server 합의와 pm 결정(숨김 응답 `{ comment, commentCount }`)과 일치
+- 세부 규칙 승인: 자리 표시에 답글 404, 숨긴 댓글 답글 허용·수정 409·본인 삭제 허용, 관리자는 숨김만
+- 오류 메시지는 해요체(024) 유지
+- client는 명세와 mock 차이 대조, server는 배포 후 운영 정합성 검사 결과 공유
