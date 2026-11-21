@@ -6,6 +6,7 @@ export interface AppEnv {
   crawl: { schedulerEnabled: boolean; concurrency: number };
   searchCacheEnabled: boolean;
   rateLimitEnabled: boolean;
+  webauthn: { rpId: string; rpName: string; origins: string[] };
 }
 
 function required(env: NodeJS.ProcessEnv, key: string): string {
@@ -30,6 +31,22 @@ function bool(env: NodeJS.ProcessEnv, key: string, fallback: boolean): boolean {
   throw new Error(`환경변수 ${key}는 true 또는 false여야 함`);
 }
 
+function origins(env: NodeJS.ProcessEnv, key: string, fallback: string[]): string[] {
+  const raw = env[key];
+  if (raw === undefined || raw.trim() === '') return fallback;
+  const list = raw.split(',').map((value) => value.trim()).filter(Boolean);
+  for (const value of list) {
+    let url: URL;
+    try {
+      url = new URL(value);
+    } catch {
+      throw new Error(`환경변수 ${key}의 ${value}는 URL이 아님`);
+    }
+    if (url.origin !== value) throw new Error(`환경변수 ${key}는 경로 없는 origin 목록이어야 함: ${value}`);
+  }
+  return list;
+}
+
 export function loadEnv(env: NodeJS.ProcessEnv = process.env): AppEnv {
   const accessSecret = required(env, 'JWT_ACCESS_SECRET');
   if (accessSecret.length < 32) throw new Error('JWT_ACCESS_SECRET은 32자 이상이어야 함');
@@ -50,6 +67,11 @@ export function loadEnv(env: NodeJS.ProcessEnv = process.env): AppEnv {
     },
     searchCacheEnabled: bool(env, 'SEARCH_CACHE_ENABLED', true),
     rateLimitEnabled: bool(env, 'RATE_LIMIT_ENABLED', true),
+    webauthn: {
+      rpId: env.WEBAUTHN_RP_ID || 'localhost',
+      rpName: env.WEBAUTHN_RP_NAME || 'DevFeed',
+      origins: origins(env, 'WEBAUTHN_ORIGINS', ['http://localhost:5175']),
+    },
   };
 }
 

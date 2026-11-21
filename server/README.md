@@ -67,7 +67,7 @@ src/
 ├── config/            # 환경변수 로드·검증
 ├── common/            # 에러 형식, 예외 필터, 검증 파이프, 커서, DB 설정
 ├── auth/              # 로그인·리프레시·로그아웃, JWT 가드, @Roles
-├── entities/          # DDL 매핑 (synchronize: false), 0012 post_likes·comments 포함
+├── entities/          # DDL 매핑 (synchronize: false), 0012 post_likes·comments, 0013 user_passkeys·webauthn_challenges 포함
 ├── ingest/            # 순수 함수: URL 정규화, 텍스트·요약, 토큰화, 태깅, 피드 파싱·fetch, 백오프
 ├── crawl/             # 스케줄러, 수집 실행, 글 저장·재색인, 태그 사전 캐시, 일일 정리
 ├── admin/             # 관리자 컨트롤러·서비스, 백그라운드 작업(재태깅)
@@ -75,6 +75,7 @@ src/
 ├── catalog/           # 공개 태그·소스 목록, 태그 글 수 캐시
 ├── posts/             # 피드·분야·인기 글·보안 뉴스·조회 기록, 카드 조립
 ├── reactions/         # 좋아요·댓글·관리자 숨김, 탈퇴 시 반응 정리
+├── passkeys/          # 패스키(WebAuthn) 등록·로그인·목록·이름 바꾸기·삭제
 └── scripts/           # 관리자 계정 생성, 개발용 토큰 발급
 ```
 
@@ -85,6 +86,7 @@ src/
   - `CRAWL_SCHEDULER_ENABLED`: `false`면 주기 수집 중지 (즉시 수집 API는 동작)
   - `SEARCH_CACHE_ENABLED`: 검색 결과 1분 캐시 (성능 측정 시 `false`)
   - `RATE_LIMIT_ENABLED`: IP 기준 속도 제한 (기본 `true`, e2e는 기본 `false`)
+  - `WEBAUTHN_RP_ID`·`WEBAUTHN_RP_NAME`·`WEBAUTHN_ORIGINS`(쉼표 구분 origin): 패스키 RP 설정. 기본값은 로컬 개발용 `localhost`·`DevFeed`·`http://localhost:5175`, 운영은 `formulous.org`·`DevFeed`·`https://formulous.org`
 - DB 스키마는 `../db/migrations`(dba)로만 반영함. 서버는 DDL을 실행하지 않음
 
 ## 실행
@@ -169,6 +171,15 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - 속도 제한: DB의 최근 24시간 작성 시각으로 1분 5개·하루 200개, 429 `COMMENT_RATE_LIMITED` + `retryAfterSec` + `Retry-After`
   - 탈퇴: `reactions/withdraw-reactions.ts`가 `db/queries/reactions.sql` 순서대로 카운터 감소 → 좋아요·답글 삭제 → 자리 표시·삭제 → 빈 자리 표시 정리 (FK RESTRICT라 빠뜨리면 회원 삭제 실패)
   - 성능 (`devfeed_perf` 글 14만·좋아요 50만·댓글 15만, `perf/reactions-latency.js`, API p95): 최신 피드 게스트 2.5·회원 3.5·회원 10동시 7.8ms, 검색 "개발" 37~38·10동시 137.5ms, 댓글 2,000개 글 첫 페이지 2.0·10동시 6.9ms → 기준 300ms 이하
+- M9 패스키 로그인 (027, 스키마 `0013`)
+  - `@simplewebauthn/server`는 CBOR·COSE 파싱과 서명 검증만 맡김. 챌린지 발급·1회 소비·만료, origin·RP ID 고정, 사용자 확인 강제, 서명 횟수 역행 거부, 10개 제한, 토큰 발급 통합은 `passkeys/`에서 직접 처리
+  - 로그인 `POST /api/auth/passkeys/login/options`·`/login`(IP당 분당 10회, 기존 로그인과 같은 토큰·쿠키). 등록·관리 `POST /api/me/passkeys/registration/options`, `GET`·`POST /api/me/passkeys`, `PATCH`·`DELETE /api/me/passkeys/{id}`
+  - 챌린지: 32바이트 랜덤, DB `webauthn_challenges`에 SHA-256만 저장(5분). 검증 때 `clientDataJSON` 안 값으로 찾아 `DELETE` 영향 행 1일 때만 통과 → 재사용·만료 차단. 발급 때 만료 행 100개씩 정리
+  - user handle: `users.webauthn_handle` 랜덤 32바이트 (첫 등록 옵션 발급 때 채움). 로그인은 credential id로 찾고 userHandle 일치 확인
+  - 서명 횟수: `UPDATE ... WHERE (새 값 > 저장 값 OR 둘 다 0)` 영향 행 0이면 거부 → 같은 응답 동시 제출도 하나만 성공
+  - 오류는 원인 구분 없이 `PASSKEY_VERIFICATION_FAILED`(원인은 경고 로그), 등록 안 된 패스키만 `PASSKEY_NOT_FOUND`
+  - 비밀번호 잠금(`LOGIN_LOCKED`)은 패스키 로그인에 적용하지 않고, 패스키 로그인 성공이 잠금 상태를 풀지도 않음
+  - 탈퇴: 두 테이블 FK CASCADE
 - 태그 영어 표기 (023)
   - 태그 분류 값을 영어로 바꿈 (`Backend`·`Frontend`·`Data`·`Database`·`Infra`·`Cloud`·`Mobile`·`Security`·`Architecture`·`Design` 등). dba `0011` 적용 후 `posts/fields.ts`는 영어 값만 묶음 (전환 기간에는 한글·영어 병행 배포로 무중단 전환)
   - 태그 ID 유지, 이름만 영어로 바꾸고 한글 이름은 동의어로 보존 → 자동 태깅·검색(`post_search`에 이름 + 동의어 색인) 결과 유지
@@ -250,8 +261,8 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - `server/.env.test`가 있으면 그것을, 없으면 `.env`를 읽음. `.env`를 쓸 때는 `DB_DATABASE=devfeed_test npm run test:e2e`
   - 테스트가 실패해 데이터가 남으면 `db/scripts/test-db-reset.sh`(dba)로 초기화
 - 각 테스트가 소스·태그·글·회원을 직접 만들고 끝나면 지움 (실행 후 테스트 DB 0행 확인)
-- 현재 53건
-  - 탈퇴 잔존 (002 필수): `db/queries/withdrawal-check.sql`(dba)을 그대로 읽어 실행. 탈퇴 전 9개 테이블(좋아요·댓글 포함)에 데이터가 있음을 확인한 뒤 탈퇴 → 9개 테이블 0건, 추천 로그 `user_id` NULL, 조회수 유지. 비밀번호 틀림 403, 탈퇴 후 로그인·리프레시·남은 토큰 거부
+- 현재 61건
+  - 탈퇴 잔존 (002 필수): `db/queries/withdrawal-check.sql`(dba)을 그대로 읽어 실행. 탈퇴 전 데이터가 있음을 확인한 뒤 탈퇴 → 11개 테이블(좋아요·댓글·패스키·등록 챌린지 포함) 0건, 추천 로그 `user_id` NULL, 조회수 유지. 비밀번호 틀림 403, 탈퇴 후 로그인·리프레시·남은 토큰 거부
   - 회원 흐름: 가입 검증·중복 → 관심 태그(개수·없는 태그 검증) → 온보딩 완료 → 북마크(멱등·커서·태그 필터·피드 플래그·해제) → 조회 → 읽은 기록(순서·개별·전체 삭제) → 닉네임 변경, 온보딩 건너뛰기, 북마크 5,000건 제한
   - 인증: 리프레시 교체, 30초 이내 재사용 401, 30초 지난 재사용 시 계열 전체 폐기, 로그아웃, 5회 실패 잠금
   - 추천: 콜드 스타트, 개인화(이유·제외·채움·다양성·커서), 다른 회원 커서 거부, 클릭 1회 기록·타인 클릭 무시, 일별 집계
@@ -266,4 +277,5 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - 태그 영어화 (023): 한글 이름 → 영어 이름 + 한글 동의어로 바꾸고 재태깅해도 태그 글(제목·피드 카테고리 매칭)·한글 검색 결과 동일, 영어 검색 일치, 영어 분류 값도 같은 분야
   - 오류 메시지 해요체 (024): 검증·중복 가입·로그인 실패·미인증·검색어·커서·분야·404 응답의 `code` 유지, `message`·`fieldErrors` 해요체
   - 좋아요·댓글 (026): 게스트 401·없는 글 404, 같은 회원 20개 동시 요청(켜기·끄기 섞음/켜기만) 후 행·카운터 일치, 카드 `likeCount`·`likedByMe`, 작성 검증(공백·1,001자)·원문 그대로·답글의 답글 승격·다른 글 부모 404, 목록 커서·답글 3개·이어 받기, 수정 본인만·`editedAt`, 관리자 숨김 수 감소·멱등·내용 가림·숨김 수정 409, 삭제 자리 표시·자리 표시 정리, 속도 제한 429·`Retry-After`, 탈퇴 후 잔존 0·자리 표시·수 일치, 정합성 검사 6항목(`db/queries/reactions.sql`) 0
+  - 패스키 (027, `test/e2e/support/webauthn.ts` P-256 가상 인증기로 응답 직접 서명): 등록 → 로그아웃 → 패스키 로그인 → 리프레시, 옵션 형태·user handle 고정·제외 목록, 챌린지 재사용·다른 origin·다른 RP ID·사용자 확인 없음·서명 횟수 역행(작음·같음)·userHandle 불일치·발급 안 한 챌린지 거부, 0을 계속 쓰는 인증기 허용, 같은 응답 5개 동시 제출 1건만 성공, 등록 안 된 패스키 `PASSKEY_NOT_FOUND`, 다른 회원 챌린지·재사용·origin·사용자 확인 없음 등록 400, 중복 409, 이름 자동 생성·40자 제한·바꾸기·삭제·남의 것 404, 11번째 409, 잠금 중 패스키 로그인, 탈퇴 후 잔존 0
   - 스모크: `GET /api/sources`

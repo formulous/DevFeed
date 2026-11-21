@@ -12,7 +12,7 @@ describe('F-032 탈퇴 후 개인 데이터 잔존 (002 결정 필수)', () => {
     await t.close();
   });
 
-  it('개인 데이터 9개 테이블 잔존 0건, 추천 로그 익명화, 조회수 유지', async () => {
+  it('개인 데이터 11개 테이블 잔존 0건, 추천 로그 익명화, 조회수 유지', async () => {
     const { tagIds, postIds } = await createFixtures(t, 3);
     const user = await signup(t, 'withdraw');
 
@@ -38,6 +38,8 @@ describe('F-032 탈퇴 후 개인 데이터 잔존 (002 결정 필수)', () => {
       post_view_guards: 1,
       post_likes: 1,
       comments: 1,
+      user_passkeys: 0,
+      webauthn_challenges: 0,
     });
 
     const wrong = await api(t, 'POST', '/me/withdraw', { token: user.token, body: { password: 'wrong999' } });
@@ -59,6 +61,8 @@ describe('F-032 탈퇴 후 개인 데이터 잔존 (002 결정 필수)', () => {
       post_view_guards: 0,
       post_likes: 0,
       comments: 0,
+      user_passkeys: 0,
+      webauthn_challenges: 0,
     });
 
     const [impression] = (await t.db.query('SELECT user_id FROM recommendation_impressions WHERE post_id = ?', [

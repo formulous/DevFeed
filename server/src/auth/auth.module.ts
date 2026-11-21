@@ -22,6 +22,6 @@ import { OptionalAuthGuard } from './optional-auth.guard';
   ],
   controllers: [AuthController],
   providers: [JwtAuthGuard, OptionalAuthGuard, AuthService],
-  exports: [JwtModule, JwtAuthGuard, OptionalAuthGuard],
+  exports: [JwtModule, JwtAuthGuard, OptionalAuthGuard, AuthService],
 })
 export class AuthModule {}

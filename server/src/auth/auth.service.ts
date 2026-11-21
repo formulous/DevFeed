@@ -97,6 +97,11 @@ export class AuthService {
     return this.issue(userId, user.role, newFamilyId(), now);
   }
 
+  async loginVerified(userId: number, role: UserRole, now = new Date()): Promise<IssuedTokens> {
+    await this.dataSource.query('UPDATE users SET last_login_at = ? WHERE id = ?', [now, userId]);
+    return this.issue(userId, role, newFamilyId(), now);
+  }
+
   private async recordFailure(userId: number, now: Date): Promise<number> {
     return this.dataSource.transaction(async (manager) => {
       const [row] = (await manager.query(

@@ -8,7 +8,9 @@ import { Source } from './source.entity';
 import { Tag } from './tag.entity';
 import { TagSynonym } from './tag-synonym.entity';
 import { User } from './user.entity';
+import { UserPasskey } from './user-passkey.entity';
+import { WebauthnChallenge } from './webauthn-challenge.entity';
 
-export const ENTITIES = [Source, CrawlRun, Tag, TagSynonym, Post, PostTag, PostSearch, User, PostLike, Comment];
+export const ENTITIES = [Source, CrawlRun, Tag, TagSynonym, Post, PostTag, PostSearch, User, PostLike, Comment, UserPasskey, WebauthnChallenge];
 
-export { Comment, CrawlRun, Post, PostLike, PostSearch, PostTag, Source, Tag, TagSynonym, User };
+export { Comment, CrawlRun, Post, PostLike, PostSearch, PostTag, Source, Tag, TagSynonym, User, UserPasskey, WebauthnChallenge };

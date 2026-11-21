@@ -53,6 +53,14 @@ export const Errors = {
   commentRateLimited: (retryAfterSec: number) =>
     new AppException(429, 'COMMENT_RATE_LIMITED', '잠시 후 다시 남겨 주세요', { retryAfterSec }),
   commentHidden: () => new AppException(409, 'COMMENT_HIDDEN', '관리자가 숨긴 댓글은 수정할 수 없어요'),
+  passkeyNotFound: () =>
+    new AppException(401, 'PASSKEY_NOT_FOUND', '이 패스키로 가입된 계정을 찾을 수 없어요'),
+  passkeyVerificationFailed: (status: 400 | 401) =>
+    new AppException(status, 'PASSKEY_VERIFICATION_FAILED', '패스키를 확인하지 못했어요. 다시 시도해 주세요'),
+  passkeyLimitExceeded: () =>
+    new AppException(409, 'PASSKEY_LIMIT_EXCEEDED', '패스키는 10개까지 만들 수 있어요'),
+  passkeyAlreadyRegistered: () =>
+    new AppException(409, 'PASSKEY_ALREADY_REGISTERED', '이미 등록된 패스키예요'),
   jobAlreadyRunning: () =>
     new AppException(409, 'JOB_ALREADY_RUNNING', '같은 작업이 이미 실행 중이에요'),
 };
