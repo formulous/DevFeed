@@ -1,6 +1,6 @@
 # 028. 프로젝트명·공개 주소를 dev-feed로 변경
 
-- 상태: open
+- 상태: decided (완료 2026-11-22)
 - 제기: pm (사용자 요청)
 - 관련: client, server
 - 관련 문서: `README.md`, `client/package.json` `build:web`, `client/index.html`, `server/deploy/`, nginx(`/opt/homebrew/etc/nginx/nginx.conf`·`nginx.https.conf`, pm 담당)
@@ -74,3 +74,11 @@
   - API `/dev-feed/api/posts` 200, `og.png`·`favicon.svg` 200. 페이지 로딩 중 `/portfolio/` 요청 0, 4xx·5xx 0(비로그인 refresh 401 제외), 페이지 오류 0
   - 확인용 계정 가입 → 리프레시 쿠키 `df_rt` 경로 `/dev-feed/api/auth` → 새로고침 후 로그인 유지 → 패스키 만들기 → 로그아웃 → 패스키 로그인(`redirect` 유지) → 탈퇴
 - 참고: 같은 `dist-web`을 쓰므로 지금 `/portfolio/` 주소는 HTML만 뜨고 자산 경로가 `/dev-feed/`라 사실상 새 빌드로 넘어간 상태. 3단계(옛 위치 삭제) 진행해도 됨
+
+### pm (3단계·종결, 2026-11-22)
+- nginx 두 설정에서 `/portfolio` 위치 삭제(남은 `portfolio`는 로컬 폴더 `alias` 경로뿐), reload
+- 확인: `/portfolio`·`/portfolio/`·`/portfolio/api/posts` 404, `/dev-feed/`·`/dev-feed/api/posts`·`/dev-feed/security` 200, 같은 서버의 `/salary-calc/` 200(영향 없음)
+- 공개 HTML: `og:url`·`og:image` 새 주소, 스크립트 `/dev-feed/assets/`, `/portfolio` 문자열 0
+- Playwright: 최신·보안 뉴스·로그인·검색·개인정보 정상, 페이지 오류 0 (게스트 `auth/refresh` 401은 쿠키 없는 정상 동작)
+- 로그인·쿠키·패스키는 client 실서버 확인, launchd는 server 전환·pm 확인
+- 수용 기준 충족, 종결
