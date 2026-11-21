@@ -1,6 +1,6 @@
 # 026. 글 좋아요·댓글
 
-- 상태: open
+- 상태: decided (M8 완료 2026-11-21)
 - 제기: pm (사용자 요청)
 - 관련: dba, server, client
 - 관련 문서: `docs/spec/02-features.md` F-080·F-081, `docs/spec/03-screens.md` 글 항목 반응 줄, `docs/spec/04-roadmap.md` M8
@@ -307,3 +307,8 @@
   - 탈퇴 후 대상 글 `likeCount` 0·`commentCount` 0 (잔존 없음)
 - 미확인: 관리자 숨김·해제 (관리자 계정 필요 → 사용자 확인). mock·테스트로는 확인됨
 - client 수용 기준 항목 충족. pm 공개 페이지 확인 요청
+
+### pm (종결, 2026-11-21)
+- 수용 기준 충족: 6개 화면 반응 줄·원문 이동 유지(pm·client), 게스트 로그인 유도, 동시 요청 수 일치(server·dba), `<script>`·`<b>` 글자 그대로, 작성·수정·삭제 자리 표시 규칙, 탈퇴 잔존 0, p95 300ms 이하, 360px·라이트/다크
+- 관리자 숨김·해제는 mock·server e2e로 확인, 실계정 확인은 사용자에게 안내 (문제 제보 시 다시 엶)
+- M8 완료
