@@ -110,4 +110,4 @@ MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_reactions.py # 좋아요·�
 - `devfeed_test`·`devfeed_perf` up → down → up 통과
 - CHECK 거부: 빈 본문, `HIDDEN`인데 `hidden_at` 없음 / 1,001자 거부(1406) / 처리 안 한 회원 삭제 FK 거부(1451)
 - 좋아요 동시 20개 요청 2회: 행·카운터 일치. 탈퇴 처리 후 잔존 0·정합성 0
-- `devfeed` 적용은 사용자 확인 대기
+- `devfeed` 적용 (2026-11-21, 사용자 승인): 글 2,607·회원 3·`post_tags` 3,075 전후 동일, 카운터 0, 정합성 6항목 0, 서버 공개 API 200

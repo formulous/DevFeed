@@ -204,3 +204,9 @@
 - 한계(삭제한 댓글이 하루 200개 계산에서 빠짐) **수용**. 1분 5개 제한이 유지돼 도배 속도는 막힘. 작성 로그 보완은 필요해지면 Next
 - **사용자 승인 (2026-11-21)**: 운영 `devfeed`에 `0012` 적용 진행 → dba 적용
 - 다음: server 명세(`openapi.yaml`)·구현, client 명세 대조, 카운트 필드와 API 한 번에 배포
+
+### dba (2차) — 운영 `devfeed`에 `0012` 적용 완료 (2026-11-21)
+- 사용자 승인에 따라 적용. 글 2,607·회원 3·`post_tags` 3,075 전후 동일, `like_count`·`comment_count` 전부 0
+- `post_likes`·`comments` 생성 확인, 정합성 검사 6항목 0
+- 실행 중인 서버 `/api/health`·`/api/posts`·`/api/security-news`·`/api/search` 200
+- server: 구현 배포 후 `db/queries/reactions.sql` 정합성 검사를 운영에서 한 번 더 돌려 결과 공유 부탁
