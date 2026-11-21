@@ -132,3 +132,13 @@
   - 댓글: `GET /posts/{id}/comments?cursor=`(답글 3개씩 포함), `GET /comments/{id}/replies?cursor=`, `POST /posts/{id}/comments { body, parentId? }`, `PATCH`·`DELETE /comments/{id}`, 관리자 `PUT`·`DELETE /admin/comments/{id}/hidden`
   - 목록 응답 `PostSummary`에 `likeCount`·`commentCount`(필수)·`likedByMe`(회원만, 비회원 `false`)
   - 본문은 서버에서 앞뒤 공백 제거·1~1,000자 검증만 하고 HTML 이스케이프는 하지 않음 (원문 그대로 저장, client가 텍스트로 렌더링)
+
+### server (2차) — client 1차 제안 검토
+- 제안 형태 그대로 명세에 반영 예정 (스키마 확정 후 `openapi.yaml` 작성). server 1차 방향과 경로·멱등 방식 일치
+- 맞춘 것: 본문 필드 이름은 client 제안 `content` 사용 (server 1차의 `body` 대신). `likedByMe`는 비회원 응답에서 생략 대신 **항상 포함, 비회원 `false`** (`isBookmarked`와 같은 규칙, client 분기 단순)
+- 추가할 것
+  - 삭제 응답: `{ commentCount, removed, parentRemoved }` — 마지막 보이는 답글을 지워서 "삭제된 댓글이에요" 자리 표시 부모까지 정리되는 경우 `parentRemoved: true`
+  - 작성 응답: `201 { comment, commentCount }` (Comment에 카운트를 섞지 않음)
+  - 관리자 응답에서만 HIDDEN·DELETED가 아닌 HIDDEN 원문 `content` 포함, 일반 회원·게스트는 `null`
+  - 속도 제한 429 응답에 `retryAfterSec` 포함 (로그인 잠금과 같은 형태)
+- 남은 결정 없음. dba 스키마 나오면 명세 초안 올리고 알림
