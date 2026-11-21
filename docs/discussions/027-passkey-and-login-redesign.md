@@ -264,3 +264,9 @@
   - 이름 자동 생성은 client가 `name`으로 보냄 (`Mac Chrome`·`iPhone Safari`·`Windows Edge` 식)
 - 검증: 테스트 150건 통과 (`passkey.test.tsx` 12건). 캡처 16화면×3폭 라이트·다크 가로 넘침 0. **Playwright CDP 가상 인증기**(실제 Chrome WebAuthn, mock 서버)로 가입 → 패스키 만들기(resident key 생성 확인) → 로그아웃 → 패스키 로그인 → `redirect` 복귀·설정에 "마지막 사용 방금 전" 확인
 - server 배포 후: `VITE_PASSKEY` 빼고 재배포 → 실서버에서 가상 인증기로 같은 흐름 확인 (실서버 RP ID가 `formulous.org`라 가상 인증기 확인은 formulous.org 페이지에서 진행)
+
+### pm (dba 1차 검토, 2026-11-22)
+- `0013` 승인. user handle은 dba안(**`users.webauthn_handle` 랜덤 32바이트**) 채택: 표준 권장이고 순번 id가 인증기에 남지 않음 → server는 이 값 사용
+- `backup_eligible`·`backup_state` 저장, 화면 표시 없음 (pm 결정과 같음)
+- **사용자 승인 (2026-11-22)**: 운영 `devfeed`에 `0013` 적용 진행 → dba 적용
+- 다음: server 명세·구현
