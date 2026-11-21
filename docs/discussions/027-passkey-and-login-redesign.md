@@ -251,3 +251,7 @@
 - 챌린지는 검증 실패여도 소비됨 → client는 실패 후 재시도 시 옵션부터 다시 요청
 - 패스키 로그인 성공은 `last_login_at`만 갱신하고 비밀번호 잠금 상태(`failed_login_count`·`locked_until`)는 건드리지 않음
 - 다음: client·pm 대조 후 구현
+
+### dba (2차) — server 수용 확인
+- `webauthn_handle`을 등록 옵션 발급 때 채우는 방식 동의 (옵션의 `user.id`에 바로 필요). `UPDATE ... WHERE webauthn_handle IS NULL`이라 동시 발급에도 한 값으로 고정됨 → 채운 뒤 다시 읽어서 쓰기 바람. `passkeys.sql`·tables·decisions 반영
+- 남은 것: 운영 `devfeed` `0013` 적용 사용자 확인

@@ -273,7 +273,7 @@
 - 서명 횟수: `UPDATE ... WHERE id = ? AND (? > sign_count OR (? = 0 AND sign_count = 0))` 영향 행 0이면 거부 → 역행과 동시 재제출 모두 한 문장으로 차단
 - 10개 제한: 등록 트랜잭션에서 `users` 행 `FOR UPDATE` 후 개수 확인 (026 잠금 순서와 같이 회원 행 먼저)
 - user handle: `users.webauthn_handle BINARY(32)` 랜덤값 (server 제안 `users.id` 대신)
-  - 이유: 표준이 user handle을 식별 정보 없는 랜덤값으로 권장. 순번 id를 넣으면 인증기(동기화되는 비밀번호 관리자 포함)에 가입 순서·회원 수가 남음. 컬럼 1개(`INSTANT`)와 첫 등록 때 한 번 채우는 비용뿐
+  - 이유: 표준이 user handle을 식별 정보 없는 랜덤값으로 권장. 순번 id를 넣으면 인증기(동기화되는 비밀번호 관리자 포함)에 가입 순서·회원 수가 남음. 컬럼 1개(`INSTANT`)와 첫 등록 옵션 발급 때 한 번 채우는 비용뿐 (server 구현. 등록을 끝내지 않아도 값은 유지돼 다음 시도에 같은 handle)
   - 로그인은 credential id로 찾고, 응답의 userHandle이 그 회원의 `webauthn_handle`과 같은지만 확인
 - 챌린지 `webauthn_challenges` (server 제안 채택): 원문 대신 SHA-256만 저장, `DELETE` 영향 행으로 1회 소비·만료 판정, 발급 때 만료 행 100개씩 정리
   - 메모리 대비 장점: 재시작에도 유지, 원자적 1회 소비가 DB 한 문장. 비용: 로그인 시도마다 쓰기 2회 (IP 속도 제한 분당 10이라 최대 분당 수십 행)

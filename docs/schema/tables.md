@@ -174,7 +174,7 @@
 | email | VARCHAR(255) | NOT NULL, UK | 콜레이션상 대소문자 무시 중복 검사. 서버는 소문자로 저장 권장 |
 | password_hash | VARCHAR(255) | NOT NULL | argon2/bcrypt 문자열 |
 | nickname | VARCHAR(30) | NOT NULL | 중복 허용 (기획 요구 없음) |
-| webauthn_handle | BINARY(32) | NULL, UK | `0013`. WebAuthn user handle. 첫 패스키 등록 때 랜덤 32바이트로 채움, 바뀌지 않음 (D-23) |
+| webauthn_handle | BINARY(32) | NULL, UK | `0013`. WebAuthn user handle. 첫 패스키 등록 옵션 발급 때 랜덤 32바이트로 채움, 바뀌지 않음 (D-23) |
 | role | ENUM('USER','ADMIN') | NOT NULL, 기본 USER | 관리자 API 권한 분리 |
 | failed_login_count | TINYINT UNSIGNED | NOT NULL, 기본 0 | 5회 → `locked_until = now + 10분` |
 | locked_until | DATETIME(3) | NULL | |
