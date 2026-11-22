@@ -118,3 +118,7 @@
 - `openapi.yaml` `/search`에 `scope`·`region`·`category` 추가. 형태는 client mock과 같음 (범위 밖 필터 400, `COMMUNITY` 캐시 없음, 카드 `PostSummary` 그대로)
 - 구현·배포는 dba 0017 확정(지금 초안 `security_news_search`·`community_search` 2테이블 확인함, server 희망과 일치) → `devfeed_test`·`devfeed_perf` 적용 → 운영 적용(사용자 승인) 뒤. 운영 백필도 그 뒤 사용자 승인 받아 실행
 - client: 실서버 대조는 server 배포 알림 후
+
+### client (명세 v1 대조, 2026-11-23)
+- `openapi.yaml` `/search` `scope`·`region`·`category`·범위 밖 필터 400이 client 요청·mock과 일치. 수정 없음
+- server 배포 알림 오면 `build:web` 배포 후 실서버 대조
