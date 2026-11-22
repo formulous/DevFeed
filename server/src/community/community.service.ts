@@ -264,6 +264,7 @@ export class CommunityService {
     )) as { today: number | string; last_at: Date | null }[];
     return postWriteStatus({
       isAdmin: user.role === 'ADMIN',
+      newAccountLimit: this.env.postNewAccountLimitEnabled,
       accountCreatedAt: user.created_at,
       todayCount: Number(stats.today),
       lastWrittenAt: stats.last_at,

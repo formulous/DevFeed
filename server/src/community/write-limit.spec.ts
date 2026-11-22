@@ -2,7 +2,7 @@ import { postWriteStatus } from './write-limit';
 
 const now = new Date('2026-11-22T05:00:00.000Z');
 const old = new Date('2026-01-01T00:00:00.000Z');
-const base = { isAdmin: false, accountCreatedAt: old, todayCount: 0, lastWrittenAt: null, now };
+const base = { isAdmin: false, newAccountLimit: true, accountCreatedAt: old, todayCount: 0, lastWrittenAt: null, now };
 
 describe('postWriteStatus', () => {
   it('제한 없으면 허용, 오늘 남은 수', () => {
@@ -20,6 +20,12 @@ describe('postWriteStatus', () => {
     const s = postWriteStatus({ ...base, accountCreatedAt: created });
     expect(s).toMatchObject({ allowed: false, reason: 'NEW_ACCOUNT', retryAfterSec: 3600 });
     expect(s.availableAt?.toISOString()).toBe('2026-11-22T06:00:00.000Z');
+  });
+
+  it('가입 제한을 끄면 새 계정도 허용, 다른 제한은 유지', () => {
+    const created = new Date(now.getTime() - 60_000);
+    expect(postWriteStatus({ ...base, newAccountLimit: false, accountCreatedAt: created })).toMatchObject({ allowed: true, remainingToday: 5 });
+    expect(postWriteStatus({ ...base, newAccountLimit: false, accountCreatedAt: created, todayCount: 5 }).reason).toBe('DAILY_LIMIT');
   });
 
   it('하루 5개면 다음 KST 자정까지', () => {

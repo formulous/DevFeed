@@ -13,6 +13,8 @@ import {
 
 type User = Awaited<ReturnType<typeof signup>>;
 
+process.env.POST_NEW_ACCOUNT_LIMIT_ENABLED = 'true';
+
 describe('F-090~F-093 커뮤니티 (032)', () => {
   let t: TestApp;
   let tagIds: number[];

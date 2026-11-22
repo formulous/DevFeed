@@ -6,6 +6,7 @@ export type PostWriteReason = 'NEW_ACCOUNT' | 'DAILY_LIMIT' | 'COOLDOWN';
 
 export interface WriteLimitInput {
   isAdmin: boolean;
+  newAccountLimit: boolean;
   accountCreatedAt: Date;
   todayCount: number;
   lastWrittenAt: Date | null;
@@ -28,7 +29,7 @@ export function postWriteStatus(input: WriteLimitInput): PostWriteStatus {
   const remainingToday = Math.max(0, POST_LIMIT.perDay - input.todayCount);
   const blocks: [PostWriteReason, number][] = [];
   const grown = input.accountCreatedAt.getTime() + POST_LIMIT.accountAgeMs;
-  if (grown > now) blocks.push(['NEW_ACCOUNT', grown]);
+  if (input.newAccountLimit && grown > now) blocks.push(['NEW_ACCOUNT', grown]);
   if (remainingToday === 0) blocks.push(['DAILY_LIMIT', kstDayStart(input.now).getTime() + DAY_MS]);
   if (input.lastWrittenAt) {
     const cooled = input.lastWrittenAt.getTime() + POST_LIMIT.gapMs;
