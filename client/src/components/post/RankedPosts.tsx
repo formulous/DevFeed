@@ -1,4 +1,3 @@
-import { FiHeart, FiMessageCircle } from 'react-icons/fi';
 import type { PopularPeriod, PopularPost, PostSummary } from '@/api/types';
 import type { BadgeMode } from './PostBadges';
 import { cn } from '@/lib/cn';
@@ -55,20 +54,6 @@ interface RankedPostsProps {
 
 export type RankMetric = 'views' | 'comments' | 'likes';
 
-function MetricLabel({ post, metric }: { post: PopularPost; metric: RankMetric }) {
-  if (metric === 'views') return <>조회 {formatNumber(post.viewCount)}</>;
-  const comments = metric === 'comments';
-  const n = formatNumber((comments ? post.commentCount : post.likeCount) ?? 0);
-  const Icon = comments ? FiMessageCircle : FiHeart;
-  return (
-    <span data-testid="rank-metric" className="inline-flex items-center gap-1 font-semibold text-fg">
-      <Icon size={13} aria-hidden />
-      <span className="sr-only">{comments ? '댓글' : '좋아요'}</span>
-      <span className="tabular-nums">{n}</span>
-    </span>
-  );
-}
-
 export function RankedPosts({ label, items, onOpen, onToggleBookmark, badges = 'new', summaryLines, metric = 'views' }: RankedPostsProps) {
   return (
     <ol className="divide-y divide-line" aria-label={label}>
@@ -87,7 +72,8 @@ export function RankedPosts({ label, items, onOpen, onToggleBookmark, badges = '
               summaryLines={summaryLines}
               onOpen={onOpen}
               onToggleBookmark={onToggleBookmark}
-              meta={<MetricLabel post={post} metric={metric} />}
+              meta={metric === 'views' ? `조회 ${formatNumber(post.viewCount)}` : undefined}
+              emphasize={metric === 'views' ? undefined : metric}
             />
           </div>
         </li>

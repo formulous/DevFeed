@@ -8,14 +8,25 @@ import { compactNumber, formatNumber } from '@/lib/format';
 const BTN =
   'relative z-10 inline-flex items-center gap-1 rounded px-1.5 py-1 tabular-nums hover:bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring';
 
+function Count({ value, strong }: { value: number; strong: boolean }) {
+  if (!strong) return <span>{compactNumber(value)}</span>;
+  return (
+    <span data-testid="rank-metric" className="font-semibold text-fg">
+      {compactNumber(value)}
+    </span>
+  );
+}
+
 export function ReactionBar({
   post,
   open,
   controls,
   onToggleComments,
   commentsTo,
+  emphasize,
 }: {
   post: PostSummary;
+  emphasize?: 'likes' | 'comments';
   open: boolean;
   controls: string;
   onToggleComments: () => void;
@@ -34,12 +45,12 @@ export function ReactionBar({
         className={cn(BTN, post.likedByMe ? 'text-hot' : 'text-fg-muted hover:text-fg')}
       >
         <FiHeart size={14} fill={post.likedByMe ? 'currentColor' : 'none'} aria-hidden />
-        <span>{compactNumber(likes)}</span>
+        <Count value={likes} strong={emphasize === 'likes'} />
       </button>
       {commentsTo ? (
         <Link to={commentsTo} aria-label={`댓글 ${formatNumber(comments)}개`} className={cn(BTN, 'text-fg-muted hover:text-fg')}>
           <FiMessageCircle size={14} aria-hidden />
-          <span>{compactNumber(comments)}</span>
+          <Count value={comments} strong={emphasize === 'comments'} />
         </Link>
       ) : (
         <button
@@ -51,7 +62,7 @@ export function ReactionBar({
           className={cn(BTN, open ? 'text-fg' : 'text-fg-muted hover:text-fg')}
         >
           <FiMessageCircle size={14} aria-hidden />
-          <span>{compactNumber(comments)}</span>
+          <Count value={comments} strong={emphasize === 'comments'} />
         </button>
       )}
     </span>

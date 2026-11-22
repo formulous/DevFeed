@@ -118,7 +118,9 @@ describe('033·035 데스크톱 펼침 메뉴·정렬 글자 탭', () => {
     expect(likes.length).toBeGreaterThan(0);
     expect(likes.every((n) => n >= 1)).toBe(true);
     expect([...likes].sort((a, b) => b - a)).toEqual(likes);
-    expect(screen.getAllByTestId('rank-metric')[0]).toHaveTextContent('좋아요');
+    const top = screen.getAllByTestId('rank-metric')[0];
+    expect(top.closest('button')).toHaveAccessibleName(/^좋아요/);
+    expect(screen.queryByText(/^조회 /)).toBeNull();
     first.unmount();
 
     renderWithApp(<App />, '/tech/comments?period=MONTH');
@@ -128,5 +130,6 @@ describe('033·035 데스크톱 펼침 메뉴·정렬 글자 탭', () => {
     expect(comments.every((n) => n >= 1)).toBe(true);
     expect([...comments].sort((a, b) => b - a)).toEqual(comments);
     expect(screen.getByRole('heading', { level: 2, name: /댓글 많은 글/ })).toBeInTheDocument();
+    expect(screen.getAllByTestId('rank-metric')[0].closest('button, a')).toHaveAccessibleName(/^댓글/);
   });
 });

@@ -23,6 +23,7 @@ interface PostCardProps {
   summaryLines?: 2 | 3;
   kicker?: ReactNode;
   reactions?: boolean;
+  emphasize?: 'likes' | 'comments';
 }
 
 function ExternalImage({ src, alt, className }: { src: string | null; alt: string; className: string }) {
@@ -51,6 +52,7 @@ export function PostCard({
   summaryLines = 3,
   kicker,
   reactions = true,
+  emphasize,
 }: PostCardProps) {
   const [open, setOpen] = useState(false);
   const showReactions = reactions && post.likeCount !== undefined;
@@ -156,6 +158,7 @@ export function PostCard({
               {showReactions && (
                 <ReactionBar
                   post={post}
+                  emphasize={emphasize}
                   open={open}
                   controls={commentsId}
                   onToggleComments={() => setOpen((v) => !v)}
