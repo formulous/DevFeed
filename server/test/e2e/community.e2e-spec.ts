@@ -101,7 +101,7 @@ describe('F-090~F-093 커뮤니티 (032)', () => {
       kind: 'COMMUNITY',
       title: '질문 있어요',
       body,
-      summary: '제목 alert(1) a',
+      summary: '제목 · alert(1) a',
       thumbnailUrl: null,
       isPopular: false,
       status: 'VISIBLE',

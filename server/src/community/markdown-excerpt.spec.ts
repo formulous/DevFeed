@@ -11,12 +11,12 @@ describe('markdownExcerpt', () => {
       '> 인용',
       '[링크](https://a.test) ![그림](https://img.test/x.png)',
     ].join('\n');
-    expect(markdownExcerpt(md)).toBe('질문 제목 굵게 와 기울임 그리고 code 와 취소 하나 둘 인용 링크 그림');
+    expect(markdownExcerpt(md)).toBe('질문 제목 · 굵게 와 기울임 그리고 code 와 취소 · 하나 · 둘 · 인용 · 링크 그림');
   });
 
   it('코드 블록은 통째로 빼고 HTML 태그는 지움', () => {
     const md = '앞\n```ts\nconst a = 1;\n```\n<script>alert(1)</script> 뒤';
-    expect(markdownExcerpt(md)).toBe('앞 alert(1) 뒤');
+    expect(markdownExcerpt(md)).toBe('앞 · alert(1) 뒤');
   });
 
   it('닫히지 않은 코드 블록은 끝까지 뺌', () => {
@@ -28,7 +28,12 @@ describe('markdownExcerpt', () => {
   });
 
   it('표는 칸 글자만 남김', () => {
-    expect(markdownExcerpt('| a | b |\n|---|:---:|\n| 1 | 2 |')).toBe('a b 1 2');
+    expect(markdownExcerpt('| a | b |\n|---|:---:|\n| 1 | 2 |')).toBe('a b · 1 2');
+  });
+
+  it('줄·목록 항목은 · 로 잇고, 문장부호로 끝난 줄은 공백으로 이음 (035)', () => {
+    const md = '한 번에 리뷰 걱정:\n- CI 시간\n- 충돌\n\n\n결론은 이래요.\n다음 줄';
+    expect(markdownExcerpt(md)).toBe('한 번에 리뷰 걱정: CI 시간 · 충돌 · 결론은 이래요. 다음 줄');
   });
 
   it('200자를 넘으면 말줄임표 포함 200자', () => {

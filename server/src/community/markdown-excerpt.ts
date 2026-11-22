@@ -1,5 +1,8 @@
 export const EXCERPT_MAX = 200;
 
+const LINE_JOIN = ' · ';
+const SENTENCE_END = /[.!?…:。]$/;
+
 const RULES: [RegExp, string][] = [
   [/^\s*(`{3,}|~{3,})[^\n]*\n[\s\S]*?^\s*\1[^\n]*$/gm, ' '],
   [/^\s*(`{3,}|~{3,})[^\n]*\n[\s\S]*$/gm, ' '],
@@ -20,7 +23,8 @@ const RULES: [RegExp, string][] = [
 export function markdownExcerpt(markdown: string, max = EXCERPT_MAX): string {
   let text = markdown.replace(/\r\n?/g, '\n');
   for (const [pattern, replacement] of RULES) text = text.replace(pattern, replacement);
-  const plain = text.replace(/\s+/g, ' ').trim();
+  const lines = text.split('\n').map((line) => line.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  const plain = lines.reduce((out, line) => (out ? `${out}${SENTENCE_END.test(out) ? ' ' : LINE_JOIN}${line}` : line), '');
   const chars = [...plain];
   if (chars.length <= max) return plain;
   return `${chars.slice(0, max - 1).join('').trimEnd()}…`;

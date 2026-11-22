@@ -193,7 +193,7 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - 지역은 출처 ID 목록으로 바꿔 거름. dba 측정(`devfeed_perf` 뉴스 4만 건) MONTH 전체 DB p95 1.4ms
 - M12 커뮤니티 (032, 스키마 `0015`)
   - `src/community/`: 글 목록·인기·상세·쓰기·수정·삭제·채택(`CommunityService`), 신고·관리자 신고 처리(`ReportsService`), 숨김 공통 처리(`moderation.ts`)
-  - 저장: `posts`(`kind = 'COMMUNITY'`, 내부 소스) + `community_posts`. `posts.url`은 `WEB_BASE_URL/community/posts/{id}`, `posts.summary`는 마크다운을 걷어낸 앞 200자(`markdown-excerpt.ts`). 본문은 받은 원문 그대로 저장하고 렌더링하지 않음
+  - 저장: `posts`(`kind = 'COMMUNITY'`, 내부 소스) + `community_posts`. `posts.url`은 `WEB_BASE_URL/community/posts/{id}`, `posts.summary`는 마크다운을 걷어낸 앞 200자(`markdown-excerpt.ts`). 줄·목록 항목은 ` · `로 잇고, `. ! ? … :`로 끝난 줄 뒤는 공백으로 이음(035). 기존 글 요약 재생성은 `node scripts/regenerate-community-excerpts.js <database> [--apply]` (빌드 후, 기본은 미리보기만). 본문은 받은 원문 그대로 저장하고 렌더링하지 않음
   - 모든 카드에 `kind`, 커뮤니티 카드는 `community`(말머리·작성자 등급·수정 시각·해결·조회수). 숨김·삭제 글은 최신·인기·북마크·읽은 기록·프로필 수치에서 빠짐 (`personal-list.ts` `LISTABLE`)
   - 삭제는 항상 `DELETED`로 남김(제목·본문·태그·작성자 삭제). 댓글 있으면 상세에 자리만, 없으면 404
   - 작성 제한(`write-limit.ts`, 관리자 예외): 가입 24시간, KST 하루 5개, 60초. 개수·마지막 시각은 원장 `POST_WRITE` 행으로 셈. 429 `POST_WRITE_LIMITED` + `reason`·`retryAfterSec`·`availableAt`, `GET /community/write-status`가 같은 계산
