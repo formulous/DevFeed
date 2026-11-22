@@ -192,7 +192,7 @@ export async function scoreMismatches(t: TestApp): Promise<Record<string, number
 
 const COMMUNITY_CHECK = (() => {
   const sql = readFileSync(join(__dirname, '..', '..', '..', '..', 'db', 'queries', 'community.sql'), 'utf8');
-  return sql.slice(sql.indexOf('-- 032 consistency check')).split('\n').filter((line) => !line.trim().startsWith('--')).join('\n').trim().replace(/;$/, '');
+  return sql.slice(sql.indexOf('-- 032 consistency check')).split('\n').filter((line) => !line.trim().startsWith('--')).join('\n').split(';')[0].trim();
 })();
 
 export async function communityMismatches(t: TestApp): Promise<Record<string, number>> {

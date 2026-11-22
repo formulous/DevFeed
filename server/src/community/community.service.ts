@@ -12,7 +12,7 @@ import { CommunityCategory, withoutViewCount } from '../posts/post-cards';
 import type { Viewer } from '../reactions/comment-view';
 import { awardPostWrite, revokeLikesReceived, setPostWriteRevoked } from '../score/score-ledger';
 import { kstDayStart } from '../score/score-policy';
-import { replaceTags, softDeletePost } from './community-store';
+import { indexCommunityPost, replaceTags, softDeletePost } from './community-store';
 import { CreateCommunityPostDto, UpdateCommunityPostDto } from './dto/community.dto';
 import { markdownExcerpt } from './markdown-excerpt';
 import { hidePost, resolveReportTarget, unhidePost } from './moderation';
@@ -129,6 +129,7 @@ export class CommunityService {
           [id, user.id, dto.category, dto.body, now],
         );
         await replaceTags(manager, id, now, tagIds);
+        await indexCommunityPost(manager, id);
         await awardPostWrite(manager, user.id, id, now);
         return id;
       }),
@@ -194,6 +195,7 @@ export class CommunityService {
           await manager.query('UPDATE posts SET summary = ? WHERE id = ?', [markdownExcerpt(dto.body) || null, postId]);
         }
         if (dto.tagIds !== undefined) await replaceTags(manager, postId, row.published_at, dto.tagIds);
+        if (dto.title !== undefined || dto.body !== undefined || dto.tagIds !== undefined) await indexCommunityPost(manager, postId);
       }),
     );
     return this.detail(postId, user);

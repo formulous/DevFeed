@@ -9,6 +9,8 @@ export const SEARCH_CACHE_MAX_ENTRIES = 500;
 
 export function searchCacheKey(input: {
   match: string;
+  scope?: string;
+  region?: string;
   tagIds?: number[];
   sourceIds?: number[];
   period: string;
@@ -17,7 +19,7 @@ export function searchCacheKey(input: {
   size: number;
 }): string {
   const sorted = (ids?: number[]) => [...(ids ?? [])].sort((a, b) => a - b).join(',');
-  return [input.match, sorted(input.tagIds), sorted(input.sourceIds), input.period, input.sort, input.page, input.size].join('|');
+  return [input.scope ?? 'TECH', input.region ?? '', input.match, sorted(input.tagIds), sorted(input.sourceIds), input.period, input.sort, input.page, input.size].join('|');
 }
 
 export class SearchCache {

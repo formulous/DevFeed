@@ -130,6 +130,14 @@ export class PostIngestService {
         matches.flatMap((m) => [post.id, m.tagId, m.rank, post.publishedAt, post.kind]),
       );
     }
+    if (post.kind === 'SECURITY_NEWS') {
+      await manager.query(
+        `INSERT INTO security_news_search (post_id, title_tokens, body_tokens) VALUES (?, ?, ?)
+         ON DUPLICATE KEY UPDATE title_tokens = VALUES(title_tokens), body_tokens = VALUES(body_tokens)`,
+        [post.id, toTokenString(post.title), toTokenString(post.summary, sourceName)],
+      );
+      return matches;
+    }
     if (post.kind !== 'BLOG') return matches;
     const tagTerms = matches.flatMap((m) => loaded.termsByTag.get(m.tagId) ?? []).join(' ');
     await manager.query(

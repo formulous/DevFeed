@@ -2,7 +2,9 @@ import { Transform } from 'class-transformer';
 import { ArrayMaxSize, IsArray, IsIn, IsInt, IsOptional, IsString, Max, Min, Validate, ValidatorConstraint, ValidatorConstraintInterface } from 'class-validator';
 import { toIdList, toInt } from '../common/validation/query-transforms';
 import type { SearchPeriod } from '../posts/period';
-import type { SearchSort } from './search-query';
+import type { CommunityCategory } from '../posts/post-cards';
+import type { NewsRegion } from '../entities/source.entity';
+import type { SearchScope, SearchSort } from './search-query';
 
 @ValidatorConstraint({ name: 'searchLength' })
 class SearchLength implements ValidatorConstraintInterface {
@@ -22,6 +24,18 @@ export class SearchQueryDto {
   @IsString({ message: '검색어는 2~50자로 입력해 주세요' })
   @Validate(SearchLength)
   q: string;
+
+  @IsOptional()
+  @IsIn(['TECH', 'SECURITY', 'COMMUNITY'], { message: 'TECH, SECURITY, COMMUNITY 중 하나여야 해요' })
+  scope?: SearchScope;
+
+  @IsOptional()
+  @IsIn(['DOMESTIC', 'OVERSEAS'], { message: 'DOMESTIC 또는 OVERSEAS여야 해요' })
+  region?: NewsRegion;
+
+  @IsOptional()
+  @IsIn(['QUESTION', 'DISCUSSION', 'SHARE'], { message: 'QUESTION, DISCUSSION, SHARE 중 하나여야 해요' })
+  category?: CommunityCategory;
 
   @IsOptional()
   @Transform(toIdList)

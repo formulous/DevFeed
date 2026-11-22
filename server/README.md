@@ -191,6 +191,13 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - `GET /api/security-news/popular?period=DAY|WEEK|MONTH&region=`: 기술 인기와 같은 기준(롤링 기간, 조회수 1 이상 상위 20건, 동점 최신순)·같은 응답(`PopularPost`). 출처 선택은 받지 않음
   - `PopularIdsService`가 종류별 캐시 키(`BLOG:`·`SECURITY_NEWS:`)로 10분 캐시. 기술 인기·`isPopular` 집합은 `kind = 'BLOG'` 쿼리 그대로라 섞이지 않음
   - 지역은 출처 ID 목록으로 바꿔 거름. dba 측정(`devfeed_perf` 뉴스 4만 건) MONTH 전체 DB p95 1.4ms
+- M13 페이지별 검색 (038, 스키마 `0017`)
+  - `GET /api/search?scope=TECH|SECURITY|COMMUNITY` (생략 = `TECH`). 범위별 필터: `TECH` 태그·출처, `SECURITY` 지역, `COMMUNITY` 말머리. 범위 밖 필터는 400
+  - 색인 테이블을 범위별로 나눔: `post_search`(블로그, 그대로), `security_news_search`(수집 시점 `reindex`에서 제목·요약·출처 이름), `community_search`(작성·수정 때 제목·마크다운 제거 본문 앞 2,000자·태그 이름·동의어, `community-store.ts` `indexCommunityPost`)
+  - 자유 게시판: 숨김은 검색 때 `community_posts.status = 'VISIBLE'` 조인으로 거르고, 삭제·탈퇴는 `softDeletePost`에서 색인 행 삭제. 검색 캐시 안 씀 (수정·숨김 즉시 반영)
+  - 기존 글 색인: `node scripts/backfill-scoped-search.js <database> [--apply]` (빌드 후, 기본은 미리보기만)
+  - 한계: 관리자 태그 이름·동의어 변경은 자유 게시판 색인에 바로 반영 안 됨(글 수정 때 갱신). 자유 게시판 약 8천 글(색인 60MB)에서 본문 색인 길이·버퍼 풀 재검토 (dba)
+  - 성능 (`devfeed_perf` 보안 뉴스 4만·자유 게시판 색인 2천, 캐시 끔, API p95): 보안 6.4~14.9ms, 자유 게시판 7.8~8.8ms. 기술 범위 SQL은 이전과 같음
 - M12 커뮤니티 (032, 스키마 `0015`)
   - `src/community/`: 글 목록·인기·상세·쓰기·수정·삭제·채택(`CommunityService`), 신고·관리자 신고 처리(`ReportsService`), 숨김 공통 처리(`moderation.ts`)
   - 저장: `posts`(`kind = 'COMMUNITY'`, 내부 소스) + `community_posts`. `posts.url`은 `WEB_BASE_URL/community/posts/{id}`, `posts.summary`는 마크다운을 걷어낸 앞 200자(`markdown-excerpt.ts`). 줄·목록 항목은 ` · `로 잇고, `. ! ? … :`로 끝난 줄 뒤는 공백으로 이음(035). 기존 글 요약 재생성은 `node scripts/regenerate-community-excerpts.js <database> [--apply]` (빌드 후, 기본은 미리보기만). 본문은 받은 원문 그대로 저장하고 렌더링하지 않음
@@ -293,7 +300,7 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - `server/.env.test`가 있으면 그것을, 없으면 `.env`를 읽음. `.env`를 쓸 때는 `DB_DATABASE=devfeed_test npm run test:e2e`
   - 테스트가 실패해 데이터가 남으면 `db/scripts/test-db-reset.sh`(dba)로 초기화
 - 각 테스트가 소스·태그·글·회원을 직접 만들고 끝나면 지움 (실행 후 테스트 DB 0행 확인)
-- 현재 82건
+- 현재 88건
   - 탈퇴 잔존 (002 필수): `db/queries/withdrawal-check.sql`(dba)을 그대로 읽어 실행. 탈퇴 전 데이터가 있음을 확인한 뒤 탈퇴 → 12개 테이블(좋아요·댓글·패스키·등록 챌린지·점수 원장 포함) 0건, 추천 로그 `user_id` NULL, 조회수 유지. 비밀번호 틀림 403, 탈퇴 후 로그인·리프레시·남은 토큰 거부
   - 회원 흐름: 가입 검증·중복 → 관심 태그(개수·없는 태그 검증) → 온보딩 완료 → 북마크(멱등·커서·태그 필터·피드 플래그·해제) → 조회 → 읽은 기록(순서·개별·전체 삭제) → 닉네임 변경, 온보딩 건너뛰기, 북마크 5,000건 제한
   - 인증: 리프레시 교체, 30초 이내 재사용 401, 30초 지난 재사용 시 계열 전체 폐기, 로그아웃, 5회 실패 잠금

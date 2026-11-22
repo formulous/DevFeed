@@ -2,8 +2,12 @@ import type { SqlQuery } from '../posts/feed-query';
 
 export type SearchSort = 'RELEVANCE' | 'LATEST';
 
+export type SearchScope = 'TECH' | 'SECURITY' | 'COMMUNITY';
+
 export interface SearchFilter {
   match: string;
+  scope?: SearchScope;
+  category?: string;
   tagIds?: number[];
   sourceIds?: number[];
   since?: Date | null;
@@ -23,22 +27,44 @@ function placeholders(count: number): string {
   return Array.from({ length: count }, () => '?').join(', ');
 }
 
+const TABLES: Record<SearchScope, string> = {
+  TECH: 'post_search',
+  SECURITY: 'security_news_search',
+  COMMUNITY: 'community_search',
+};
+
+const COMMUNITY_JOIN = "JOIN community_posts cp ON cp.post_id = s.post_id AND cp.status = 'VISIBLE'";
+
+function scopeOf(filter: SearchFilter): SearchScope {
+  return filter.scope ?? 'TECH';
+}
+
 export function needsPostsJoin(filter: SearchFilter): boolean {
+  if (scopeOf(filter) === 'COMMUNITY') return false;
   return filter.sort === 'LATEST' || !!filter.since || !!filter.sourceIds?.length;
 }
 
-function fromClause(join: boolean): string {
-  return join
-    ? `FROM post_search s JOIN posts p FORCE INDEX (${SEARCH_FILTER_INDEX}) ON p.id = s.post_id`
-    : 'FROM post_search s';
+function fromClause(filter: SearchFilter): string {
+  const scope = scopeOf(filter);
+  const base = `FROM ${TABLES[scope]} s`;
+  if (scope === 'COMMUNITY') return `${base} ${COMMUNITY_JOIN}`;
+  return needsPostsJoin(filter) ? `${base} JOIN posts p FORCE INDEX (${SEARCH_FILTER_INDEX}) ON p.id = s.post_id` : base;
+}
+
+function publishedColumn(filter: SearchFilter): string {
+  return scopeOf(filter) === 'COMMUNITY' ? 'cp.published_at' : 'p.published_at';
 }
 
 function whereClause(filter: SearchFilter, params: unknown[]): string {
   const where = [MATCH_ALL];
   params.push(filter.match);
   if (filter.since) {
-    where.push('p.published_at >= ?');
+    where.push(`${publishedColumn(filter)} >= ?`);
     params.push(filter.since);
+  }
+  if (filter.category) {
+    where.push('cp.category = ?');
+    params.push(filter.category);
   }
   if (filter.sourceIds?.length) {
     where.push(`p.source_id IN (${placeholders(filter.sourceIds.length)})`);
@@ -54,8 +80,7 @@ function whereClause(filter: SearchFilter, params: unknown[]): string {
 }
 
 export function buildSearchQueries(filter: SearchFilter): { list: SqlQuery; count: SqlQuery } {
-  const join = needsPostsJoin(filter);
-  const from = fromClause(join);
+  const from = fromClause(filter);
 
   const listParams: unknown[] = [];
   let select = 'SELECT s.post_id AS id';
@@ -65,7 +90,7 @@ export function buildSearchQueries(filter: SearchFilter): { list: SqlQuery; coun
     listParams.push(filter.match, filter.match);
     order = 'ORDER BY score DESC, s.post_id DESC';
   } else {
-    order = 'ORDER BY p.published_at DESC, p.id DESC';
+    order = scopeOf(filter) === 'COMMUNITY' ? 'ORDER BY cp.published_at DESC, cp.post_id DESC' : 'ORDER BY p.published_at DESC, p.id DESC';
   }
   const listWhere = whereClause(filter, listParams);
   listParams.push(filter.limit, filter.offset);
