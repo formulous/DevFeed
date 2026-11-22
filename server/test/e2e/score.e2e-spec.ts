@@ -1,3 +1,4 @@
+import { MaintenanceService } from '../../src/crawl/maintenance.service';
 import { api, cleanup, createFixtures, scoreMismatches, signup, startApp, TestApp } from './support/app';
 
 describe('F-082·F-083 프로필·활동 점수 (029)', () => {
@@ -151,6 +152,36 @@ describe('F-082·F-083 프로필·활동 점수 (029)', () => {
     await t.db.query("UPDATE score_events SET points = 4994 WHERE user_id = ? AND kind = 'ARCHIVE'", [user.userId]);
     await t.db.query('UPDATE users SET score = 5000 WHERE id = ?', [user.userId]);
     expect((await profile(user.token)).grade).toEqual({ level: 5, name: 'Architect', minScore: 5000, nextMinScore: null });
+  });
+
+  it('1년 지난 읽기 원장은 보관 행 1개로 접히고 점수 유지, 접힌 글은 다시 읽으면 +1', async () => {
+    const user = await signup(t, 'score-fold');
+    for (const id of postIds.slice(0, 5)) await view(user.token, id);
+    await t.db.query(
+      "UPDATE score_events SET created_at = created_at - INTERVAL 400 DAY WHERE user_id = ? AND kind = 'READ' AND ref_id IN (?, ?, ?)",
+      [user.userId, postIds[0], postIds[1], postIds[2]],
+    );
+    const maintenance = t.app.get(MaintenanceService);
+    const first = await maintenance.foldOldReadEvents(new Date());
+    expect(first.rows).toBeGreaterThanOrEqual(3);
+    const events = (await t.db.query('SELECT kind, points FROM score_events WHERE user_id = ? ORDER BY kind, ref_id', [user.userId])) as {
+      kind: string;
+      points: number;
+    }[];
+    expect(events.map((e) => [e.kind, e.points])).toEqual([['READ', 1], ['READ', 1], ['ARCHIVE', 3]]);
+    expect((await profile(user.token)).score).toBe(5);
+
+    await t.db.query(
+      "UPDATE score_events SET created_at = created_at - INTERVAL 400 DAY WHERE user_id = ? AND kind = 'READ'",
+      [user.userId],
+    );
+    await maintenance.foldOldReadEvents(new Date());
+    const [archive] = (await t.db.query("SELECT points FROM score_events WHERE user_id = ? AND kind = 'ARCHIVE'", [user.userId])) as {
+      points: number;
+    }[];
+    expect(archive.points).toBe(5);
+    await view(user.token, postIds[0]);
+    expect((await profile(user.token)).score).toBe(6);
   });
 
   it('수치는 실제 행 수와 일치, 정합성 검사 6항목 0', async () => {

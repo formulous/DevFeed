@@ -8,6 +8,7 @@ export const CRAWL_RUN_RETENTION_DAYS = 90;
 export const READ_HISTORY_RETENTION_DAYS = 365;
 export const VIEW_GUARD_RETENTION_HOURS = 24;
 const DELETE_CHUNK = 1000;
+const FOLD_USER_CHUNK = 500;
 
 @Injectable()
 export class MaintenanceService {
@@ -24,7 +25,8 @@ export class MaintenanceService {
         'DELETE FROM read_histories WHERE last_read_at < ? LIMIT ?',
         addDays(now, -READ_HISTORY_RETENTION_DAYS),
       );
-      this.logger.log(`crawl_runs ${runs}건, read_histories ${reads}건 삭제`);
+      const folded = await this.foldOldReadEvents(now);
+      this.logger.log(`crawl_runs ${runs}건, read_histories ${reads}건 삭제, 읽기 점수 원장 ${folded.rows}건을 회원 ${folded.users}명 보관 행으로 접음`);
       const impressions = await this.recommendationStats(now);
       this.logger.log(`추천 일별 집계 완료, 노출 원본 ${impressions}건 삭제`);
     } catch (error) {
@@ -58,6 +60,40 @@ export class MaintenanceService {
       'DELETE FROM recommendation_impressions WHERE shown_at < ? LIMIT ?',
       impressionRetentionThreshold(now),
     );
+  }
+
+  async foldOldReadEvents(now: Date): Promise<{ users: number; rows: number }> {
+    const threshold = addDays(now, -READ_HISTORY_RETENTION_DAYS);
+    let users = 0;
+    let rows = 0;
+    for (;;) {
+      const batch = (await this.dataSource.query(
+        "SELECT DISTINCT user_id FROM score_events WHERE kind = 'READ' AND created_at < ? LIMIT ?",
+        [threshold, FOLD_USER_CHUNK],
+      )) as { user_id: number | string }[];
+      for (const { user_id } of batch) {
+        rows += await this.dataSource.transaction(async (manager) => {
+          await manager.query('SELECT id FROM users WHERE id = ? FOR UPDATE', [user_id]);
+          const [{ n, points }] = (await manager.query(
+            "SELECT COUNT(*) AS n, COALESCE(SUM(points), 0) AS points FROM score_events WHERE user_id = ? AND kind = 'READ' AND created_at < ?",
+            [user_id, threshold],
+          )) as { n: number | string; points: number | string }[];
+          if (Number(n) === 0) return 0;
+          await manager.query(
+            `INSERT INTO score_events (user_id, kind, ref_id, points, created_at) VALUES (?, 'ARCHIVE', 0, ?, ?)
+             ON DUPLICATE KEY UPDATE points = points + VALUES(points)`,
+            [user_id, Number(points), now],
+          );
+          const deleted = (await manager.query(
+            "DELETE FROM score_events WHERE user_id = ? AND kind = 'READ' AND created_at < ?",
+            [user_id, threshold],
+          )) as { affectedRows: number };
+          return deleted.affectedRows;
+        });
+      }
+      users += batch.length;
+      if (batch.length < FOLD_USER_CHUNK) return { users, rows };
+    }
   }
 
   deleteOldCrawlRuns(now: Date): Promise<number> {
