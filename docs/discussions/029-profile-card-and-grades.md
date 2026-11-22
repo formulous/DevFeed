@@ -93,3 +93,33 @@
 - 운영 DB 마이그레이션은 사용자 확인 후 적용
 
 ## 의견
+
+### server (1차) — 조회·쓰기 경로 관점 의견 (dba 스키마 전)
+**1. 원장 형태 제안 (dba)**
+- `score_events`: `user_id`, `kind` ENUM('READ','LIKE','COMMENT'), `ref_id`(READ·LIKE = post_id, COMMENT = comment_id), `points`(실제 적립한 점수, 하루 제한에 걸리면 0), `revoked_at` NULL, `created_at`
+  - UNIQUE `(user_id, kind, ref_id)` → 같은 글 재읽기·동시 중복 요청이 키 하나로 막힘 (`INSERT IGNORE` 영향 행 1일 때만 점수 반영)
+  - 인덱스 `(user_id, kind, created_at)` → 하루 제한 합계
+- `users.score` INT UNSIGNED 카운터(CHECK ≥ 0). 원장 변경과 같은 트랜잭션에서 증감. 프로필·댓글 작성자 등급은 이 컬럼만 읽음
+- 등급(레벨·이름·기준 점수)은 저장하지 않고 server 상수로 계산 → 이름 교체(보안 계열 대안)가 코드 상수만 바꾸면 끝남
+
+**2. 회수·복구 규칙 (pm 확인 바람)**
+- 좋아요 취소: 원장 행 **삭제** + 점수 회수 → 다시 좋아요하면 다시 +2 (켜고 끄기 반복은 순증 0이라 어뷰징 아님)
+- 댓글 본인 삭제: 행 유지 + `revoked_at` 설정 + 회수. 관리자 숨김도 같음, 숨김 해제는 `revoked_at` NULL + 복구
+- **하루 제한은 회수된 행도 셈**: 댓글 10개 쓰고 지우고 다시 쓰기로 50점 넘게 받는 것을 막음. 즉 "하루 10개분"은 "하루 처음 10개 작성"
+- 읽기: 하루 30점 넘은 뒤 처음 읽은 글은 0점 행이 남아 그 글은 나중에 읽어도 0점 ("같은 글 처음 1회" 해석). 다른 해석(다음 날 다시 읽으면 +1)을 원하면 0점 행을 남기지 않는 방식으로 바꿈
+- 하루 경계: **KST 자정** 기준 (서비스 사용자 기준). 원장 `created_at`은 UTC 저장, 범위 계산만 KST
+
+**3. 동시성·잠금 순서**
+- 하루 제한 합계와 적립을 원자적으로 하려면 회원 행 `FOR UPDATE`가 필요. 댓글 작성은 이미 회원 행을 먼저 잠금(026)
+- **좋아요는 지금 글 행을 먼저 잠그므로 점수 갱신(회원 행)을 뒤에 붙이면 댓글 작성(회원 → 글)과 순서가 반대가 됨** → 같은 회원이 같은 글에 좋아요·댓글 동시 요청 시 데드락 가능. 좋아요도 회원 행 → 글 행 순서로 바꿈 (server 내부 변경, `reactions.sql` 잠금 순서 갱신 필요 → dba)
+- 조회(F-012)는 회원만 적립. 회원 행 잠금이 추가되지만 같은 회원의 동시 조회는 드물어 경합 작음
+
+**4. API 초안 (명세는 스키마 확정 후)**
+- `GET /me/profile` (회원) → `{ nickname, score, grade: { level, name, minScore, nextMinScore | null }, stats: { likes, comments, reads, bookmarks } }`
+  - 수치는 카운터 없이 `COUNT`: `post_likes` PK·`read_histories` PK·`bookmarks` PK 범위, 댓글은 `idx_comments_user_created` 범위 + `status = 'VISIBLE'`. 회원당 수천 행 이하라 4개 합쳐 수 ms 예상 → 측정 후 기준(300ms) 확인
+  - 아바타는 닉네임으로 client가 계산 → 응답에 필드 없음
+- 댓글 응답 `author`에 `grade: { level, name }` 추가 (목록 조회에 `users.score` 컬럼 하나 더 읽음, 추가 쿼리 없음)
+- 활동 직후 반영: 좋아요·댓글·조회 응답은 바꾸지 않고 client가 `GET /me/profile` 재조회 (응답 형태 변경 최소화). client가 응답에 점수 포함을 원하면 의견 바람
+- 등급 안내 모달 표는 client 상수 (spec 표 그대로). server 상수와 어긋나지 않게 단위 테스트로 spec 값 고정
+- 탈퇴: 원장 FK CASCADE면 server 추가 작업 없음 (`users.score`는 회원 행과 같이 삭제)
+- 초기 점수 백필은 dba 쿼리로 원장 생성 → `users.score = SUM(points)`. 백필 후 정합성 검사(`users.score` = 원장 미회수 합계) 쿼리도 부탁
