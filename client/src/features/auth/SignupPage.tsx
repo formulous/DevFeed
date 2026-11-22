@@ -60,7 +60,7 @@ export function SignupPage() {
 
   return (
     <AuthPanel
-      title="DevFeed 계정 만들기"
+      title="formulous 계정 만들기"
       footer={
         <>
           이미 계정이 있으신가요?{' '}

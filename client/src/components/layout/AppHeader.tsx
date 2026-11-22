@@ -8,6 +8,7 @@ import { Avatar } from '@/components/profile/Avatar';
 import { GradeBadge } from '@/components/profile/GradeBadge';
 import { useProfile } from '@/hooks/useProfile';
 import { ThemeToggle } from './ThemeToggle';
+import { Wordmark } from '@/components/auth/LogoMark';
 
 export const SEARCH_MIN = 2;
 export const SEARCH_MAX = 50;
@@ -119,8 +120,8 @@ export function AppHeader({ showSearchLink = false }: { showSearchLink?: boolean
   return (
     <header ref={ref} className="sticky top-0 z-30 border-b border-line bg-[color:color-mix(in_srgb,var(--color-bg-app)_85%,transparent)] backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-[1200px] items-center gap-2 px-4">
-        <Link to={HOME} className={cn('mr-auto shrink-0 rounded text-lg font-semibold tracking-tight text-fg', FOCUS)}>
-          DevFeed
+        <Link to={HOME} aria-label="formulous 홈" className={cn('mr-auto shrink-0 rounded text-lg font-semibold tracking-tight text-fg', FOCUS)}>
+          <Wordmark />
         </Link>
         {showSearchLink && (
           <Link

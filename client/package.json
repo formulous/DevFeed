@@ -8,7 +8,7 @@
     "build": "tsc -p tsconfig.json && vite build && node scripts/check-build.mjs dist",
     "preview": "vite preview --host 0.0.0.0",
     "test": "vitest run",
-    "build:web": "tsc -p tsconfig.json && VITE_BASE=/dev-feed/ VITE_API_MOCK=false vite build --outDir dist-web && node scripts/check-build.mjs dist-web",
+    "build:web": "tsc -p tsconfig.json && VITE_BASE=/ VITE_API_MOCK=false vite build --outDir dist-root && node scripts/check-build.mjs dist-root --release",
     "capture": "node scripts/capture.mjs",
     "og": "node scripts/og.mjs"
   },

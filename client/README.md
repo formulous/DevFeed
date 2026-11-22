@@ -1,7 +1,7 @@
-# DevFeed client
+# formulous client
 
 - 담당: `client`
-- 상태: MVP 완료 (M0~M6, 2026-11-19). 공개 주소 https://formulous.org/dev-feed/ (2026-11-22 `/portfolio/`에서 변경, `docs/discussions/028`). S-01 홈 피드, S-03 인기 글, S-04 검색, S-05 로그인, S-06 가입, S-07 온보딩, S-08 북마크, S-09 읽은 기록, S-10 설정·탈퇴, S-02 추천(M5), A-01~A-04 관리자 화면 동작
+- 상태: MVP 완료 (M0~M6, 2026-11-19). 공개 주소 https://formulous.org/ (037에서 `/dev-feed/`에서 루트로 이전, 이름 DevFeed → formulous). S-01 홈 피드, S-03 인기 글, S-04 검색, S-05 로그인, S-06 가입, S-07 온보딩, S-08 북마크, S-09 읽은 기록, S-10 설정·탈퇴, S-02 추천(M5), A-01~A-04 관리자 화면 동작
 - 검증 환경: Node 24.22.3
 - API 타입·mock은 `docs/api/openapi.yaml` v1(004에서 승인)과 `docs/api/conventions.md` 기준. 현재 구현 범위(posts, tags, sources, auth, me, bookmarks, views)만 반영
 - 기준 문서: `docs/spec/02-features.md`, `docs/spec/03-screens.md`
@@ -381,7 +381,7 @@ npm run capture    # 반응형 점검·README용 스크린샷 (Playwright, 최�
   - 수용 기준 측정 (`npm run capture` + 실서버 데이터 임시 측정): 1280×720·1440×900에서 기본·최대 선택(태그 10, 소스 20) 모두 사이드바 `scrollHeight ≤ clientHeight`. 실데이터 최대 선택 처음 613/584px 넘침 → 소스 추가 표시 2개·칩 간격 4px로 줄여 567/567
 - 광고(F-060)는 사용자 결정으로 제외 (`docs/discussions/016` decided). 관련 코드 없음
 - 비공개 화면 `meta robots noindex` (016, 사용자가 nginx `noindex` 해제): S-05~S-10, A-01~A-04 진입 시 `RouteTitle`이 `<meta name="robots" content="noindex">`를 붙이고, 공개 화면(S-01~S-04, S-11)으로 오면 뗌
-- 화면별 `<title>`: `components/layout/RouteTitle.tsx`의 경로 표 한 곳에서 관리 (예: "검색: 카프카 · DevFeed")
+- 화면별 `<title>`: `components/layout/RouteTitle.tsx`의 경로 표 한 곳에서 관리 (예: "검색: 카프카 · formulous")
 - 글 카드 배지 (F-014, `docs/discussions/020`): 소스 줄 시간 옆에 `NEW`(발행 24시간 이내, client 계산)·`인기`(`PostSummary.isPopular`, 7일 인기 상위 20) 최대 2개
   - `components/post/PostBadges.tsx`, `PostCard`의 `badges` prop: 기본 `all`, S-03 인기는 `new`(인기 배지 생략), S-09 기록은 `none`
   - `isPopular`가 없는 응답이면 `인기`만 생략. mock은 7일 조회수 상위 20건에 `isPopular: true`
@@ -399,14 +399,17 @@ npm run capture    # 반응형 점검·README용 스크린샷 (Playwright, 최�
   | S-02 제목 옆 "관심 태그:" 라벨이 따로 떨어짐 | 360 | 좁은 폭에서 제목을 한 줄 전체로, 관심 태그는 다음 줄 |
   - 768px은 사이드바가 "필터" 버튼으로 접힘(의도), 관리자 표·수집 이력·태그 사전 표는 360px에서 표 안에서만 가로 스크롤(의도)
 
-## 하위 경로 배포 (외부 확인용)
-- `https://formulous.org/dev-feed/` 에서 실서버 연동 빌드를 확인함 (`docs/discussions/009`, 028에서 `/portfolio/` → `/dev-feed/`)
-- `npm run build:web` → `dist-web/` (`VITE_BASE=/dev-feed/`, mock 끔). `dist-web/`는 git 제외. `check-build`가 결과에 옛 주소 `/portfolio/`가 남으면 실패시킴
-- 하위 경로 처리
-  - Vite `base`: `VITE_BASE` 환경변수 (기본 `/`)
-  - 라우터: `BrowserRouter basename` = `BASE_URL`에서 끝 슬래시 제거
-  - API: `apiUrl`이 `${BASE_URL}api` 기준 → `/dev-feed/api/...` (조회 기록 keepalive 포함)
-- nginx 설정은 pm 담당. `/dev-feed/api/` → `127.0.0.1:3000/api/` 프록시, 리프레시 쿠키 경로 변환
+## 배포 (루트 `https://formulous.org/`, `docs/discussions/037`)
+- `npm run build:web` → `dist-root/` (`VITE_BASE=/`, mock 끔, git 제외). nginx가 `/`를 이 폴더로, `/api/`를 서버로 넘김 (pm 담당)
+- `check-build`: mock 코드·워커, 옛 이름·주소(`/portfolio/`·`/dev-feed/`·`DevFeed`)가 결과(`index.html`·자산·`robots.txt`·`sitemap.xml`)에 있으면 실패. `--release`면 `ads.txt` 내용(AdSense)과 `/assets/` 루트 경로도 확인
+- `public/`: `ads.txt`(옛 home과 같은 내용), `robots.txt`(관리자·내 정보·온보딩·글쓰기 제외), `sitemap.xml`(공개 목록 주소만), `favicon.svg`, `og.png`(`npm run og`로 생성)
+- 기존 `dist-web/`(`/dev-feed/` 빌드)은 nginx 전환 전까지 남겨 둠. 전환 뒤 `/dev-feed/...`는 404 (넘김 없음)
+- 하위 경로 처리는 그대로 남아 있음: Vite `base` = `VITE_BASE`, 라우터 `basename` = `BASE_URL`, API `apiUrl` = `${BASE_URL}api`
+
+## 이름·로고 (037)
+- 서비스 이름 **formulous**. 로고는 `components/auth/LogoMark.tsx` (`LogoMark` 아이콘 `f.` + `Wordmark`). 점 색은 `--color-logo-dot` (라이트 `#8ea6d6`·다크 `#3d5a8f`, 반전 배경 위 강조색)
+- 문서 제목 `<화면> · formulous`, 메인 `formulous — 기술·보안 뉴스와 개발자 커뮤니티`
+- 브라우저 저장소 키(`devfeed-color-scheme`, `devfeed:community-draft:…`, `devfeed:chunk-reload`)는 화면에 안 보이는 내부 이름이라 그대로 둠 (바꾸면 테마 선택·임시 저장이 사라짐)
 
 ## 실서버 확인 (M5 추천)
 - 2026-11-19 `:3000`, 확인용 계정 가입 → 확인 → 탈퇴

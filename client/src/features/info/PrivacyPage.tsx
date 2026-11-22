@@ -14,7 +14,7 @@ export function PrivacyPage() {
   return (
     <article className="mx-auto max-w-2xl rounded-[var(--radius-md)] border border-line bg-surface px-6 py-5">
       <h1 className="mb-2 text-xl font-bold">개인정보 안내</h1>
-      <p className="mb-2 text-sm text-fg-secondary">DevFeed가 어떤 정보를 왜 보관하고 언제 지우는지 안내해 드려요.</p>
+      <p className="mb-2 text-sm text-fg-secondary">formulous가 어떤 정보를 왜 보관하고 언제 지우는지 안내해 드려요.</p>
       <Item title="수집 항목">
         <p>회원가입할 때 이메일과 닉네임만 받아요.</p>
         <p>비밀번호는 원래 값으로 되돌릴 수 없는 해시로만 저장해요.</p>

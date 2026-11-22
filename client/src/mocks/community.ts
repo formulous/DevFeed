@@ -24,7 +24,7 @@ import { mockTags } from './fixtures';
 import { seedAuthorGrade } from './profile';
 import { commentAuthorOf, commentCount, commentPreview, hideCommentByReports, reactionFields, showComment } from './reactions';
 
-export const COMMUNITY_SOURCE = { id: 999, name: 'DevFeed 커뮤니티', logoUrl: null, type: 'COMPANY' as const };
+export const COMMUNITY_SOURCE = { id: 999, name: 'formulous 커뮤니티', logoUrl: null, type: 'COMPANY' as const };
 export const DAILY_POST_LIMIT = 5;
 export const POST_COOLDOWN_MS = 60_000;
 export const NEW_ACCOUNT_MS = 24 * 3_600_000;

@@ -11,18 +11,18 @@ function Boom({ error }: { error: Error }): never {
 
 describe('화면별 title', () => {
   it('경로별 제목을 만듦', () => {
-    expect(titleFor('/tech', '')).toBe('최신 기술 글 · DevFeed');
-    expect(titleFor('/tech/popular', '')).toBe('인기 기술 글 · DevFeed');
-    expect(titleFor('/security/popular', '')).toBe('인기 보안 뉴스 · DevFeed');
-    expect(titleFor('/search', '?q=%EC%B9%B4%ED%94%84%EC%B9%B4')).toBe('검색: 카프카 · DevFeed');
-    expect(titleFor('/admin/sources/3/edit', '')).toBe('소스 수정 · DevFeed');
-    expect(titleFor('/admin/sources/3', '')).toBe('소스 상세 · DevFeed');
-    expect(titleFor('/nope', '')).toBe('페이지를 찾을 수 없어요 · DevFeed');
+    expect(titleFor('/tech', '')).toBe('최신 기술 글 · formulous');
+    expect(titleFor('/tech/popular', '')).toBe('인기 기술 글 · formulous');
+    expect(titleFor('/security/popular', '')).toBe('인기 보안 뉴스 · formulous');
+    expect(titleFor('/search', '?q=%EC%B9%B4%ED%94%84%EC%B9%B4')).toBe('검색: 카프카 · formulous');
+    expect(titleFor('/admin/sources/3/edit', '')).toBe('소스 수정 · formulous');
+    expect(titleFor('/admin/sources/3', '')).toBe('소스 상세 · formulous');
+    expect(titleFor('/nope', '')).toBe('페이지를 찾을 수 없어요 · formulous');
   });
 
   it('라우트가 바뀌면 document.title을 갱신함', async () => {
     renderWithApp(<App />, '/popular');
-    await waitFor(() => expect(document.title).toBe('인기 기술 글 · DevFeed'));
+    await waitFor(() => expect(document.title).toBe('인기 기술 글 · formulous'));
   });
 });
 
@@ -35,7 +35,7 @@ describe('S-11 개인정보 안내', () => {
     expect(await screen.findByRole('heading', { level: 1, name: '개인정보 안내' })).toBeInTheDocument();
     expect(screen.getByText(/최대 14일 남고/)).toBeInTheDocument();
     expect(screen.getByText(/df_vid/)).toBeInTheDocument();
-    await waitFor(() => expect(document.title).toBe('개인정보 안내 · DevFeed'));
+    await waitFor(() => expect(document.title).toBe('개인정보 안내 · formulous'));
   });
 
   it('회원가입 화면에도 링크가 있음', async () => {

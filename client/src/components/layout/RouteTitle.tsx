@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { matchPath, useLocation } from 'react-router';
 
-const APP = 'DevFeed';
+const APP = 'formulous';
 
 const TITLES: [string, string][] = [
   ['/tech', '최신 기술 글'],

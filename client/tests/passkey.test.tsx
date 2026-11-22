@@ -46,7 +46,7 @@ describe('S-05 로그인 개편·F-034 패스키 (027)', () => {
   it('패스키를 지원하면 방법 선택부터, 이메일로 계속하면 입력칸으로 바뀌고 돌아올 수 있음', async () => {
     const user = userEvent.setup();
     renderWithApp(<App />, '/login');
-    expect(await screen.findByRole('heading', { name: 'DevFeed에 로그인' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'formulous에 로그인' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '패스키로 로그인' })).toBeInTheDocument();
     expect(screen.queryByLabelText('이메일')).toBeNull();
     expect(screen.queryByRole('navigation', { name: '피드' })).toBeNull();
@@ -149,7 +149,7 @@ describe('S-05 로그인 개편·F-034 패스키 (027)', () => {
     webauthn.startRegistration.mockResolvedValue(assertion('cred-new'));
     const user = userEvent.setup();
     const view = renderWithApp(<App />, '/signup?redirect=%2Fpopular');
-    expect(await screen.findByRole('heading', { name: 'DevFeed 계정 만들기' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'formulous 계정 만들기' })).toBeInTheDocument();
     expect(screen.queryByLabelText('비밀번호 확인')).toBeNull();
     await user.type(screen.getByLabelText('이메일'), 'new@devfeed.dev');
     await user.type(screen.getByLabelText('비밀번호'), 'abcd1234');

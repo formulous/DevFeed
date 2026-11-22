@@ -99,7 +99,7 @@ export function LoginPage() {
 
   return (
     <AuthPanel
-      title="DevFeed에 로그인"
+      title="formulous에 로그인"
       footer={
         <>
           계정이 없으신가요?{' '}

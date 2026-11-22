@@ -76,7 +76,7 @@ export function passkeyHandlers({ isMember, me, startSession, error }: Ctx) {
       if (mine().length >= PASSKEY_MAX) return error(409, 'PASSKEY_LIMIT_EXCEEDED', '패스키는 10개까지 만들 수 있어요');
       return HttpResponse.json({
         challenge: random(32),
-        rp: { name: 'DevFeed', id: rpId(request) },
+        rp: { name: 'formulous', id: rpId(request) },
         user: { id: b64url(new TextEncoder().encode(`devfeed-${user.id}-${user.email}`)), name: user.email, displayName: user.nickname },
         pubKeyCredParams: [
           { type: 'public-key', alg: -7 },

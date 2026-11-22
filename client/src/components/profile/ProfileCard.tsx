@@ -99,7 +99,7 @@ function GuestCard() {
   const redirect = encodeURIComponent(location.pathname + location.search);
   return (
     <section aria-label="로그인 안내" data-testid="guest-card" className={WRAP}>
-      <p className="text-sm font-semibold text-fg">DevFeed에 로그인하고</p>
+      <p className="text-sm font-semibold text-fg">formulous에 로그인하고</p>
       <p className="mt-0.5 text-sm text-fg-secondary">좋아요·댓글로 등급을 올려 보세요</p>
       <div className="mt-3 flex gap-2">
         <Link

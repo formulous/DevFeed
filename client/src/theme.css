@@ -20,6 +20,7 @@
   --color-primary-line: #d3dcec;
   --color-inverse: #18181b;
   --color-on-inverse: #fafafa;
+  --color-logo-dot: #8ea6d6;
   --color-danger: #c22d2d;
   --color-on-danger: #ffffff;
   --color-danger-soft: #fdf1f1;
@@ -59,6 +60,7 @@
   --color-primary-line: #2a3550;
   --color-inverse: #ededef;
   --color-on-inverse: #0b0b0d;
+  --color-logo-dot: #3d5a8f;
   --color-danger: #f27a7a;
   --color-on-danger: #0b0b0d;
   --color-danger-soft: #261414;

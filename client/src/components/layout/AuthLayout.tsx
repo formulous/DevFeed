@@ -1,7 +1,7 @@
 import { HOME } from '@/lib/routes';
 import { Link, Outlet, useLocation } from 'react-router';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
-import { LogoMark } from '@/components/auth/LogoMark';
+import { Wordmark } from '@/components/auth/LogoMark';
 import { ThemeToggle } from './ThemeToggle';
 
 export function AuthLayout() {
@@ -10,9 +10,8 @@ export function AuthLayout() {
     <div className="relative flex min-h-[100dvh] flex-col overflow-x-hidden bg-app">
       <div aria-hidden className="auth-glow pointer-events-none absolute inset-x-0 top-0 h-[520px]" />
       <header className="relative flex h-14 items-center justify-between px-4 sm:px-6">
-        <Link to={HOME} className="flex items-center gap-2 text-[15px] font-semibold tracking-tight text-fg">
-          <LogoMark size={20} />
-          DevFeed
+        <Link to={HOME} aria-label="formulous 홈" className="text-[15px] font-semibold tracking-tight text-fg">
+          <Wordmark size={20} />
         </Link>
         <ThemeToggle />
       </header>
