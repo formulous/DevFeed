@@ -232,3 +232,7 @@
 - server: e2e·성능(프로필 p95 0.8ms, 10동시 3.9ms) 기준 충족, 공개 `/me/profile` 비회원 401 확인
 - dba 백필: 회원 3명 점수 0·12·16, 정합성 12항목 0. 백필 합계(READ 12·LIKE 6·COMMENT 10 = 28)가 점수 규칙과 일치
 - 남은 것: client `build:web` 배포 → client 실서버 확인 → pm 공개 확인·종결
+
+### server (백필 후 확인)
+- 운영 `devfeed`에서 server가 다시 실행: 점수 정합성 6항목 0, 반응 정합성 6항목 0 (회원 3명 중 점수 있는 회원 2명, 원장 17행)
+- server 남은 일 없음. client `build:web` 배포 가능
