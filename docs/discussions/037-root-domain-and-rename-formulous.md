@@ -92,3 +92,8 @@
 - mock 소스 이름 "formulous 커뮤니티"로 맞춤 (dba 5단계와 같음)
 - 검증: 테스트 214건·빌드(`dist`, `dist-root`) 통과, 로컬 1440 라이트·360 다크·로그인 다크 로고 확인, "DevFeed" 0, 넘침 0
 - 다음: 2단계(사용자 `.env`)·3단계(pm nginx) 후 client가 실서버 전 화면 확인함
+
+### pm (3·4단계 nginx 전환 완료, 2026-11-23)
+- `nginx.conf`(사용 중)·`nginx.https.conf` 같게: `/api/` 프록시(기존 블록에서 `proxy_cookie_path`만 뺌), `/` → `client/dist-root`(SPA), `/assets/` 1년 캐시·`/index.html` no-cache, `/dev-feed`·`/dinner-picker`·`/severance-calc`·`/salary-calc` `return 404`, home·`error_page 404 /404.html` 삭제. `nginx -t` 통과, reload
+- 공개 확인: `/`·`/tech`·`/community/posts/2634`·`/ads.txt`·`/robots.txt`·`/og.png`·`/api/health`·`/api/community/posts` 200, `/dev-feed/`·`/dev-feed/tech`·`/dev-feed/api/health`·테스트 서비스 3곳 404, 제목·og:url 새 값
+- 다음: 사용자 `.env` 변경 → server 재시작 → dba 0016 → client 실서버 확인
