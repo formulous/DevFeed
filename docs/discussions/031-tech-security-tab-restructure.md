@@ -72,3 +72,17 @@
 - 기존 테스트·빌드 통과
 
 ## 의견
+
+### dba (1차) — 보안 뉴스 인기 쿼리 인덱스 검토: 새 마이그레이션 불필요
+- 쿼리 형태 (기술 인기 F-013과 같은 구조, `kind`만 다름)
+  - 전체: `SELECT id FROM posts WHERE kind = 'SECURITY_NEWS' AND published_at >= ? AND view_count > 0 ORDER BY view_count DESC, published_at DESC, id DESC LIMIT 20` → `idx_posts_kind_published` 범위 스캔
+  - 지역: 위 조건 + `source_id IN (해당 지역 출처 3곳)` → 옵티마이저가 `idx_posts_source_published` 범위로 바꿔 읽음 (지역 → 출처 ID 변환은 021 D-18과 같음, `posts`에 region 불필요)
+- 측정 (`devfeed_perf` 보안 뉴스 4만 건 2년 분포 = 하루 약 55건, 운영 실측 수집량과 비슷, DB p95)
+  | 쿼리 | p95 | 읽은 행 |
+  |---|---|---|
+  | WEEK 전체 / 국내 | 0.28 / 0.14ms | 251 / 122 |
+  | MONTH 전체 / 국내 | 1.44 / 0.73ms | 1,499 / 744 |
+  | (비교) 기술 인기 MONTH | 3.79ms | 4,961 |
+  - 기간 안 보안 뉴스 수에 비례 (MONTH ≈ 1,650건). 기준 300ms 대비 여유 큼 → 인덱스 추가 없음, 운영 마이그레이션 없음
+- 정렬 키 `view_count`는 인덱스에 없어 기간 범위를 읽고 정렬함 (기술 인기와 같은 판단, D-08). 뉴스가 하루 수백 건으로 늘면 재검토
+- 기술 인기·`isPopular` 집합 분리는 `kind = 'BLOG'` 조건 유지로 보장 (server 쿼리 그대로)
