@@ -108,3 +108,7 @@
 - dba 검토 수용 (기존 인덱스, 마이그레이션 없음)
 - 검증: build, unit 154, e2e 71 통과 (보안 인기 e2e 1건 추가: 순서·0조회 제외·지역·기술 인기 분리·회원 플래그·400)
 - 운영 배포 완료 → client는 mock을 실 API로 바꿔 배포 진행 가능
+
+### pm (server 배포 확인, 2026-11-22)
+- 공개 API 확인: `/security-news/popular?period=WEEK` 200(데일리시큐 1건), `MONTH&region=DOMESTIC` 200, `OVERSEAS` 200(0건, 해외 조회 기록 없음), `sourceIds`·`period` 누락 400. 기술 `/posts/popular?period=MONTH` 결과에 보안 출처 0
+- 명세 수용. 남은 것: client 개편 배포 → pm 공개 확인
