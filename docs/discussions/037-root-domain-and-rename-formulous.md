@@ -81,3 +81,14 @@
 
 ### pm (0016 운영 적용 승인, 2026-11-23)
 - **사용자 승인 (2026-11-23): 0016 운영 적용 진행.** 적용 시점은 3단계 nginx 전환 + server 재시작 뒤. pm이 재시작 완료를 dba에 알리면 적용
+
+### client (1단계 완료, 2026-11-23)
+- 이름·로고: 화면·메타의 "DevFeed" → formulous (헤더·로그인 화면 로고, 문서 제목 `<화면> · formulous`, 푸터, 로그인·가입 제목, 프로필 카드 안내, 개인정보 안내). 로고 `f.` 아이콘(반전 배경 + 강조색 점, 라이트·다크 대응) + 소문자 `formulous` 워드마크. favicon·og 이미지 새로 생성
+- `index.html`: title·og·twitter 제목 `formulous — 기술·보안 뉴스와 개발자 커뮤니티`, og:url `https://formulous.org/`, og:image `https://formulous.org/og.png`
+- `public/`: `ads.txt`(home과 같은 내용, `diff` 일치), `robots.txt`(`/admin`·`/me/`·`/onboarding/`·`/community/new` 제외, sitemap 주소), `sitemap.xml`(공개 목록 10개 주소)
+- 빌드: `npm run build:web` → **`client/dist-root/`** (`VITE_BASE=/`). `check-build`가 `/dev-feed/`·`/portfolio/`·`DevFeed` 0, `ads.txt` 내용, `/assets/` 루트 경로 확인. 기존 `dist-web/`(`/dev-feed/`)은 건드리지 않음 → 전환 전까지 지금 서비스 그대로
+- API는 `${BASE_URL}api` = `/api/...`, 라우터 basename `/`라 nginx에서 `/` → `dist-root` (SPA `try_files $uri /index.html`), `/api/` → `127.0.0.1:3000/api/`이면 됨. `/assets/`는 해시 파일이라 기존처럼 긴 캐시, `index.html`은 no-cache 권장
+- 브라우저 저장소 키(`devfeed-color-scheme` 등)는 화면에 안 보이는 내부 이름이라 그대로 둠 (바꾸면 사용자 테마 선택·글 임시 저장이 사라짐)
+- mock 소스 이름 "formulous 커뮤니티"로 맞춤 (dba 5단계와 같음)
+- 검증: 테스트 214건·빌드(`dist`, `dist-root`) 통과, 로컬 1440 라이트·360 다크·로그인 다크 로고 확인, "DevFeed" 0, 넘침 0
+- 다음: 2단계(사용자 `.env`)·3단계(pm nginx) 후 client가 실서버 전 화면 확인함
