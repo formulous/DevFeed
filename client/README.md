@@ -164,6 +164,7 @@ App
 - 설정: 닉네임 변경(헤더에 즉시 반영), 관심 태그 칩 ✕(3개면 비활성 + "최소 3개 필요")·추가 모달, 로그아웃, 탈퇴(삭제 데이터 안내 + 비밀번호 재입력, `PASSWORD_MISMATCH` 안내)
 - 직접 로그아웃·탈퇴하면 회원 화면에 있어도 `/login`이 아니라 홈으로 이동 (`signedOutByUser`). 토큰 만료로 세션을 잃은 경우는 기존대로 `/login?redirect=`
 - `Modal`은 `onClose`가 바뀌어도 포커스를 다시 옮기지 않음 (입력 중 부모가 다시 렌더링될 때 두 번째 글자부터 입력이 사라지던 문제 수정)
+- `Modal`은 제목·닫기 줄 고정, 본문만 스크롤(최대 높이 `100dvh - 2rem`). 너비 `size` 옵션 `sm`(기본 384px)·`md`(448px) (030)
 
 ## 검색 (S-04, M3)
 - 검색어·태그·소스·기간·정렬·페이지가 모두 URL 쿼리. 기본값(`period=ALL`, `sort=RELEVANCE`, `page=1`)은 URL에서 뺌
@@ -210,7 +211,7 @@ App
 
 ## 프로필 카드·활동 등급 (F-082·F-083, M10, `docs/discussions/029`)
 - 위치: 최신·검색(`FilterLayout`)·보안 뉴스 좌측 열 맨 위, 좌측 열이 없던 인기·추천은 `ProfileRail`(256px 좌측 열 + 본문)로 감쌈. `lg` 미만은 숨기고 헤더 프로필 메뉴 맨 위에 아바타·닉네임·등급
-- `components/profile/`: `ProfileCard`(회원·게스트·로딩·오류), `Avatar`(닉네임 첫 글자, 무채색 6단계, 글자 대비 4.5:1 이상 테스트), `GradeBadge`, `GradeGuideModal`(등급표·점수 규칙)
+- `components/profile/`: `ProfileCard`(회원·게스트·로딩·오류), `Avatar`(닉네임 첫 글자, 무채색 6단계, 글자 대비 4.5:1 이상 테스트), `GradeBadge`, `GradeGuideModal`(등급표 + 점수 규칙 2줄 목록, `Modal size="md"`, 030)
 - 데이터: `GET /me/profile` → `{ nickname, score, grade: { level, name, minScore, nextMinScore }, stats }` (`hooks/useProfile.ts`, 키 `['me','profile']`). 다음 등급 이름은 `lib/grades.ts` 상수(level+1)에서 찾음. 진행 막대 = 현재 등급 시작점부터 다음 등급까지 비율
 - 활동 직후 반영: 좋아요(직렬화 끝)·북마크·원문 조회(`POST /views` 응답 후)·댓글 작성/삭제/숨김·읽은 기록 삭제 뒤 `refreshProfile`로 재조회
 - 댓글 작성자 옆 아바타(20px)·등급 배지 (`author.grade`)

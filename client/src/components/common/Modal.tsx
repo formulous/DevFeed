@@ -7,9 +7,12 @@ interface ModalProps {
   onClose: () => void;
   title: ReactNode;
   children: ReactNode;
+  size?: 'sm' | 'md';
 }
 
-export function Modal({ open, onClose, title, children }: ModalProps) {
+const WIDTH = { sm: 'max-w-sm', md: 'max-w-md' } as const;
+
+export function Modal({ open, onClose, title, children, size = 'sm' }: ModalProps) {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
@@ -41,9 +44,9 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className="relative w-full max-w-sm rounded-[var(--radius-lg)] border border-line bg-surface p-5 shadow-pop outline-none"
+        className={`relative flex max-h-[calc(100dvh-2rem)] w-full ${WIDTH[size]} flex-col rounded-[var(--radius-lg)] border border-line bg-surface shadow-pop outline-none`}
       >
-        <div className="mb-3 flex items-center justify-between">
+        <div className="flex shrink-0 items-center justify-between px-5 pb-3 pt-5">
           <h2 id={titleId} className="text-lg font-semibold">
             {title}
           </h2>
@@ -51,7 +54,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
             <FiX size={18} />
           </button>
         </div>
-        {children}
+        <div className="scrollbar-thin min-h-0 overflow-y-auto overscroll-contain px-5 pb-5">{children}</div>
       </div>
     </div>,
     document.body,

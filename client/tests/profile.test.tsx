@@ -202,6 +202,12 @@ describe('F-082 프로필 카드 (029)', () => {
     expect(dialog.getByText('5,000점')).toBeInTheDocument();
     expect(dialog.getByText('같은 글은 처음 한 번만, 하루 최대 30점')).toBeInTheDocument();
     expect(dialog.getByText('점수에는 들어가지 않아요')).toBeInTheDocument();
+    expect(dialog.getByRole('heading', { name: '등급' })).toBeInTheDocument();
+    expect(dialog.getByRole('heading', { name: '점수 얻는 법' })).toBeInTheDocument();
+    const panel = screen.getByRole('dialog', { name: '등급 안내' });
+    expect(panel).toHaveClass('max-w-md');
+    expect(panel.lastElementChild).toHaveClass('overflow-y-auto');
+    expect(panel.querySelector('.break-keep')).not.toBeNull();
   });
 
   it.each(['/popular', '/for-you', '/search?q=kafka', '/security'])('%s 좌측 열 맨 위에도 카드가 있음', async (path) => {
