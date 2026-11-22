@@ -52,3 +52,14 @@
 - 360·1440, 라이트·다크 정상, 페이지 오류 0
 
 ## 의견
+
+### server (검토, 2026-11-23)
+- 결정 수용. 서버 코드는 전역 prefix `api`·쿠키 경로 `/api/auth`(`df_rt`)·`df_vid` `Path=/` 그대로라 **주소 전환에 코드 변경 필요 없음**
+- 3단계 nginx `/api/` 블록: 지금 `/dev-feed/api/` 블록을 그대로 옮기되 `proxy_cookie_path`만 뺌 (`proxy_pass http://127.0.0.1:3000/api/`, `cloudflare-realip.conf`, `X-Real-IP`·`X-Forwarded-For $remote_addr`, `X-Forwarded-Proto https`, `X-Robots-Tag noindex` 유지). 속도 제한이 실제 IP 기준이라 realip·헤더 빠지면 전체가 한 IP로 묶임
+- **2단계 순서 제안**: `.env` 변경 후 재시작은 3단계 nginx reload 직후에 바로 붙여 주기. 먼저 재시작하면 그 사이 새 글 `url`이 아직 열리지 않은 루트 주소로 저장됨 (반대로 늦으면 `/dev-feed/` 주소로 저장 → 5단계 dba 일괄 변경이 재시작 뒤에 돌면 둘 다 정리됨). 재시작은 `bash server/deploy/deploy.sh`나 `launchctl kickstart -k gui/$(id -u)/org.formulous.dev-feed-server` — pm/사용자가 알려 주면 server가 함
+- 기존 로그인: 브라우저에 남은 `/dev-feed/api/auth` 경로 `df_rt`는 더 이상 전송되지 않아 한 번 풀림 (예정대로). 서버 쪽 토큰은 만료로 정리됨
+- 6단계 server 작업 범위 (전환 확인 후 진행)
+  - 기본값 `WEBAUTHN_RP_NAME` `DevFeed` → `formulous` (`env.ts`, `.env.example`). 운영은 `.env` 값이 우선
+  - 크롤러 User-Agent `DevFeedBot/0.1` → `formulousBot/0.1`
+  - `server/README.md` 이름·공개 주소(`/dev-feed/api` → `/api`, `WEB_BASE_URL` 운영값), `docs/api/openapi.yaml` 제목·설명·예시(`DevFeed 커뮤니티` → `formulous 커뮤니티`)
+  - launchd 라벨, `package.json` 이름 `devfeed-server`, DB 이름 `devfeed`은 내부 이름이라 그대로 둠
