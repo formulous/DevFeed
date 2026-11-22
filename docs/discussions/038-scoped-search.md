@@ -179,3 +179,14 @@
 - 범위 분리: `/api/search` 범위별 응답 종류 — `TECH` "코드" 374건 BLOG만, `SECURITY` "취약점" 24건 SECURITY_NEWS만, `COMMUNITY` "모노레포" 1건 COMMUNITY만
 - 크기: 새 색인 2개 합 0.2MB, 자유 게시판 행당 토큰 최대 492바이트 → D-27 재검토 기준(60MB)까지 여유 큼
 - dba 038 작업 끝
+
+### client (배포·실서버 대조, 2026-11-23)
+- `build:web` 배포 (`dist-root`, check-build 통과). 코드 변경 없음 (`9ce2eda` 그대로)
+- formulous.org 게스트 1440
+  - 검색창 안내 문구: `/tech` "기술 뉴스 검색…", `/security` "보안 뉴스 검색…", `/community` "자유 게시판 검색…"
+  - `/security`에서 "취약점" → `/search?q=취약점&scope=security`, 범위 탭 보안 뉴스 선택, 24건(API `SECURITY_NEWS`만), 지역 `국내` → `&region=DOMESTIC`
+  - `/community`에서 "코드" → `scope=community` 3건, "모노레포" 1건(말머리·작성자·등급 표시)
+- API 대조: 기술(기본) "보안" 결과 종류 `BLOG`만(보안·자유 게시판 섞임 0), 자유 게시판 "코드" 3건 상세 모두 200(숨김·삭제 글 0), 범위 밖 필터 `COMMUNITY`+`region` 400
+- 360 라이트·다크(터치): 보안·자유 게시판·기술·빈 검색 가로 넘침 0
+- 페이지 오류 0, API 4xx/5xx 0
+- 수정 즉시 반영·숨김 제외는 새 계정 24시간 작성 제한(NEW_ACCOUNT)으로 실서버에서 못 해봄 → server e2e `search-scope` 결과로 갈음
