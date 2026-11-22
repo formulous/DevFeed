@@ -52,7 +52,7 @@ export interface Comment {
   parentId: number | null;
   status: CommentStatus;
   content: string | null;
-  author: { id: number; nickname: string } | null;
+  author: CommentAuthor | null;
   createdAt: string;
   editedAt: string | null;
   mine: boolean;
@@ -264,4 +264,27 @@ export interface Passkey {
   name: string;
   createdAt: string;
   lastUsedAt: string | null;
+}
+
+export interface GradeRef {
+  level: number;
+  name: string;
+}
+
+export interface CommentAuthor {
+  id: number;
+  nickname: string;
+  grade: GradeRef;
+}
+
+export interface ProfileGrade extends GradeRef {
+  minScore: number;
+  nextMinScore: number | null;
+}
+
+export interface Profile {
+  nickname: string;
+  score: number;
+  grade: ProfileGrade;
+  stats: { likes: number; comments: number; reads: number; bookmarks: number };
 }

@@ -6,6 +6,7 @@ import { useAuth } from '@/auth/AuthProvider';
 import { useLoginPrompt } from '@/auth/LoginPromptProvider';
 import { ApiError } from '@/api/http';
 import { useToast } from '@/components/common/Toast';
+import { refreshProfile } from './useProfile';
 
 export const POSTS_KEY = ['posts'] as const;
 
@@ -48,6 +49,7 @@ export function useToggleBookmark() {
     },
     onSettled: () => {
       client.invalidateQueries({ queryKey: [...POSTS_KEY, 'bookmarks'], refetchType: 'inactive' });
+      refreshProfile(client);
     },
   });
 
@@ -64,8 +66,9 @@ export function useOpenPost() {
   const client = useQueryClient();
   const { status } = useAuth();
   return (post: PostSummary, recommendationId?: string) => {
-    recordView(post.id, recommendationId);
+    const sent = recordView(post.id, recommendationId);
     if (status !== 'member') return;
+    sent.then(() => refreshProfile(client));
     if (!post.isRead) patchPost(client, post.id, { isRead: true });
     client.invalidateQueries({ queryKey: [...POSTS_KEY, 'history'], refetchType: 'inactive' });
   };
@@ -100,6 +103,7 @@ export function useToggleLike() {
       toast('좋아요를 반영하지 못했어요', 'error');
     } finally {
       likeSync.delete(postId);
+      refreshProfile(client);
     }
   };
 

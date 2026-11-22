@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { FiChevronDown } from 'react-icons/fi';
 import { MAX_SOURCE_FILTER, MAX_TAG_FILTER } from '@/api/posts';
 import { Modal } from '@/components/common/Modal';
+import { ProfileCard } from '@/components/profile/ProfileCard';
 import { ActiveFilterChips } from './ActiveFilterChips';
 import { ChipPickerModal } from './ChipPickerModal';
 import { FilterPanel } from './FilterPanel';
@@ -44,6 +45,7 @@ export function FilterLayout({ b, children }: FilterLayoutProps) {
         data-testid="filter-sidebar"
         className="scrollbar-thin hidden lg:sticky lg:top-[calc(var(--header-h,6.5rem)+1.5rem)] lg:block lg:max-h-[calc(100dvh-var(--header-h,6.5rem)-2.5rem)] lg:w-64 lg:shrink-0 lg:overflow-y-auto lg:overscroll-contain"
       >
+        <ProfileCard />
         <FilterPanel b={b} onOpenTags={() => setPicker('tags')} onOpenSources={() => setPicker('sources')} />
       </aside>
 

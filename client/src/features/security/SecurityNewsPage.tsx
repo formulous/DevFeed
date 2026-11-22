@@ -7,6 +7,7 @@ import { Chip } from '@/components/common/Chip';
 import { EmptyState } from '@/components/common/EmptyState';
 import { ErrorState } from '@/components/common/ErrorState';
 import { ChipPickerModal } from '@/components/filters/ChipPickerModal';
+import { ProfileCard } from '@/components/profile/ProfileCard';
 import { BarButton } from '@/components/filters/FilterLayout';
 import { ToggleChip } from '@/components/filters/FilterPanel';
 import { Segment } from '@/components/filters/Segment';
@@ -101,6 +102,7 @@ export function SecurityNewsPage() {
         aria-label="출처 필터"
         className="scrollbar-thin hidden lg:sticky lg:top-[calc(var(--header-h,6.5rem)+1.5rem)] lg:block lg:max-h-[calc(100dvh-var(--header-h,6.5rem)-2.5rem)] lg:w-64 lg:shrink-0 lg:overflow-y-auto"
       >
+        <ProfileCard />
         <SourcePanel
           sources={sourceList}
           selected={query.sourceIds}

@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw';
-import type { Comment, CommentStatus, Me } from '@/api/types';
+import type { Comment, CommentStatus, GradeRef, Me } from '@/api/types';
+import { claimCommentPoint, seedAuthorGrade } from './profile';
 import { mockNewsPosts, mockPosts } from './fixtures';
 
 interface MockComment {
@@ -12,12 +13,14 @@ interface MockComment {
   status: CommentStatus;
   createdAt: string;
   editedAt: string | null;
+  scored?: boolean;
 }
 
 interface Ctx {
   isMember: (request: Request) => boolean;
   me: () => Me | null;
   error: (status: number, code: string, message: string) => Response;
+  myGrade: () => GradeRef;
 }
 
 const RATE_PER_MINUTE = 5;
@@ -97,6 +100,19 @@ export function reactionFields(postId: number, member: boolean) {
   return { likeCount: likeCount(postId), commentCount: commentCount(postId), likedByMe: member && store.likes.has(postId) };
 }
 
+export function myActivity(userId: number) {
+  let comments = 0;
+  let scoredComments = 0;
+  for (const list of store.comments.values()) {
+    for (const c of list) {
+      if (c.authorId !== userId || c.status !== 'VISIBLE') continue;
+      comments += 1;
+      if (c.scored) scoredComments += 1;
+    }
+  }
+  return { likes: store.likes.size, comments, scoredComments };
+}
+
 export function resetReactions() {
   store.likes.clear();
   store.comments.clear();
@@ -145,7 +161,7 @@ function cursorSlice<T>(list: T[], url: URL, start = 0) {
   return { items: list.slice(offset, next), nextCursor: next < list.length ? btoa(String(next)) : null };
 }
 
-export function reactionHandlers({ isMember, me, error }: Ctx) {
+export function reactionHandlers({ isMember, me, error, myGrade }: Ctx) {
   const view = (request: Request) => {
     const member = isMember(request) ? me() : null;
     return { userId: member?.id ?? null, admin: member?.role === 'ADMIN' };
@@ -160,7 +176,14 @@ export function reactionHandlers({ isMember, me, error }: Ctx) {
       parentId: c.parentId,
       status: c.status,
       content,
-      author: content === null || c.authorId === null ? null : { id: c.authorId, nickname: c.nickname },
+      author:
+        content === null || c.authorId === null
+          ? null
+          : {
+              id: c.authorId,
+              nickname: c.nickname,
+              grade: c.authorId === v.userId ? myGrade() : seedAuthorGrade(c.authorId),
+            },
       createdAt: c.createdAt,
       editedAt: c.editedAt,
       mine: c.status !== 'DELETED' && c.authorId !== null && c.authorId === v.userId,
@@ -251,6 +274,7 @@ export function reactionHandlers({ isMember, me, error }: Ctx) {
         status: 'VISIBLE',
         createdAt: new Date(now).toISOString(),
         editedAt: null,
+        scored: claimCommentPoint(),
       };
       list.push(c);
       return HttpResponse.json({ comment: toApi(c, view(request), list, true), commentCount: commentCount(postId) }, { status: 201 });

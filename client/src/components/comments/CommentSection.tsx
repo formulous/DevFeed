@@ -8,6 +8,9 @@ import { useAuth } from '@/auth/AuthProvider';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { useToast } from '@/components/common/Toast';
 import { patchPost } from '@/hooks/usePostActions';
+import { refreshProfile } from '@/hooks/useProfile';
+import { Avatar } from '@/components/profile/Avatar';
+import { GradeBadge } from '@/components/profile/GradeBadge';
 import { cn } from '@/lib/cn';
 import { relativeTime } from '@/lib/time';
 import { addComment, appendReplies, commentsKey, markDeleted, removeComment, replaceComment } from './commentCache';
@@ -27,7 +30,10 @@ function useCommentActions(post: PostSummary) {
   const client = useQueryClient();
   const toast = useToast();
   const postId = post.id;
-  const setCount = (commentCount: number) => patchPost(client, postId, { commentCount });
+  const setCount = (commentCount: number) => {
+    patchPost(client, postId, { commentCount });
+    refreshProfile(client);
+  };
 
   const run = async (fn: () => Promise<void>, fallback: string) => {
     try {
@@ -89,7 +95,13 @@ function CommentItem({ comment, actions, isAdmin, isMember, onReply, onDelete }:
   return (
     <div className="py-2.5">
       <div className="flex flex-wrap items-center gap-x-1.5 text-xs text-fg-secondary">
-        {showMeta && comment.author && <span className="font-medium text-fg">{comment.author.nickname}</span>}
+        {showMeta && comment.author && (
+          <span className="flex min-w-0 items-center gap-1.5">
+            <Avatar nickname={comment.author.nickname} size={20} />
+            <span className="truncate font-medium text-fg">{comment.author.nickname}</span>
+            {comment.author.grade && <GradeBadge grade={comment.author.grade} small />}
+          </span>
+        )}
         {showMeta && <span aria-hidden>·</span>}
         {showMeta && <time dateTime={comment.createdAt}>{relativeTime(comment.createdAt)}</time>}
         {showMeta && comment.editedAt && <span className="text-fg-muted">(수정됨)</span>}

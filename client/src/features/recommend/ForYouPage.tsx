@@ -1,3 +1,4 @@
+import { ProfileRail } from '@/components/profile/ProfileCard';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 import { FiZap } from 'react-icons/fi';
@@ -74,74 +75,80 @@ export function ForYouPage() {
   }, [expired, client, toast]);
 
   const entries = useMemo(
-    () => list.data?.pages.flatMap((p) => p.items.map((post) => ({ post, recommendationId: p.recommendationId }))) ?? [],
+    () =>
+      list.data?.pages.flatMap((p) => p.items.map((post) => ({ post, recommendationId: p.recommendationId }))) ?? [],
     [list.data],
   );
   const fallback = list.data?.pages[0]?.fallback ?? false;
 
   return (
-    <section className="mx-auto max-w-3xl" aria-label="추천 피드">
-      <InterestHeader />
+    <ProfileRail>
+      <section aria-label="추천 피드">
+        <InterestHeader />
 
-      {fallback && (
-        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-[var(--radius-md)] border border-line bg-surface p-4 text-sm">
-          <p className="mr-auto">
-            아직 취향 정보가 없어서 인기 글을 보여드리고 있어요. 관심 태그를 고르면 더 정확해져요
-          </p>
-          <Link to={ONBOARDING_LINK} className="rounded-full bg-inverse px-3.5 py-1.5 font-medium text-on-inverse hover:opacity-90">
-            관심 태그 고르기
-          </Link>
-        </div>
-      )}
-
-      {list.isPending || expired ? (
-        <div>
-          {Array.from({ length: 4 }, (_, i) => (
-            <PostCardSkeleton key={i} />
-          ))}
-        </div>
-      ) : list.isError && entries.length === 0 ? (
-        <ErrorState message={list.error.message} onRetry={() => list.refetch()} />
-      ) : entries.length === 0 ? (
-        <EmptyState
-          title="지금 추천할 새 글이 없어요"
-          description="최근 2주 글을 이미 다 읽었거나 관심 태그 글이 아직 없어요"
-          action={
-            <Link to="/" className="text-sm font-medium text-brand">
-              최신 피드 보기
+        {fallback && (
+          <div className="mb-4 flex flex-wrap items-center gap-3 rounded-[var(--radius-md)] border border-line bg-surface p-4 text-sm">
+            <p className="mr-auto">
+              아직 취향 정보가 없어서 인기 글을 보여드리고 있어요. 관심 태그를 고르면 더 정확해져요
+            </p>
+            <Link
+              to={ONBOARDING_LINK}
+              className="rounded-full bg-inverse px-3.5 py-1.5 font-medium text-on-inverse hover:opacity-90"
+            >
+              관심 태그 고르기
             </Link>
-          }
-        />
-      ) : (
-        <ul className="divide-y divide-line">
-          {entries.map(({ post, recommendationId }) => {
-            const why = reasonText(post.reasons);
-            return (
-              <li key={post.id}>
-                <PostCard
-                  post={post}
-                  kicker={
-                    why && (
-                      <p className="mb-2 flex items-center gap-1 text-xs text-fg-secondary">
-                        <FiZap size={12} className="text-warn" aria-hidden />
-                        <span>추천 이유: {why}</span>
-                      </p>
-                    )
-                  }
-                  onOpen={(p) => openPost(p, recommendationId)}
-                  onToggleBookmark={toggleBookmark}
-                />
-              </li>
-            );
-          })}
-        </ul>
-      )}
-      <div ref={sentinel} />
-      {list.isFetchingNextPage && (
-        <div>
-          <PostCardSkeleton />
-        </div>
-      )}
-    </section>
+          </div>
+        )}
+
+        {list.isPending || expired ? (
+          <div>
+            {Array.from({ length: 4 }, (_, i) => (
+              <PostCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : list.isError && entries.length === 0 ? (
+          <ErrorState message={list.error.message} onRetry={() => list.refetch()} />
+        ) : entries.length === 0 ? (
+          <EmptyState
+            title="지금 추천할 새 글이 없어요"
+            description="최근 2주 글을 이미 다 읽었거나 관심 태그 글이 아직 없어요"
+            action={
+              <Link to="/" className="text-sm font-medium text-brand">
+                최신 피드 보기
+              </Link>
+            }
+          />
+        ) : (
+          <ul className="divide-y divide-line">
+            {entries.map(({ post, recommendationId }) => {
+              const why = reasonText(post.reasons);
+              return (
+                <li key={post.id}>
+                  <PostCard
+                    post={post}
+                    kicker={
+                      why && (
+                        <p className="mb-2 flex items-center gap-1 text-xs text-fg-secondary">
+                          <FiZap size={12} className="text-warn" aria-hidden />
+                          <span>추천 이유: {why}</span>
+                        </p>
+                      )
+                    }
+                    onOpen={(p) => openPost(p, recommendationId)}
+                    onToggleBookmark={toggleBookmark}
+                  />
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <div ref={sentinel} />
+        {list.isFetchingNextPage && (
+          <div>
+            <PostCardSkeleton />
+          </div>
+        )}
+      </section>
+    </ProfileRail>
   );
 }

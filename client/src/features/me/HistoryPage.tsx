@@ -1,3 +1,4 @@
+import { refreshProfile } from '@/hooks/useProfile';
 import { useInfiniteQuery, useMutation, useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { FiX } from 'react-icons/fi';
@@ -51,6 +52,7 @@ export function HistoryPage() {
   const removeOne = useMutation({
     mutationFn: (postId: number) => deleteHistoryItem(postId),
     onSuccess: (_d, postId) => {
+      refreshProfile(client);
       client.setQueryData<HistoryCache>(historyQuery.queryKey, (data) =>
         data && {
           ...data,
@@ -65,6 +67,7 @@ export function HistoryPage() {
     mutationFn: clearHistory,
     onSuccess: () => {
       setConfirmClear(false);
+      refreshProfile(client);
       client.setQueryData<HistoryCache>(historyQuery.queryKey, (data) =>
         data && { pages: [{ items: [], nextCursor: null }], pageParams: [undefined] },
       );

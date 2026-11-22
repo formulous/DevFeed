@@ -236,7 +236,7 @@ describe('S-10 설정', () => {
     await user.type(pw, 'pw');
     await user.click(within(dialog).getByRole('button', { name: '탈퇴하기' }));
     await waitFor(() => expect(currentLocation).toBe('/'));
-    expect(await screen.findByRole('link', { name: '로그인' })).toBeInTheDocument();
+    expect(await within(screen.getByRole('banner')).findByRole('link', { name: '로그인' })).toBeInTheDocument();
     expect(mockState.me).toBeNull();
   });
 });

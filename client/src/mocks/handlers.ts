@@ -4,7 +4,8 @@ import type { Me, PostSummary } from '@/api/types';
 import { resetAdminState } from './adminFixtures';
 import { adminHandlers } from './adminHandlers';
 import { passkeyHandlers, resetPasskeys, setPasskeyPassword } from './passkeys';
-import { reactionFields, reactionHandlers, resetReactions, withdrawReactions } from './reactions';
+import { myActivity, reactionFields, reactionHandlers, resetReactions, withdrawReactions } from './reactions';
+import { gradeRef, profileHandlers, profileScore, resetProfile, scoreRead } from './profile';
 import { fieldByApi } from '@/lib/fields';
 import { mockExtraSources, mockNewsPosts, mockNewsSources, mockPosts, mockSources, mockTags } from './fixtures';
 
@@ -36,6 +37,12 @@ export function resetMockState() {
   resetAdminState();
   resetReactions();
   resetPasskeys();
+  resetProfile();
+}
+
+function activityCounts() {
+  const activity = state.me ? myActivity(state.me.id) : { likes: 0, comments: 0, scoredComments: 0 };
+  return { ...activity, reads: state.reads.size, bookmarks: state.bookmarks.size };
 }
 
 function startSession(me: Me, password: string, status = 200) {
@@ -99,7 +106,8 @@ function decorate(post: PostSummary, member: boolean): PostSummary {
 const error = (status: number, code: string, message: string) => HttpResponse.json({ code, message }, { status });
 
 export const handlers = [
-  ...reactionHandlers({ isMember, me: () => state.me, error }),
+  ...reactionHandlers({ isMember, me: () => state.me, error, myGrade: () => gradeRef(profileScore(activityCounts())) }),
+  ...profileHandlers({ isMember, me: () => state.me, error, counts: activityCounts }),
   ...passkeyHandlers({ isMember, me: () => state.me, startSession: (me, password) => startSession(me, password), error }),
   http.get('*/api/posts', ({ request }) => {
     const url = new URL(request.url);
@@ -215,7 +223,10 @@ export const handlers = [
   ),
 
   http.post('*/api/posts/:id/views', async ({ request, params }) => {
-    if (isMember(request)) state.reads.set(Number(params.id), new Date().toISOString());
+    if (isMember(request)) {
+      state.reads.set(Number(params.id), new Date().toISOString());
+      scoreRead(Number(params.id));
+    }
     const body = (await request.json().catch(() => null)) as { recommendationId?: string } | null;
     if (body?.recommendationId) state.recClicks.push({ postId: Number(params.id), recommendationId: body.recommendationId });
     return new HttpResponse(null, { status: 204 });

@@ -48,7 +48,7 @@ export function deleteBookmark(postId: number) {
 }
 
 export function recordView(postId: number, recommendationId?: string) {
-  request<void>(`/posts/${postId}/views`, {
+  return request<void>(`/posts/${postId}/views`, {
     method: 'POST',
     keepalive: true,
     json: recommendationId ? { recommendationId } : undefined,

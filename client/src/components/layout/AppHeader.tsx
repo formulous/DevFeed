@@ -3,6 +3,9 @@ import { FiSearch } from 'react-icons/fi';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '@/auth/AuthProvider';
 import { cn } from '@/lib/cn';
+import { Avatar } from '@/components/profile/Avatar';
+import { GradeBadge } from '@/components/profile/GradeBadge';
+import { useProfile } from '@/hooks/useProfile';
 import { ThemeToggle } from './ThemeToggle';
 
 export const SEARCH_MIN = 2;
@@ -51,6 +54,7 @@ export function SearchBox({ className }: { className?: string }) {
 
 function ProfileMenu() {
   const { status, me, logout } = useAuth();
+  const profile = useProfile();
   if (status === 'loading') return <div className="h-8 w-16" />;
   if (status === 'guest') {
     return (
@@ -68,7 +72,16 @@ function ProfileMenu() {
       <summary className="flex h-8 max-w-[9rem] cursor-pointer list-none items-center truncate rounded-full px-2 text-sm font-medium text-fg-secondary hover:text-fg">
         {me?.nickname} ▾
       </summary>
-      <ul className="absolute right-0 z-20 mt-2 w-36 rounded-lg border border-line bg-surface py-1 text-sm shadow-pop">
+      <ul className="absolute right-0 z-20 mt-2 w-52 rounded-lg border border-line bg-surface py-1 text-sm shadow-pop lg:w-36">
+        {profile.data && (
+          <li data-testid="menu-profile" className="mb-1 flex items-center gap-2 border-b border-line px-3 pb-2.5 pt-2 lg:hidden">
+            <Avatar nickname={profile.data.nickname} size={28} />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-medium text-fg">{profile.data.nickname}</span>
+              <GradeBadge grade={profile.data.grade} small />
+            </span>
+          </li>
+        )}
         <li><Link className={item} to="/me/bookmarks">북마크</Link></li>
         <li><Link className={item} to="/me/history">읽은 기록</Link></li>
         <li><Link className={item} to="/me/settings">설정</Link></li>

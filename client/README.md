@@ -208,6 +208,16 @@ App
   - 내용은 텍스트 노드 + `whitespace-pre-wrap`으로만 렌더 (HTML 해석 없음). 입력은 1,000자 카운터, 앞뒤 공백 제거 후 빈 값이면 등록 비활성, `Ctrl/⌘+Enter` 등록
 - mock: `mocks/reactions.ts` (첫 글에 댓글 25개·답글 5개·삭제 자리·숨김·`<script>` 문구, 좋아요 1,234). 캡처 `S-01-comments`(360·1280, 관리자)
 
+## 프로필 카드·활동 등급 (F-082·F-083, M10, `docs/discussions/029`)
+- 위치: 최신·검색(`FilterLayout`)·보안 뉴스 좌측 열 맨 위, 좌측 열이 없던 인기·추천은 `ProfileRail`(256px 좌측 열 + 본문)로 감쌈. `lg` 미만은 숨기고 헤더 프로필 메뉴 맨 위에 아바타·닉네임·등급
+- `components/profile/`: `ProfileCard`(회원·게스트·로딩·오류), `Avatar`(닉네임 첫 글자, 무채색 6단계, 글자 대비 4.5:1 이상 테스트), `GradeBadge`, `GradeGuideModal`(등급표·점수 규칙)
+- 데이터: `GET /me/profile` → `{ nickname, score, grade: { level, name, minScore, nextMinScore }, stats }` (`hooks/useProfile.ts`, 키 `['me','profile']`). 다음 등급 이름은 `lib/grades.ts` 상수(level+1)에서 찾음. 진행 막대 = 현재 등급 시작점부터 다음 등급까지 비율
+- 활동 직후 반영: 좋아요(직렬화 끝)·북마크·원문 조회(`POST /views` 응답 후)·댓글 작성/삭제/숨김·읽은 기록 삭제 뒤 `refreshProfile`로 재조회
+- 댓글 작성자 옆 아바타(20px)·등급 배지 (`author.grade`)
+- 1280×720 최신·검색 사이드바(카드+필터) 617px로 스크롤 없이 들어옴
+- mock: `mocks/profile.ts` (읽기 같은 글 1회·하루 30점, 좋아요 +2, 댓글 +5 하루 10개, 기본 점수 1,200)
+- 공개 배포는 server `/me/profile` 배포 후 (그 전 배포하면 회원 카드가 오류 상태로 보임)
+
 ## 좌우 광고 (F-060, `docs/discussions/025`)
 - `components/ads/SideAd.tsx`, `lib/ads.ts`. 게시자 `ca-pub-1750461537555326`, 좌 `3021654585`·우 `2195210969` (반응형 `auto`), `index.html`에 `google-adsense-account` 메타
 - 표시: 화면 폭 1440px 이상(`matchMedia`)이면서 상단 히어로가 있는 화면(최신·추천·인기·보안 뉴스·검색)만. `AppLayout`에서 `main` 좌우에 160px `sticky`(헤더 아래 24px) 배치, 본문 폭은 줄어듦

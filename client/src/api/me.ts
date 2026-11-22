@@ -1,5 +1,5 @@
 import { request } from './http';
-import type { AuthResponse, BookmarkPage, CursorPage, HistoryItem, Me, SignupInput, TagRef } from './types';
+import type { AuthResponse, BookmarkPage, CursorPage, HistoryItem, Me, Profile, SignupInput, TagRef } from './types';
 
 export const ME_PAGE_SIZE = 20;
 export const INTEREST_MIN = 3;
@@ -27,3 +27,5 @@ export const fetchHistory = (cursor?: string, signal?: AbortSignal) =>
 export const deleteHistoryItem = (postId: number) => request<void>(`/me/history/${postId}`, { method: 'DELETE' });
 
 export const clearHistory = () => request<void>('/me/history', { method: 'DELETE' });
+
+export const fetchProfile = () => request<Profile>('/me/profile');
