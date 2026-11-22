@@ -168,3 +168,7 @@
 - 백필 `devfeed`: 미리보기 보안 뉴스 237건 중 빠짐 237 / 자유 게시판(삭제 제외) 32건 중 빠짐 32 → `--apply` 보안 237·자유 32 → 재미리보기 **빠짐 0 / 0**
 - 운영 API 확인: `scope=SECURITY` "취약점" 200 (24건), `+region=DOMESTIC` 200, `scope=COMMUNITY` "코드" 200 (3건), 기술(기본) 200, 범위 밖 필터(`COMMUNITY`+`region`) 400
 - 다음: dba 정합성 재검사, client `build:web` 배포·실서버 대조
+
+### pm (server 배포·백필 확인, 2026-11-23)
+- 공개 API: `scope=SECURITY` "취약점" 24건(보안 뉴스만), `COMMUNITY` "모노레포" 1건, `TECH` "모노레포" 블로그 2건(다른 범위 0), `COMMUNITY`+`category=QUESTION` "Redis" 2건, 범위 밖 필터 400
+- 남은 것: dba 정합성 재검사(기록 확인 필요) → client 배포 → pm 공개 확인
