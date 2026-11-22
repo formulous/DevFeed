@@ -196,6 +196,7 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - 색인 테이블을 범위별로 나눔: `post_search`(블로그, 그대로), `security_news_search`(수집 시점 `reindex`에서 제목·요약·출처 이름), `community_search`(작성·수정 때 제목·마크다운 제거 본문 앞 2,000자·태그 이름·동의어, `community-store.ts` `indexCommunityPost`)
   - 자유 게시판: 숨김은 검색 때 `community_posts.status = 'VISIBLE'` 조인으로 거르고, 삭제·탈퇴는 `softDeletePost`에서 색인 행 삭제. 검색 캐시 안 씀 (수정·숨김 즉시 반영)
   - 기존 글 색인: `node scripts/backfill-scoped-search.js <database> [--apply]` (빌드 후, 기본은 미리보기만)
+  - 운영 반영 (2026-11-23): 0017 → server 배포 → 백필(보안 뉴스 237·자유 게시판 32, 빠짐 0) → dba 정합성 0 → client 배포·대조 완료. 새 범위 적용 시 같은 순서(색인 테이블 먼저, 배포 뒤 백필)
   - 한계: 관리자 태그 이름·동의어 변경은 자유 게시판 색인에 바로 반영 안 됨(글 수정 때 갱신). 자유 게시판 약 8천 글(색인 60MB)에서 본문 색인 길이·버퍼 풀 재검토 (dba)
   - 성능 (`devfeed_perf` 보안 뉴스 4만·자유 게시판 색인 2천, 캐시 끔, API p95): 보안 6.4~14.9ms, 자유 게시판 7.8~8.8ms. 기술 범위 SQL은 이전과 같음
 - M12 커뮤니티 (032, 스키마 `0015`)
