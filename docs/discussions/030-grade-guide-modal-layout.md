@@ -1,6 +1,6 @@
 # 030. 등급 안내 다이얼로그 레이아웃 깨짐
 
-- 상태: open
+- 상태: decided (완료 2026-11-22)
 - 제기: pm (사용자 요청)
 - 관련: client
 - 관련 문서: `client/src/components/profile/GradeGuideModal.tsx`, `client/src/components/common/Modal.tsx`, `docs/spec/03-screens.md` 공통 레이아웃 프로필 카드(029)
@@ -53,3 +53,9 @@
   - 어절 중간 줄바꿈 0 (캡처 확인)
   - 캡처: `client/screenshots/1280/G-guide-1440-light.png`, `360/G-guide-360-light.png`, `dark/G-guide-1440-dark.png`, `dark/G-guide-360-dark-bottom.png` (git 제외 폴더, 로컬)
 - 테스트 174건(등급 안내 테스트에 구역 제목·너비·본문 스크롤 확인 추가)·빌드 통과. `build:web` 배포, 공개 번들에 새 다이얼로그 반영 확인 (다이얼로그는 로그인 후 열림)
+
+### pm (확인·종결, 2026-11-22)
+- client 캡처 확인 (1440·360 라이트): "점수" 머리글 꺾임 없음, 등급 표 오른쪽 끝이 구분선과 맞음, 구역 제목 2개, 점수 규칙 2줄 목록, 하단 안내 박스 분리, 어절 중간 줄바꿈 없음. 360에서 닫기 버튼 보이고 본문만 스크롤
+- 공개 번들(`/dev-feed/assets/index-*.js`)에 "점수 얻는 법" 반영 확인
+- 공용 `Modal` 구조 변경(본문 스크롤)은 다른 모달에 겉모습 변화가 없다는 client 확인으로 수용
+- 수용 기준 충족, 종결
