@@ -247,3 +247,20 @@ dba 초안 작성에 참고. 최종 검토는 초안이 나온 뒤에 함
   - 작성 제한(하루 5개·60초)에 삭제한 글도 포함 → 지우고 다시 쓰기로 제한을 피하지 못하게 하는 쪽이라 수용
 - 내부 소스 1행(`internal:community`) 방식: 관리자 소스 목록·통계·보안 출처에서 빠지는지 server 확인 조건으로 수용
 - server 검토가 끝나면 pm이 사용자에게 운영 적용(0015) 승인을 받음
+
+### server (dba 1차 검토) — 0015 동의, 참고 쿼리 1건 수정 + 확인 5건
+- 구조 동의: `posts` + `community_posts`, 내부 소스 1행, 항상 soft delete, 신고 2테이블, 원장 `actor_id`, 잠금 순서. 조회 패턴(말머리 커서·인기·작성 제한·프로필 글 수)이 모두 인덱스로 처리됨 확인
+- 기존 server 코드 호환: 원장 INSERT는 컬럼을 지정하므로 `actor_id` 기본 0으로 그대로 동작(READ `INSERT IGNORE`·ARCHIVE 접기 포함). `posts`/`post_tags` ENUM 추가도 영향 없음
+
+#### 수정 요청 (`community.sql` 참고 쿼리)
+1. **신고 2건에 자동 숨김됨**: `UPDATE report_targets SET report_count = report_count + 1, ..., state = IF(... report_count + 1 >= 3 ...)` 에서 MariaDB 단일 테이블 UPDATE는 왼쪽부터 대입하므로 `state` 식의 `report_count`가 이미 +1된 값임 (`SIMULTANEOUS_ASSIGNMENT` 꺼짐). `devfeed_test` 임시 테이블로 확인: `report_count 1 → 2`에서 `HIDDEN`. `state`를 먼저 쓰거나 `report_count >= 3`으로 바꿔야 함. server 구현은 `report_count >= 3`(대입 후 값)으로 씀. 시나리오 검증에 "2명 신고는 숨김 아님" 추가 부탁
+
+#### 확인 5건
+2. **배포 순서**: `ck_comments_hidden`이 `hidden_reason NOT NULL`을 요구하므로 0015 적용 후 지금 server의 관리자 댓글 숨김(`hidden_reason` 안 씀)이 CHECK 위반 500이 됨. server는 0015 적용 직후 바로 배포함. 운영 적용 시각을 알려 주면 맞춤 (관리자 숨김만 영향, 사용 빈도 낮음)
+3. **댓글 행 삭제 시 신고 대상 고아**: `report_targets`는 대상 FK가 없어서 답글 삭제·자리 표시 정리·탈퇴 댓글 삭제 때 남음. server가 댓글 `DELETE`와 같은 트랜잭션에서 `report_targets`(→ `reports` CASCADE)도 지움. 정합성 검사에 "대상 없는 신고 대상" 항목 추가 부탁
+4. **정식 url의 `@base_url`**: server 설정 `WEB_BASE_URL`(기본 `http://localhost:5175`)을 새로 둠. 운영 `.env`에 값 추가가 필요해 0015와 함께 사용자에게 요청할 예정 (값은 공개 웹 주소)
+5. **내부 소스 노출**: server가 관리자 소스 목록·수정·통계, 수집 스케줄러·수동 수집, 카탈로그에서 `kind = 'COMMUNITY'`를 제외함. 관리자가 상태를 `ACTIVE`로 바꾸는 것도 거부 (수집기가 `internal:community`를 가져가지 않게)
+6. 탈퇴·삭제 시 숨김 글: soft delete UPDATE가 `hidden_*`를 NULL로 비우는 것 확인 (CHECK 통과). 관리자 "숨김 해제"는 `report_targets.state = CLEARED`로 둠 (해제 후 자동 숨김 제외, pm 규칙과 같음)
+
+- 0015 자체는 수정 없이 승인 의견. 1·3은 참고 쿼리·정합성 검사 쪽 변경
+- 다음: dba 답 받으면 `openapi.yaml` 명세 작성 → client·pm 검토
