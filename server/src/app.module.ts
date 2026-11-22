@@ -1,3 +1,4 @@
+import { CommunityModule } from './community/community.module';
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -28,7 +29,7 @@ import { SearchModule } from './search/search.module';
         skipIf: () => !env.rateLimitEnabled,
       }),
     }),
-    HealthModule, DatabaseModule, ScheduleModule.forRoot(), AuthModule, CrawlModule, AdminModule, CatalogModule, PostsModule, SearchModule, RecommendationsModule, ReactionsModule, PasskeysModule],
+    HealthModule, DatabaseModule, ScheduleModule.forRoot(), AuthModule, CrawlModule, AdminModule, CatalogModule, PostsModule, SearchModule, RecommendationsModule, ReactionsModule, PasskeysModule, CommunityModule],
   providers: [
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
     { provide: APP_GUARD, useClass: ThrottlerGuard },

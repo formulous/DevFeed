@@ -38,7 +38,7 @@ describe('F-082·F-083 프로필·활동 점수 (029)', () => {
       nickname: expect.any(String),
       score: 0,
       grade: { level: 1, name: 'Hello World', minScore: 0, nextMinScore: 100 },
-      stats: { likes: 0, comments: 0, reads: 0, bookmarks: 0 },
+      stats: { posts: 0, likes: 0, comments: 0, reads: 0, bookmarks: 0 },
     });
     expect((await api(t, 'GET', '/me/profile')).status).toBe(401);
   });

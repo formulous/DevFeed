@@ -30,10 +30,11 @@ export interface CommentView {
   createdAt: Date;
   editedAt: Date | null;
   mine: boolean;
+  reportedByMe: boolean;
   replyCount: number;
 }
 
-export function toCommentView(row: CommentRow, viewer?: Viewer): CommentView {
+export function toCommentView(row: CommentRow, viewer?: Viewer, reported: ReadonlySet<number> = new Set()): CommentView {
   const userId = row.user_id === null ? null : Number(row.user_id);
   const visible = row.status === 'VISIBLE' || (row.status === 'HIDDEN' && viewer?.role === 'ADMIN');
   return {
@@ -46,6 +47,7 @@ export function toCommentView(row: CommentRow, viewer?: Viewer): CommentView {
     createdAt: row.created_at,
     editedAt: row.edited_at,
     mine: viewer !== undefined && userId !== null && userId === viewer.id,
+    reportedByMe: viewer !== undefined && reported.has(Number(row.id)),
     replyCount: row.parent_id === null ? Number(row.reply_count) : 0,
   };
 }

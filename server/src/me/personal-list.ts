@@ -3,8 +3,11 @@ import type { SqlQuery } from '../posts/feed-query';
 
 export const BOOKMARK_LIMIT = 5000;
 
+export const LISTABLE = (alias: string) =>
+  `NOT EXISTS (SELECT 1 FROM community_posts cx WHERE cx.post_id = ${alias}.post_id AND cx.status <> 'VISIBLE')`;
+
 export function bookmarkListQuery(userId: number, limit: number, cursor?: TimeIdCursor, tagIds?: number[]): SqlQuery {
-  const where = ['b.user_id = ?'];
+  const where = ['b.user_id = ?', LISTABLE('b')];
   const params: unknown[] = [userId];
   if (cursor) {
     where.push('(b.created_at < ? OR (b.created_at = ? AND b.post_id < ?))');
@@ -22,7 +25,7 @@ export function bookmarkListQuery(userId: number, limit: number, cursor?: TimeId
 }
 
 export function historyListQuery(userId: number, limit: number, cursor?: TimeIdCursor): SqlQuery {
-  const where = ['h.user_id = ?'];
+  const where = ['h.user_id = ?', LISTABLE('h')];
   const params: unknown[] = [userId];
   if (cursor) {
     where.push('(h.last_read_at < ? OR (h.last_read_at = ? AND h.post_id < ?))');

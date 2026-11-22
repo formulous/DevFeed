@@ -9,7 +9,17 @@ describe('등급 표 (F-083 spec 값 고정)', () => {
       [4, 'Tech Lead', 2000],
       [5, 'Architect', 5000],
     ]);
-    expect(SCORE).toEqual({ read: 1, readDailyCap: 30, like: 2, comment: 5, commentDailyCount: 10 });
+    expect(SCORE).toEqual({
+      read: 1,
+      readDailyCap: 30,
+      like: 2,
+      comment: 5,
+      commentDailyCount: 10,
+      postWrite: 10,
+      postWriteDailyCount: 3,
+      likeReceived: 1,
+      likeReceivedDailyCap: 50,
+    });
   });
 
   it.each([

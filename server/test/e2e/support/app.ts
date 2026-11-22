@@ -7,6 +7,7 @@ import { DataSource } from 'typeorm';
 import { AppModule } from '../../../src/app.module';
 import { configureApp } from '../../../src/app.setup';
 import { viewerKey } from '../../../src/common/visitor/visitor';
+import { dropOrphanCommentReports, removeCommunity } from '../../../src/community/withdraw-community';
 import { removeReactions } from '../../../src/reactions/withdraw-reactions';
 
 export interface TestApp {
@@ -115,8 +116,25 @@ export async function createFixtures(t: TestApp, postCount = 3) {
 export async function cleanup(t: TestApp): Promise<void> {
   const like = `e2e-${t.runId}-%`;
   const users = (await t.db.query('SELECT id FROM users WHERE email LIKE ?', [like])) as { id: number | string }[];
-  for (const { id } of users) await t.db.transaction((manager) => removeReactions(manager, Number(id)));
+  const communityPosts = users.length
+    ? ((await t.db.query(
+        `SELECT post_id FROM community_posts WHERE user_id IN (${users.map(() => '?').join(', ')})`,
+        users.map((u) => u.id),
+      )) as { post_id: number | string }[])
+    : [];
+  for (const { id } of users) {
+    await t.db.transaction(async (manager) => {
+      await removeCommunity(manager, Number(id));
+      await removeReactions(manager, Number(id));
+      await dropOrphanCommentReports(manager);
+    });
+  }
   await t.db.query('DELETE FROM users WHERE email LIKE ?', [like]);
+  for (const { post_id } of communityPosts) {
+    await t.db.query("DELETE FROM report_targets WHERE target_type = 'POST' AND target_id = ?", [post_id]);
+    await t.db.query('DELETE FROM post_view_guards WHERE post_id = ?', [post_id]);
+    await t.db.query('DELETE FROM posts WHERE id = ?', [post_id]);
+  }
   const sources = (await t.db.query('SELECT id FROM sources WHERE feed_url LIKE ?', [
     `https://e2e-${t.runId}.test/%`,
   ])) as { id: number }[];
@@ -169,5 +187,15 @@ const SCORE_CHECK = (() => {
 
 export async function scoreMismatches(t: TestApp): Promise<Record<string, number>> {
   const [row] = (await t.db.query(SCORE_CHECK)) as Record<string, number | string>[];
+  return Object.fromEntries(Object.entries(row).map(([k, v]) => [k, Number(v)]));
+}
+
+const COMMUNITY_CHECK = (() => {
+  const sql = readFileSync(join(__dirname, '..', '..', '..', '..', 'db', 'queries', 'community.sql'), 'utf8');
+  return sql.slice(sql.indexOf('-- 032 consistency check')).split('\n').filter((line) => !line.trim().startsWith('--')).join('\n').trim().replace(/;$/, '');
+})();
+
+export async function communityMismatches(t: TestApp): Promise<Record<string, number>> {
+  const [row] = (await t.db.query(COMMUNITY_CHECK)) as Record<string, number | string>[];
   return Object.fromEntries(Object.entries(row).map(([k, v]) => [k, Number(v)]));
 }

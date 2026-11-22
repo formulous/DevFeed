@@ -15,9 +15,13 @@ export class PostCardsService {
     const marks = ids.map(() => '?').join(', ');
     const [posts, tags, flags, popular] = await Promise.all([
       this.dataSource.query(
-        `SELECT p.id, p.title, p.summary, p.url, p.thumbnail_url, p.published_at, p.view_count, p.like_count, p.comment_count,
-                s.id AS source_id, s.name AS source_name, s.logo_url AS source_logo_url, s.source_type
+        `SELECT p.id, p.kind, p.title, p.summary, p.url, p.thumbnail_url, p.published_at, p.view_count, p.like_count, p.comment_count,
+                s.id AS source_id, s.name AS source_name, s.logo_url AS source_logo_url, s.source_type,
+                cp.category, cp.user_id AS author_id, cu.nickname AS author_nickname, cu.score AS author_score,
+                cp.edited_at, cp.accepted_comment_id
            FROM posts p JOIN sources s ON s.id = p.source_id
+           LEFT JOIN community_posts cp ON cp.post_id = p.id
+           LEFT JOIN users cu ON cu.id = cp.user_id
           WHERE p.id IN (${marks})`,
         ids,
       ) as Promise<PostRow[]>,

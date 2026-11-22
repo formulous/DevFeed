@@ -51,7 +51,7 @@ describe('좋아요·댓글 (M8, 026)', () => {
     const mixed = await Promise.all(
       Array.from({ length: 20 }, (_, i) => api(t, i % 2 ? 'DELETE' : 'PUT', `/posts/${postId}/like`, { token: a.token })),
     );
-    expect(mixed.every((r) => r.status === 200)).toBe(true);
+    expect(mixed.filter((r) => r.status !== 200).map((r) => [r.status, r.body])).toEqual([]);
     const [{ n }] = (await t.db.query('SELECT COUNT(*) AS n FROM post_likes WHERE post_id = ?', [postId])) as { n: number }[];
     expect((await counts()).like).toBe(Number(n));
     expect([0, 1]).toContain(Number(n));

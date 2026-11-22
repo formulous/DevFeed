@@ -10,7 +10,8 @@ import { withoutViewCount } from '../posts/post-cards';
 import { PostCardsService } from '../posts/post-cards.service';
 import { removeReactions } from '../reactions/withdraw-reactions';
 import { gradeOf } from '../score/score-policy';
-import { BOOKMARK_LIMIT, bookmarkListQuery, historyListQuery } from './personal-list';
+import { dropOrphanCommentReports, removeCommunity } from '../community/withdraw-community';
+import { BOOKMARK_LIMIT, bookmarkListQuery, historyListQuery, LISTABLE } from './personal-list';
 
 export interface MeResponse {
   id: number;
@@ -42,15 +43,17 @@ export class MeService {
   async profile(userId: number) {
     const [row] = (await this.dataSource.query(
       `SELECT u.nickname, u.score,
+              (SELECT COUNT(*) FROM community_posts WHERE user_id = u.id AND status = 'VISIBLE') AS post_count,
               (SELECT COUNT(*) FROM post_likes WHERE user_id = u.id) AS like_count,
               (SELECT COUNT(*) FROM comments WHERE user_id = u.id AND status = 'VISIBLE') AS comment_count,
-              (SELECT COUNT(*) FROM read_histories WHERE user_id = u.id) AS read_count,
-              (SELECT COUNT(*) FROM bookmarks WHERE user_id = u.id) AS bookmark_count
+              (SELECT COUNT(*) FROM read_histories h WHERE h.user_id = u.id AND ${LISTABLE('h')}) AS read_count,
+              (SELECT COUNT(*) FROM bookmarks b WHERE b.user_id = u.id AND ${LISTABLE('b')}) AS bookmark_count
          FROM users u WHERE u.id = ?`,
       [userId],
     )) as {
       nickname: string;
       score: number;
+      post_count: number | string;
       like_count: number | string;
       comment_count: number | string;
       read_count: number | string;
@@ -63,6 +66,7 @@ export class MeService {
       score,
       grade: gradeOf(score),
       stats: {
+        posts: Number(row.post_count),
         likes: Number(row.like_count),
         comments: Number(row.comment_count),
         reads: Number(row.read_count),
@@ -148,11 +152,12 @@ export class MeService {
 
   async addBookmark(userId: number, postId: number, now = new Date()): Promise<void> {
     const [post] = (await this.dataSource.query(
-      `SELECT p.id, EXISTS (SELECT 1 FROM bookmarks b WHERE b.user_id = ? AND b.post_id = p.id) AS saved
-         FROM posts p WHERE p.id = ?`,
+      `SELECT p.id, cp.status, EXISTS (SELECT 1 FROM bookmarks b WHERE b.user_id = ? AND b.post_id = p.id) AS saved
+         FROM posts p LEFT JOIN community_posts cp ON cp.post_id = p.id WHERE p.id = ?`,
       [userId, postId],
-    )) as { id: number | string; saved: number | string }[];
+    )) as { id: number | string; status: string | null; saved: number | string }[];
     if (!post) throw Errors.notFound('글을 찾을 수 없어요');
+    if (post.status !== null && post.status !== 'VISIBLE') throw Errors.communityPostClosed();
     if (Number(post.saved) === 1) return;
     const [{ n }] = (await this.dataSource.query('SELECT COUNT(*) AS n FROM bookmarks WHERE user_id = ?', [
       userId,
@@ -179,7 +184,7 @@ export class MeService {
     const { sql, params } = bookmarkListQuery(userId, size + 1, cursor, query.tagIds);
     const [rows, totals] = await Promise.all([
       this.dataSource.query(sql, params) as Promise<{ id: number | string; at: Date }[]>,
-      this.dataSource.query('SELECT COUNT(*) AS n FROM bookmarks WHERE user_id = ?', [userId]) as Promise<
+      this.dataSource.query(`SELECT COUNT(*) AS n FROM bookmarks b WHERE b.user_id = ? AND ${LISTABLE('b')}`, [userId]) as Promise<
         { n: number | string }[]
       >,
     ]);
@@ -224,7 +229,9 @@ export class MeService {
     await this.dataSource.transaction(async (manager) => {
       await manager.query('UPDATE recommendation_impressions SET user_id = NULL WHERE user_id = ?', [userId]);
       await manager.query('DELETE FROM post_view_guards WHERE viewer_key = ?', [viewerKey({ userId })]);
+      await removeCommunity(manager, userId);
       await removeReactions(manager, userId);
+      await dropOrphanCommentReports(manager);
       await manager.query('DELETE FROM users WHERE id = ?', [userId]);
     });
   }

@@ -61,6 +61,19 @@ export const Errors = {
     new AppException(409, 'PASSKEY_LIMIT_EXCEEDED', '패스키는 10개까지 만들 수 있어요'),
   passkeyAlreadyRegistered: () =>
     new AppException(409, 'PASSKEY_ALREADY_REGISTERED', '이미 등록된 패스키예요'),
+  postWriteLimited: (reason: string, retryAfterSec: number, availableAt: Date) =>
+    new AppException(429, 'POST_WRITE_LIMITED', '지금은 글을 쓸 수 없어요. 잠시 후 다시 시도해 주세요', {
+      reason,
+      retryAfterSec,
+      availableAt: availableAt.toISOString(),
+    }),
+  communityPostClosed: () => new AppException(409, 'COMMUNITY_POST_CLOSED', '숨겨졌거나 삭제된 글이에요'),
+  acceptNotQuestion: () => new AppException(409, 'ACCEPT_NOT_QUESTION', '질문글에서만 답을 채택할 수 있어요'),
+  acceptOwnComment: () => new AppException(409, 'ACCEPT_OWN_COMMENT', '내 댓글은 채택할 수 없어요'),
+  acceptReply: () => new AppException(409, 'ACCEPT_REPLY', '답글은 채택할 수 없어요'),
+  commentAccepted: () => new AppException(409, 'COMMENT_ACCEPTED', '채택된 댓글은 삭제할 수 없어요'),
+  reportOwnContent: () => new AppException(403, 'REPORT_OWN_CONTENT', '내 글이나 댓글은 신고할 수 없어요'),
+  reportDuplicated: () => new AppException(409, 'REPORT_DUPLICATED', '이미 신고했어요'),
   jobAlreadyRunning: () =>
     new AppException(409, 'JOB_ALREADY_RUNNING', '같은 작업이 이미 실행 중이에요'),
 };

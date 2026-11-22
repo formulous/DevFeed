@@ -88,6 +88,7 @@ src/
   - `SEARCH_CACHE_ENABLED`: 검색 결과 1분 캐시 (성능 측정 시 `false`)
   - `RATE_LIMIT_ENABLED`: IP 기준 속도 제한 (기본 `true`, e2e는 기본 `false`)
   - `WEBAUTHN_RP_ID`·`WEBAUTHN_RP_NAME`·`WEBAUTHN_ORIGINS`(쉼표 구분 origin): 패스키 RP 설정. 기본값은 로컬 개발용 `localhost`·`DevFeed`·`http://localhost:5175`, 운영은 `formulous.org`·`DevFeed`·`https://formulous.org`
+  - `WEB_BASE_URL`: 커뮤니티 글 정식 주소(`posts.url`)의 웹 기준 주소. 기본 `http://localhost:5175`, 운영 `https://formulous.org/dev-feed`
 - DB 스키마는 `../db/migrations`(dba)로만 반영함. 서버는 DDL을 실행하지 않음
 
 ## 실행
@@ -187,9 +188,17 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - `GET /api/security-news/popular?period=DAY|WEEK|MONTH&region=`: 기술 인기와 같은 기준(롤링 기간, 조회수 1 이상 상위 20건, 동점 최신순)·같은 응답(`PopularPost`). 출처 선택은 받지 않음
   - `PopularIdsService`가 종류별 캐시 키(`BLOG:`·`SECURITY_NEWS:`)로 10분 캐시. 기술 인기·`isPopular` 집합은 `kind = 'BLOG'` 쿼리 그대로라 섞이지 않음
   - 지역은 출처 ID 목록으로 바꿔 거름. dba 측정(`devfeed_perf` 뉴스 4만 건) MONTH 전체 DB p95 1.4ms
-- M12 커뮤니티 (032, 스키마 `0015`) — 진행 중
-  - 0015 호환: 댓글 숨김은 `hidden_reason`(`ADMIN`, 신고 자동 숨김은 `REPORTS`)을 함께 씀. 내부 소스(`kind = 'COMMUNITY'`, `internal:community`)는 관리자 소스 API·통계·수집 스케줄러에서 제외
-  - 명세: `docs/api/openapi.yaml`의 `/community/*`·`/reports`·`/admin/reports`. 구현은 명세 검토 후
+- M12 커뮤니티 (032, 스키마 `0015`)
+  - `src/community/`: 글 목록·인기·상세·쓰기·수정·삭제·채택(`CommunityService`), 신고·관리자 신고 처리(`ReportsService`), 숨김 공통 처리(`moderation.ts`)
+  - 저장: `posts`(`kind = 'COMMUNITY'`, 내부 소스) + `community_posts`. `posts.url`은 `WEB_BASE_URL/community/posts/{id}`, `posts.summary`는 마크다운을 걷어낸 앞 200자(`markdown-excerpt.ts`). 본문은 받은 원문 그대로 저장하고 렌더링하지 않음
+  - 모든 카드에 `kind`, 커뮤니티 카드는 `community`(말머리·작성자 등급·수정 시각·해결·조회수). 숨김·삭제 글은 최신·인기·북마크·읽은 기록·프로필 수치에서 빠짐 (`personal-list.ts` `LISTABLE`)
+  - 삭제는 항상 `DELETED`로 남김(제목·본문·태그·작성자 삭제). 댓글 있으면 상세에 자리만, 없으면 404
+  - 작성 제한(`write-limit.ts`, 관리자 예외): 가입 24시간, KST 하루 5개, 60초. 개수·마지막 시각은 원장 `POST_WRITE` 행으로 셈. 429 `POST_WRITE_LIMITED` + `reason`·`retryAfterSec`·`availableAt`, `GET /community/write-status`가 같은 계산
+  - 점수: 글 +10(하루 처음 3개분, 숨김·삭제 회수, 해제 복구), 받은 좋아요 +1(`LIKE_RECEIVED`, 원장 키에 누른 회원 `actor_id`, 하루 50점·초과분 행 없음·자기 글 0, 취소·글 삭제·누른 회원 탈퇴 시 회수)
+  - 신고: 대상 요약 행 `FOR UPDATE` 후 `INSERT IGNORE`로 1인 1회, 서로 다른 3명이면 자동 숨김(`hidden_reason = REPORTS`, 점수 회수, 채택 해제). 관리자 `CLEAR`·숨김 해제 후에는 자동 숨김 제외. 댓글 행을 지울 때 신고 대상도 같이 지움
+  - 잠금 순서: 회원 행(좋아요는 누른 회원·작성자를 id 오름차순) → 글 → `community_posts` → 부모 댓글 → 댓글 → 신고 대상 → 원장. 좋아요는 작성자 조회를 트랜잭션 밖에서 먼저 함 (MariaDB 스냅숏 검사 `1020 Record has changed` 회피). `withDeadlockRetry`는 1213·1205·1020을 재시도
+  - 0015 호환: 내부 소스는 관리자 소스 API·통계·수집 스케줄러에서 제외
+  - 성능 (`devfeed_perf` 보이는 글 19,600건, `perf/community-latency.js`, API p95): 최신 1.2~2.2·10동시 4.8~7.1ms, 말머리 1.4·5.8ms, 인기 MONTH 1.4·6.1ms, 상세 1.5·5.7ms, 댓글 첫 페이지 0.8·2.8ms, 작성 가능 여부 0.8·2.6ms
 - M9 패스키 로그인 (027, 스키마 `0013`)
   - `@simplewebauthn/server`는 CBOR·COSE 파싱과 서명 검증만 맡김. 챌린지 발급·1회 소비·만료, origin·RP ID 고정, 사용자 확인 강제, 서명 횟수 역행 거부, 10개 제한, 토큰 발급 통합은 `passkeys/`에서 직접 처리
   - 로그인 `POST /api/auth/passkeys/login/options`·`/login`(IP당 분당 10회, 기존 로그인과 같은 토큰·쿠키). 등록·관리 `POST /api/me/passkeys/registration/options`, `GET`·`POST /api/me/passkeys`, `PATCH`·`DELETE /api/me/passkeys/{id}`
@@ -281,7 +290,7 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - `server/.env.test`가 있으면 그것을, 없으면 `.env`를 읽음. `.env`를 쓸 때는 `DB_DATABASE=devfeed_test npm run test:e2e`
   - 테스트가 실패해 데이터가 남으면 `db/scripts/test-db-reset.sh`(dba)로 초기화
 - 각 테스트가 소스·태그·글·회원을 직접 만들고 끝나면 지움 (실행 후 테스트 DB 0행 확인)
-- 현재 71건
+- 현재 82건
   - 탈퇴 잔존 (002 필수): `db/queries/withdrawal-check.sql`(dba)을 그대로 읽어 실행. 탈퇴 전 데이터가 있음을 확인한 뒤 탈퇴 → 12개 테이블(좋아요·댓글·패스키·등록 챌린지·점수 원장 포함) 0건, 추천 로그 `user_id` NULL, 조회수 유지. 비밀번호 틀림 403, 탈퇴 후 로그인·리프레시·남은 토큰 거부
   - 회원 흐름: 가입 검증·중복 → 관심 태그(개수·없는 태그 검증) → 온보딩 완료 → 북마크(멱등·커서·태그 필터·피드 플래그·해제) → 조회 → 읽은 기록(순서·개별·전체 삭제) → 닉네임 변경, 온보딩 건너뛰기, 북마크 5,000건 제한
   - 인증: 리프레시 교체, 30초 이내 재사용 401, 30초 지난 재사용 시 계열 전체 폐기, 로그아웃, 5회 실패 잠금

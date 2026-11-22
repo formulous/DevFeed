@@ -12,7 +12,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     if (status >= 500) {
       this.logger.error(exception instanceof Error ? exception.stack : String(exception));
     }
-    if ((body.code === 'LOGIN_LOCKED' || body.code === 'COMMENT_RATE_LIMITED') && typeof body.retryAfterSec === 'number') {
+    if ((body.code === 'LOGIN_LOCKED' || body.code === 'COMMENT_RATE_LIMITED' || body.code === 'POST_WRITE_LIMITED') && typeof body.retryAfterSec === 'number') {
       res.setHeader('Retry-After', String(body.retryAfterSec));
     }
     res.status(status).json(body);

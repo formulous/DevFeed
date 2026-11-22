@@ -1,4 +1,4 @@
-const RETRYABLE_ERRNOS = new Set([1213, 1205]);
+const RETRYABLE_ERRNOS = new Set([1213, 1205, 1020]);
 
 export function isRetryableLockError(error: unknown): boolean {
   const e = error as { errno?: number; driverError?: { errno?: number } };

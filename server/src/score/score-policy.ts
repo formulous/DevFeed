@@ -4,6 +4,10 @@ export const SCORE = {
   like: 2,
   comment: 5,
   commentDailyCount: 10,
+  postWrite: 10,
+  postWriteDailyCount: 3,
+  likeReceived: 1,
+  likeReceivedDailyCap: 50,
 } as const;
 
 export const GRADES = [

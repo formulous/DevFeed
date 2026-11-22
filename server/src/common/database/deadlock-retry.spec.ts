@@ -32,5 +32,6 @@ describe('withDeadlockRetry', () => {
     }, 3, noSleep)).rejects.toBe(other);
     expect(calls).toBe(1);
     expect(isRetryableLockError({ errno: 1205 })).toBe(true);
+    expect(isRetryableLockError({ driverError: { errno: 1020 } })).toBe(true);
   });
 });

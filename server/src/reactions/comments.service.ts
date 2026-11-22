@@ -3,6 +3,7 @@ import { DataSource, EntityManager } from 'typeorm';
 import { withDeadlockRetry } from '../common/database/deadlock-retry';
 import { AppException, Errors } from '../common/errors/app.exception';
 import { decodeIdCursor, encodeIdCursor } from '../common/pagination/cursor';
+import { dropCommentReports, hideComment, resolveReportTarget, unhideComment } from '../community/moderation';
 import { awardComment, setCommentRevoked } from '../score/score-ledger';
 import { commentRetryAfterSec, COMMENT_RATE } from './comment-rate';
 import { CommentRow, CommentView, toCommentView, Viewer } from './comment-view';
@@ -12,6 +13,7 @@ const REPLY_PREVIEW = 3;
 const COLUMNS = `c.id, c.post_id, c.parent_id, c.user_id, c.body, c.status, c.reply_count, c.edited_at, c.created_at, u.nickname, u.score`;
 
 type Affected = { affectedRows: number };
+type CommunityLock = { status: 'VISIBLE' | 'HIDDEN' | 'DELETED'; user_id: number | string | null; accepted_comment_id: number | string | null };
 type LockedComment = { id: number | string; post_id: number | string; parent_id: number | string | null; user_id: number | string | null; status: CommentRow['status'] };
 
 const commentNotFound = () => Errors.notFound('댓글을 찾을 수 없어요');
@@ -25,8 +27,7 @@ export class CommentsService {
   async list(postId: number, query: { cursor?: string; size?: number }, viewer?: Viewer) {
     const size = query.size ?? DEFAULT_SIZE;
     const after = query.cursor ? decodeIdCursor(query.cursor) : 0;
-    const [post] = (await this.dataSource.query('SELECT id FROM posts WHERE id = ?', [postId])) as unknown[];
-    if (!post) throw postNotFound();
+    await this.assertReadable(postId, viewer);
     const rows = (await this.dataSource.query(
       `SELECT ${COLUMNS} FROM comments c LEFT JOIN users u ON u.id = c.user_id
         WHERE c.post_id = ? AND c.parent_id IS NULL AND c.id > ? ORDER BY c.id LIMIT ?`,
@@ -50,13 +51,14 @@ export class CommentsService {
       byParent.set(key, [...(byParent.get(key) ?? []), reply]);
     }
     const last = page[page.length - 1];
+    const reported = await this.reportedBy(viewer, [...page, ...replies].map((r) => Number(r.id)));
     return {
       items: page.map((row) => {
         const children = byParent.get(Number(row.id)) ?? [];
         const shown = children.slice(0, REPLY_PREVIEW);
         return {
-          ...toCommentView(row, viewer),
-          replies: shown.map((r) => toCommentView(r, viewer)),
+          ...toCommentView(row, viewer, reported),
+          replies: shown.map((r) => toCommentView(r, viewer, reported)),
           repliesNextCursor: children.length > REPLY_PREVIEW ? encodeIdCursor(Number(shown[shown.length - 1].id)) : null,
         };
       }),
@@ -67,10 +69,11 @@ export class CommentsService {
   async replies(commentId: number, query: { cursor?: string; size?: number }, viewer?: Viewer) {
     const size = query.size ?? DEFAULT_SIZE;
     const after = query.cursor ? decodeIdCursor(query.cursor) : 0;
-    const [parent] = (await this.dataSource.query('SELECT id FROM comments WHERE id = ? AND parent_id IS NULL', [
+    const [parent] = (await this.dataSource.query('SELECT id, post_id FROM comments WHERE id = ? AND parent_id IS NULL', [
       commentId,
-    ])) as unknown[];
+    ])) as { post_id: number | string }[];
     if (!parent) throw commentNotFound();
+    await this.assertReadable(Number(parent.post_id), viewer, commentNotFound);
     const rows = (await this.dataSource.query(
       `SELECT ${COLUMNS} FROM comments c LEFT JOIN users u ON u.id = c.user_id
         WHERE c.parent_id = ? AND c.id > ? ORDER BY c.id LIMIT ?`,
@@ -78,8 +81,9 @@ export class CommentsService {
     )) as CommentRow[];
     const page = rows.slice(0, size);
     const last = page[page.length - 1];
+    const reported = await this.reportedBy(viewer, page.map((r) => Number(r.id)));
     return {
-      items: page.map((r) => toCommentView(r, viewer)),
+      items: page.map((r) => toCommentView(r, viewer, reported)),
       nextCursor: rows.length > size && last ? encodeIdCursor(Number(last.id)) : null,
     };
   }
@@ -91,6 +95,8 @@ export class CommentsService {
         await this.checkRate(manager, viewer.id);
         const [post] = (await manager.query('SELECT id FROM posts WHERE id = ? FOR UPDATE', [postId])) as unknown[];
         if (!post) throw postNotFound();
+        const community = await this.lockCommunity(manager, postId);
+        if (community && community.status !== 'VISIBLE') throw Errors.communityPostClosed();
         let parent: number | null = null;
         if (parentId !== undefined) {
           const found = await this.find(manager, parentId);
@@ -135,9 +141,12 @@ export class CommentsService {
         const postId = Number(found.post_id);
         await manager.query('SELECT id FROM users WHERE id = ? FOR UPDATE', [viewer.id]);
         await manager.query('SELECT id FROM posts WHERE id = ? FOR UPDATE', [postId]);
+        const community = await this.lockCommunity(manager, postId);
         if (found.parent_id !== null) await this.lock(manager, Number(found.parent_id));
         const target = await this.lock(manager, commentId);
         if (!target || target.status === 'DELETED' || Number(target.user_id) !== viewer.id) throw commentNotFound();
+        if (community?.accepted_comment_id != null && Number(community.accepted_comment_id) === commentId) throw Errors.commentAccepted();
+        const dropped: number[] = [];
         let removed = true;
         let parentRemoved = false;
         if (target.parent_id === null) {
@@ -147,17 +156,23 @@ export class CommentsService {
             [commentId],
           )) as Affected;
           if (placeholder.affectedRows === 1) removed = false;
-          else await manager.query('DELETE FROM comments WHERE id = ?', [commentId]);
+          else {
+            await manager.query('DELETE FROM comments WHERE id = ?', [commentId]);
+            dropped.push(commentId);
+          }
         } else {
           const parentId = Number(target.parent_id);
           await manager.query('DELETE FROM comments WHERE id = ?', [commentId]);
+          dropped.push(commentId);
           await manager.query('UPDATE comments SET reply_count = reply_count - 1 WHERE id = ?', [parentId]);
-          const dropped = (await manager.query(
+          const gone = (await manager.query(
             "DELETE FROM comments WHERE id = ? AND status = 'DELETED' AND reply_count = 0",
             [parentId],
           )) as Affected;
-          parentRemoved = dropped.affectedRows === 1;
+          parentRemoved = gone.affectedRows === 1;
+          if (parentRemoved) dropped.push(parentId);
         }
+        await dropCommentReports(manager, dropped);
         if (target.status === 'VISIBLE') {
           await manager.query('UPDATE posts SET comment_count = comment_count - 1 WHERE id = ?', [postId]);
         }
@@ -176,21 +191,42 @@ export class CommentsService {
         const authorId = Number(found.user_id);
         await manager.query('SELECT id FROM users WHERE id = ? FOR UPDATE', [authorId]);
         await manager.query('SELECT id FROM posts WHERE id = ? FOR UPDATE', [postId]);
+        await this.lockCommunity(manager, postId);
         const target = await this.lock(manager, commentId);
         if (!target || target.status === 'DELETED' || Number(target.user_id) !== authorId) throw commentNotFound();
-        const changed = (await manager.query(
-          hidden
-            ? "UPDATE comments SET status = 'HIDDEN', hidden_at = UTC_TIMESTAMP(3), hidden_by = ?, hidden_reason = 'ADMIN' WHERE id = ? AND status = 'VISIBLE'"
-            : "UPDATE comments SET status = 'VISIBLE', hidden_at = NULL, hidden_by = NULL, hidden_reason = NULL WHERE id = ? AND status = 'HIDDEN'",
-          hidden ? [admin.id, commentId] : [commentId],
-        )) as Affected;
-        if (changed.affectedRows === 1) {
-          await manager.query(`UPDATE posts SET comment_count = comment_count ${hidden ? '-' : '+'} 1 WHERE id = ?`, [postId]);
-          await setCommentRevoked(manager, authorId, commentId, hidden, now);
-        }
+        const ref = { id: commentId, postId, authorId };
+        if (hidden) await hideComment(manager, ref, { reason: 'ADMIN', adminId: admin.id }, now);
+        else await unhideComment(manager, ref, now);
+        await resolveReportTarget(manager, 'COMMENT', commentId, hidden ? 'HIDDEN' : 'CLEARED', admin.id, now);
         return { comment: await this.view(manager, commentId, admin), commentCount: await this.count(manager, postId) };
       }),
     );
+  }
+
+  private async assertReadable(postId: number, viewer: Viewer | undefined, missing = postNotFound): Promise<void> {
+    const [post] = (await this.dataSource.query(
+      'SELECT p.id, cp.status, cp.user_id FROM posts p LEFT JOIN community_posts cp ON cp.post_id = p.id WHERE p.id = ?',
+      [postId],
+    )) as { status: CommunityLock['status'] | null; user_id: number | string | null }[];
+    if (!post) throw missing();
+    if (post.status === 'HIDDEN' && viewer?.role !== 'ADMIN' && Number(post.user_id) !== viewer?.id) throw missing();
+  }
+
+  private async reportedBy(viewer: Viewer | undefined, ids: number[]): Promise<Set<number>> {
+    if (!viewer || !ids.length) return new Set();
+    const rows = (await this.dataSource.query(
+      `SELECT target_id FROM reports WHERE reporter_id = ? AND target_type = 'COMMENT' AND target_id IN (${ids.map(() => '?').join(', ')})`,
+      [viewer.id, ...ids],
+    )) as { target_id: number | string }[];
+    return new Set(rows.map((r) => Number(r.target_id)));
+  }
+
+  private async lockCommunity(manager: EntityManager, postId: number): Promise<CommunityLock | undefined> {
+    const [row] = (await manager.query(
+      'SELECT status, user_id, accepted_comment_id FROM community_posts WHERE post_id = ? FOR UPDATE',
+      [postId],
+    )) as CommunityLock[];
+    return row;
   }
 
   private async checkRate(manager: EntityManager, userId: number): Promise<void> {
@@ -225,7 +261,7 @@ export class CommentsService {
       `SELECT ${COLUMNS} FROM comments c LEFT JOIN users u ON u.id = c.user_id WHERE c.id = ?`,
       [id],
     )) as CommentRow[];
-    return toCommentView(row, viewer);
+    return toCommentView(row, viewer, await this.reportedBy(viewer, [id]));
   }
 
   private async count(manager: EntityManager, postId: number): Promise<number> {

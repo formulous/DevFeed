@@ -2,6 +2,7 @@ import { assembleCards, withoutViewCount } from './post-cards';
 
 const row = (id: number) => ({
   id: String(id),
+  kind: 'BLOG' as const,
   title: `t${id}`,
   summary: null,
   url: `https://a.com/${id}`,
@@ -45,6 +46,31 @@ describe('assembleCards', () => {
     expect(guest).toMatchObject({ likeCount: 1, commentCount: 2, likedByMe: false });
     const [member] = assembleCards([1], [row(1)], [], { bookmarked: new Set(), read: new Set(), liked: new Set([1]) });
     expect(member.likedByMe).toBe(true);
+  });
+
+  it('모든 카드에 kind, 커뮤니티 글만 community (032)', () => {
+    const community = {
+      ...row(3),
+      kind: 'COMMUNITY' as const,
+      category: 'QUESTION' as const,
+      author_id: '7',
+      author_nickname: '작성자',
+      author_score: 120,
+      edited_at: null,
+      accepted_comment_id: '11',
+    };
+    const [blog, post] = assembleCards([1, 3], [row(1), community], []);
+    expect(blog.kind).toBe('BLOG');
+    expect(blog).not.toHaveProperty('community');
+    expect(post.community).toEqual({
+      category: 'QUESTION',
+      author: { id: 7, nickname: '작성자', grade: { level: 2, name: 'Junior Dev' } },
+      editedAt: null,
+      solved: true,
+      viewCount: 30,
+    });
+    const deleted = assembleCards([3], [{ ...community, category: 'DISCUSSION' as const, author_id: null, author_nickname: null }], [])[0];
+    expect(deleted.community).toMatchObject({ author: null, solved: false });
   });
 
   it('사라진 글은 건너뜀', () => {

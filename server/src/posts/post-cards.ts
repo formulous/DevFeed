@@ -1,5 +1,11 @@
+import type { SourceKind } from '../entities/source.entity';
+import { Grade, gradeBrief } from '../score/score-policy';
+
+export type CommunityCategory = 'QUESTION' | 'DISCUSSION' | 'SHARE';
+
 export interface PostRow {
   id: number | string;
+  kind: SourceKind;
   title: string;
   summary: string | null;
   url: string;
@@ -12,6 +18,20 @@ export interface PostRow {
   source_name: string;
   source_logo_url: string | null;
   source_type: 'COMPANY' | 'PERSONAL';
+  category?: CommunityCategory | null;
+  author_id?: number | string | null;
+  author_nickname?: string | null;
+  author_score?: number | null;
+  edited_at?: Date | null;
+  accepted_comment_id?: number | string | null;
+}
+
+export interface CommunityInfo {
+  category: CommunityCategory;
+  author: { id: number; nickname: string; grade: Grade } | null;
+  editedAt: Date | null;
+  solved: boolean;
+  viewCount: number;
 }
 
 export interface TagRow {
@@ -22,6 +42,8 @@ export interface TagRow {
 
 export interface PostSummary {
   id: number;
+  kind: SourceKind;
+  community?: CommunityInfo;
   title: string;
   summary: string | null;
   url: string;
@@ -64,6 +86,8 @@ export function assembleCards(
     if (!row) continue;
     const card: PostSummary & { viewCount: number } = {
       id,
+      kind: row.kind,
+      ...(row.kind === 'COMMUNITY' ? { community: communityInfo(row) } : {}),
       title: row.title,
       summary: row.summary,
       url: row.url,
@@ -89,6 +113,20 @@ export function assembleCards(
     cards.push(card);
   }
   return cards;
+}
+
+function communityInfo(row: PostRow): CommunityInfo {
+  const authorId = row.author_id == null ? null : Number(row.author_id);
+  return {
+    category: row.category ?? 'DISCUSSION',
+    author:
+      authorId !== null && row.author_nickname != null
+        ? { id: authorId, nickname: row.author_nickname, grade: gradeBrief(Number(row.author_score ?? 0)) }
+        : null,
+    editedAt: row.edited_at ?? null,
+    solved: row.category === 'QUESTION' && row.accepted_comment_id != null,
+    viewCount: Number(row.view_count),
+  };
 }
 
 export function withoutViewCount<T extends { viewCount: number }>(card: T): Omit<T, 'viewCount'> {

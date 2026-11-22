@@ -41,4 +41,11 @@ describe('toCommentView', () => {
     });
     expect(toCommentView(row({ parent_id: '9', reply_count: 5 })).replyCount).toBe(0);
   });
+
+  it('reportedByMe는 회원이 신고한 댓글만 true (032)', () => {
+    const reported = new Set([10]);
+    expect(toCommentView(row(), { id: 3, role: 'USER' }, reported).reportedByMe).toBe(true);
+    expect(toCommentView(row(), { id: 3, role: 'USER' }).reportedByMe).toBe(false);
+    expect(toCommentView(row(), undefined, reported).reportedByMe).toBe(false);
+  });
 });
