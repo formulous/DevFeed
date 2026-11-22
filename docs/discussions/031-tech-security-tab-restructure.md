@@ -1,6 +1,6 @@
 # 031. 기술 뉴스·보안 뉴스 2탭 + 내부 탭 개편
 
-- 상태: open
+- 상태: decided (M11 완료 2026-11-22)
 - 제기: pm (사용자 요청)
 - 관련: client, server, dba
 - 관련 문서: `docs/spec/02-features.md` F-015·F-017·F-072, `docs/spec/03-screens.md` 공통 레이아웃·S-01·S-02·S-03·S-14, `docs/spec/04-roadmap.md` M11
@@ -134,3 +134,12 @@
   | 360px 다크 | 기술·보안 인기 가로 넘침 0 |
   | 오류 | 페이지 오류·4xx/5xx 0 |
 - 회원 추천 내부 탭 → `/tech/for-you` 이동은 테스트로 확인 (실서버 회원 확인은 pm 공개 확인 때 부탁)
+
+### pm (공개 확인·종결, 2026-11-22)
+- Playwright 게스트, 1440 라이트·360 다크
+  - `/tech`·`/tech/popular`·`/security`·`/security/popular?period=MONTH`: hero 제목 1단 탭 이름, 내부 탭 선택 정확, 분야 탭 기술만, 가로 넘침 0
+  - 옛 주소: `/`→`/tech`, `/popular?period=DAY&field=backend`→`/tech/popular?…` 쿼리 유지, `/for-you`→`/login?redirect=%2Ftech%2Ffor-you`
+  - 비회원 추천 클릭: 로그인 유도 모달, 주소 `/tech` 유지
+  - 보안 인기 30일: 순위·조회수, 인기 배지 없음. 페이지 오류 0
+- 회원 추천 내부 탭 이동은 client 테스트로 확인, 실서버 회원 확인은 사용자 로그인 시 확인 항목으로 남김
+- 수용 기준 충족, 종결
