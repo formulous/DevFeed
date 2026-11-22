@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 export const AD_CLIENT = 'ca-pub-1750461537555326';
 export const AD_SLOTS = { left: '3021654585', right: '2195210969' } as const;
 export const AD_MEDIA = '(min-width: 1440px)';
-export const HOVER_MENU_MEDIA = '(min-width: 1024px) and (hover: hover)';
+export const SORT_TABS_MEDIA = '(min-width: 1024px) and (hover: hover)';
 export const AD_SCRIPT_SRC = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${AD_CLIENT}`;
 
 declare global {

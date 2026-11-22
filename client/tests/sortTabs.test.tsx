@@ -2,12 +2,12 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { App } from '@/App';
-import { currentLocation, renderWithApp, seedLogin } from './render';
+import { currentLocation, renderWithApp } from './render';
 
-const flags = globalThis as { __hoverMenu?: boolean };
+const flags = globalThis as { __sortTabs?: boolean };
 
 beforeEach(() => {
-  flags.__hoverMenu = true;
+  flags.__sortTabs = true;
 });
 
 const nav = () => within(screen.getByRole('navigation', { name: '피드' }));
@@ -15,7 +15,7 @@ const sortTabs = () => within(screen.getByRole('navigation', { name: '정렬' })
 const sortLabels = () => [...screen.getByTestId('sort-tabs').querySelectorAll('a, button')].map((l) => l.textContent);
 const metrics = () => screen.getAllByTestId('rank-metric').map((m) => Number(m.textContent!.replace(/\D/g, '')));
 
-describe('033·035 데스크톱 펼침 메뉴·정렬 글자 탭', () => {
+describe('035·036 데스크톱 정렬 글자 탭 (1단 탭 펼침 메뉴 없음)', () => {
   it('1단 탭 순서는 자유 게시판·기술 뉴스·보안 뉴스, 토글 그룹·펼침 선택 대신 정렬 글자 탭이 현재 하위 탭을 보여줌', async () => {
     renderWithApp(<App />, '/tech/popular?field=ai');
     await screen.findByRole('list', { name: '인기 글 순위' });
@@ -27,30 +27,7 @@ describe('033·035 데스크톱 펼침 메뉴·정렬 글자 탭', () => {
     expect(screen.getByRole('radiogroup', { name: '분야' })).toBeInTheDocument();
   });
 
-  it('1단 탭에 마우스를 올리면 하위 메뉴가 펼쳐지고, 항목을 누르면 이동하며 유지 규칙을 따름', async () => {
-    const user = userEvent.setup();
-    renderWithApp(<App />, '/tech?field=backend&tagIds=1');
-    await screen.findAllByRole('article');
-    await user.hover(screen.getByTestId('section-menu-tech'));
-    const menu = within(await screen.findByRole('menu', { name: '기술 뉴스 보기' }));
-    expect(menu.getAllByRole('menuitem').map((m) => m.textContent)).toEqual(['최신', '추천', '인기', '댓글']);
-    expect(menu.getByRole('menuitem', { name: '최신' })).toHaveAttribute('aria-current', 'page');
-    await user.click(menu.getByRole('menuitem', { name: '인기' }));
-    expect(currentLocation).toBe('/tech/popular?field=backend');
-    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
-
-    await user.hover(screen.getByTestId('section-menu-community'));
-    const cm = within(await screen.findByRole('menu', { name: '자유 게시판 보기' }));
-    expect(cm.getAllByRole('menuitem').map((m) => m.textContent)).toEqual(['최신', '인기', '댓글', '좋아요']);
-    await user.unhover(screen.getByTestId('section-menu-community'));
-    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
-
-    await user.hover(screen.getByTestId('section-menu-security'));
-    const sm = within(await screen.findByRole('menu', { name: '보안 뉴스 보기' }));
-    expect(sm.getAllByRole('menuitem').map((m) => m.textContent)).toEqual(['최신', '인기']);
-  });
-
-  it('비회원이 메뉴·정렬에서 추천을 고르면 로그인 안내만 뜸', async () => {
+  it('비회원이 정렬에서 추천순을 고르면 로그인 안내만 뜸', async () => {
     const user = userEvent.setup();
     renderWithApp(<App />, '/tech');
     await screen.findAllByRole('article');
@@ -59,28 +36,21 @@ describe('033·035 데스크톱 펼침 메뉴·정렬 글자 탭', () => {
     expect(currentLocation).toBe('/tech');
   });
 
-  it('키보드: 포커스로 펼침, ↓로 들어가 ↑↓ 이동, Esc로 닫고 탭으로 돌아감, Enter로 이동', async () => {
-    await seedLogin('user@devfeed.dev');
+  it('1단 탭은 hover·포커스에 메뉴를 펼치지 않고, 클릭하면 각 탭의 최신으로 이동함', async () => {
     const user = userEvent.setup();
-    renderWithApp(<App />, '/security');
-    await screen.findAllByRole('article');
-    const tech = nav().getByRole('link', { name: '기술 뉴스' });
-    act(() => tech.focus());
-    expect(await screen.findByRole('menu', { name: '기술 뉴스 보기' })).toBeInTheDocument();
-    expect(tech).toHaveAttribute('aria-expanded', 'true');
-    await user.keyboard('{ArrowDown}');
-    await waitFor(() => expect(screen.getByRole('menuitem', { name: '최신' })).toHaveFocus());
-    await user.keyboard('{ArrowDown}');
-    expect(screen.getByRole('menuitem', { name: '추천' })).toHaveFocus();
-    await user.keyboard('{ArrowUp}{ArrowUp}');
-    expect(screen.getByRole('menuitem', { name: '댓글' })).toHaveFocus();
-    await user.keyboard('{Escape}');
-    expect(screen.queryByRole('menu', { name: '기술 뉴스 보기' })).toBeNull();
-    expect(tech).toHaveFocus();
-    await user.keyboard('{ArrowDown}');
-    await waitFor(() => expect(screen.getByRole('menuitem', { name: '최신' })).toHaveFocus());
-    await user.keyboard('{ArrowDown}{Enter}');
-    await waitFor(() => expect(currentLocation).toBe('/tech/for-you'));
+    renderWithApp(<App />, '/tech/popular?field=backend');
+    await screen.findByRole('list', { name: '인기 글 순위' });
+    const community = nav().getByRole('link', { name: '자유 게시판' });
+    await user.hover(community);
+    act(() => nav().getByRole('link', { name: '보안 뉴스' }).focus());
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(community).not.toHaveAttribute('aria-haspopup');
+    await user.click(community);
+    expect(currentLocation).toBe('/community');
+    await user.click(nav().getByRole('link', { name: '보안 뉴스' }));
+    expect(currentLocation).toBe('/security');
+    await user.click(nav().getByRole('link', { name: '기술 뉴스' }));
+    expect(currentLocation).toBe('/tech');
   });
 
   it('자유 게시판: 정렬 글자 탭 오른쪽에 글쓰기, 말머리 유지, 인기·댓글·좋아요 사이에서만 기간 유지', async () => {

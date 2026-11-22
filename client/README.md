@@ -238,16 +238,15 @@ App
 - mock: `mocks/profile.ts` (읽기 같은 글 1회·하루 30점, 좋아요 +2, 댓글 +5 하루 10개, 기본 점수 1,200)
 - 2026-11-22 server 배포·백필 후 `build:web` 배포. 실서버 확인(확인용 계정 가입→탈퇴): 원문 열기 +1·재읽기 0, 좋아요 +2·취소 회수, 댓글 +5·삭제 회수, 읽은 기록 삭제 후 점수 유지, 댓글 배지, 360px 헤더 메뉴, 1280×720 좌측 열 스크롤 없음
 
-## 1단 탭 순서·펼침 메뉴·정렬 선택 (`docs/discussions/033`)
+## 1단 탭 순서 (`docs/discussions/033`, 펼침 메뉴는 036에서 삭제)
 - 1단 탭 순서 `자유 게시판 · 기술 뉴스 · 보안 뉴스`, 화면 문구 "커뮤니티" → "자유 게시판" (주소 `/community/...` 그대로, `/`는 `/tech`)
-- 데스크톱(`HOVER_MENU_MEDIA` = `(min-width: 1024px) and (hover: hover)`): 1단 탭에 마우스를 올리거나 포커스하면 하위 탭 메뉴(`role="menu"`)가 탭 아래 겹쳐 뜸. 떠날 때 150ms 지연 후 닫힘, ↓로 메뉴 진입·↑↓·Home/End 이동·Enter 선택·Esc 닫고 탭으로 복귀. 현재 하위 탭은 ✓ 표시. 비회원 추천은 로그인 안내 모달
-- 데스크톱은 하위 탭 토글 그룹 대신 목록 위 줄 오른쪽 `정렬` 선택(`최신순·추천순·인기순`, 자유 게시판·보안 뉴스는 `최신순·인기순`). 같은 줄 왼쪽에 분야·말머리 글자 탭, 자유 게시판은 `글쓰기`가 정렬 왼쪽. 바꾸면 하위 탭 주소로 이동(유지 규칙 031·032 그대로)
-- 모바일·터치(위 조건 아님): 지금 토글 그룹(`SectionTabs`) 그대로
-- 테스트: `tests/setup.ts`가 `HOVER_MENU_MEDIA`를 기본 false로 두고, `tests/hoverMenu.test.tsx`에서 켜서 확인
+- 1단 탭은 클릭하면 각 탭 최신으로 가는 글자 탭만 있음. 033의 hover 펼침 메뉴는 정렬 글자 탭(035)과 중복이라 036에서 삭제
+- 데스크톱(`SORT_TABS_MEDIA` = `(min-width: 1024px) and (hover: hover)`)은 정렬 글자 탭, 그 밖(모바일·터치)은 토글 그룹(`SectionTabs`)
+- 테스트: `tests/setup.ts`가 `SORT_TABS_MEDIA`를 기본 false로 두고, `tests/sortTabs.test.tsx`에서 켜서 확인
 
 ## 정렬 글자 탭·댓글순·좋아요순 (`docs/discussions/035`)
 - 033의 `[최신순 ▾]` 선택 메뉴를 없애고 목록 위 줄 오른쪽에 정렬 글자 탭(`SortTabs`, `data-testid="sort-tabs"`, 분야 탭과 같은 크기). 자유 게시판 `글쓰기`는 정렬 탭 오른쪽
-- 항목: 자유 게시판 `최신·인기·댓글·좋아요`, 기술 뉴스 `최신·추천·인기·댓글`, 보안 뉴스 `최신·인기`. hover 메뉴·모바일 토글도 같은 항목 (`FeedTabs.tsx` `ALL_SECTIONS`). 모바일 토글은 넘치면 가로 스크롤
+- 항목: 자유 게시판 `최신·인기·댓글·좋아요`, 기술 뉴스 `최신·추천·인기·댓글`, 보안 뉴스 `최신·인기`. 모바일 토글도 같은 항목 (`FeedTabs.tsx` `ALL_SECTIONS`). 모바일 토글은 넘치면 가로 스크롤
 - 기간: `ranked` 탭(인기·댓글·좋아요) 사이 이동 때만 `period`를 넘김 (`tabHref`), 최신·추천으로 가면 버림
 - API: 기존 인기 API에 `sort` (`/posts/popular?sort=VIEWS|COMMENTS`, `/community/popular?sort=SCORE|COMMENTS|LIKES`, 기본값이면 생략). 순위 카드는 `RankedPosts` `metric` → `PostCard`·`ReactionBar` `emphasize`로 반응 줄의 해당 수치만 굵게 (인기순은 `조회 N` 메타 유지)
 
