@@ -80,11 +80,11 @@ describe('자동 아바타', () => {
 
 describe('F-082 프로필 카드 (029)', () => {
   it('게스트는 로그인 안내 카드, 로그인·가입 링크는 현재 화면으로 돌아옴', async () => {
-    renderWithApp(<App />, '/popular?period=DAY');
+    renderWithApp(<App />, '/tech/popular?period=DAY');
     const guest = within(await screen.findByTestId('guest-card'));
     expect(guest.getByText('좋아요·댓글로 등급을 올려 보세요')).toBeInTheDocument();
-    expect(guest.getByRole('link', { name: '로그인' })).toHaveAttribute('href', '/login?redirect=%2Fpopular%3Fperiod%3DDAY');
-    expect(guest.getByRole('link', { name: '회원가입' })).toHaveAttribute('href', '/signup?redirect=%2Fpopular%3Fperiod%3DDAY');
+    expect(guest.getByRole('link', { name: '로그인' })).toHaveAttribute('href', '/login?redirect=%2Ftech%2Fpopular%3Fperiod%3DDAY');
+    expect(guest.getByRole('link', { name: '회원가입' })).toHaveAttribute('href', '/signup?redirect=%2Ftech%2Fpopular%3Fperiod%3DDAY');
     expect(screen.queryByTestId('profile-card')).toBeNull();
   });
 

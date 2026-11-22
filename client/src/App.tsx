@@ -16,6 +16,8 @@ import { OnboardingPage } from '@/features/me/OnboardingPage';
 import { SettingsPage } from '@/features/me/SettingsPage';
 import { HomePage } from '@/features/feed/HomePage';
 import { SecurityNewsPage } from '@/features/security/SecurityNewsPage';
+import { SecurityPopularPage } from '@/features/security/SecurityPopularPage';
+import { PATHS } from '@/lib/routes';
 import { M7_API_READY } from '@/lib/features';
 import { PopularPage } from '@/features/popular/PopularPage';
 import { ForYouPage } from '@/features/recommend/ForYouPage';
@@ -28,7 +30,12 @@ function LegacySourceTypeRedirect({ type }: { type: SourceType }) {
   const { search } = useLocation();
   const params = new URLSearchParams(search);
   params.set('sourceType', type);
-  return <Navigate to={`/?${params.toString()}`} replace />;
+  return <Navigate to={`${PATHS.tech}?${params.toString()}`} replace />;
+}
+
+function LegacyRedirect({ to }: { to: string }) {
+  const { search, hash } = useLocation();
+  return <Navigate to={`${to}${search}${hash}`} replace />;
 }
 
 export function App() {
@@ -37,12 +44,16 @@ export function App() {
       <RouteTitle />
       <Routes>
         <Route element={<AppLayout />}>
-          <Route index element={<HomePage />} />
+          <Route index element={<LegacyRedirect to={PATHS.tech} />} />
+          <Route path="for-you" element={<LegacyRedirect to={PATHS.techForYou} />} />
+          <Route path="popular" element={<LegacyRedirect to={PATHS.techPopular} />} />
+          <Route path="tech" element={<HomePage />} />
+          <Route path="tech/for-you" element={<RequireAuth><ForYouPage /></RequireAuth>} />
+          <Route path="tech/popular" element={<PopularPage />} />
           <Route path="company" element={<LegacySourceTypeRedirect type="COMPANY" />} />
           <Route path="personal" element={<LegacySourceTypeRedirect type="PERSONAL" />} />
-          <Route path="security" element={M7_API_READY ? <SecurityNewsPage /> : <Navigate to="/" replace />} />
-          <Route path="for-you" element={<RequireAuth><ForYouPage /></RequireAuth>} />
-          <Route path="popular" element={<PopularPage />} />
+          <Route path="security" element={M7_API_READY ? <SecurityNewsPage /> : <Navigate to={PATHS.tech} replace />} />
+          <Route path="security/popular" element={M7_API_READY ? <SecurityPopularPage /> : <Navigate to={PATHS.tech} replace />} />
           <Route path="search" element={<SearchPage />} />
           <Route path="privacy" element={<PrivacyPage />} />
           <Route path="me/bookmarks" element={<RequireAuth><BookmarksPage /></RequireAuth>} />

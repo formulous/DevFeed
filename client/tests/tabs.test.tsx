@@ -13,43 +13,83 @@ const fieldGroup = () => screen.queryByRole('radiogroup', { name: '분야' });
 const tagNamesOf = (categories: string[]) =>
   mockTags.filter((t) => t.category && categories.includes(categoryLabel(t.category))).map((t) => t.name);
 
-describe('F-015 상단 탭 (023)', () => {
-  it('게스트는 최신·인기·보안 뉴스 3개, 추천 탭 없음', async () => {
-    renderWithApp(<App />, '/popular');
+const sub = () => within(screen.getByTestId('section-tabs'));
+
+describe('F-015 상단 탭 (031: 기술 뉴스·보안 뉴스 + 내부 탭)', () => {
+  it('1단 탭은 기술 뉴스·보안 뉴스 2개, 내부 탭 화면에서도 해당 1단 탭이 선택됨', async () => {
+    renderWithApp(<App />, '/tech/popular');
     await screen.findByRole('list', { name: '인기 글 순위' });
-    expect(nav().getAllByRole('link').map((l) => l.textContent)).toEqual(['최신', '인기', '보안 뉴스']);
-    expect(nav().getByRole('link', { name: '인기' })).toHaveAttribute('aria-current', 'page');
+    expect(nav().getAllByRole('link').map((l) => l.textContent)).toEqual(['기술 뉴스', '보안 뉴스']);
+    expect(nav().getByRole('link', { name: '기술 뉴스' })).toHaveAttribute('aria-current', 'page');
+    expect(nav().getByRole('link', { name: '기술 뉴스' })).toHaveAttribute('href', '/tech');
+    expect(nav().getByRole('link', { name: '보안 뉴스' })).toHaveAttribute('href', '/security');
+    expect(screen.getByRole('heading', { level: 1, name: '기술 뉴스' })).toBeInTheDocument();
+    expect(sub().getByRole('link', { name: '인기' })).toHaveAttribute('aria-current', 'page');
   });
 
-  it('회원은 추천 포함 4개', async () => {
+  it('기술 뉴스 내부 탭은 최신·추천·인기, 보안 뉴스는 최신·인기', async () => {
+    const first = renderWithApp(<App />, '/tech');
+    await screen.findAllByRole('article');
+    expect([...screen.getByTestId('section-tabs').querySelectorAll('a, button')].map((l) => l.textContent)).toEqual(['최신', '추천', '인기']);
+    first.unmount();
+    renderWithApp(<App />, '/security');
+    expect(sub().getAllByRole('link').map((l) => l.textContent)).toEqual(['최신', '인기']);
+    expect(screen.getByRole('heading', { level: 1, name: '보안 뉴스' })).toBeInTheDocument();
+    expect(nav().getByRole('link', { name: '보안 뉴스' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('게스트가 추천을 누르면 로그인 안내만 뜨고 이동하지 않음', async () => {
+    const user = userEvent.setup();
+    renderWithApp(<App />, '/tech');
+    await screen.findAllByRole('article');
+    await waitFor(() => expect(sub().getByRole('button', { name: '추천' })).toBeInTheDocument());
+    await user.click(sub().getByRole('button', { name: '추천' }));
+    expect(await screen.findByText('추천 글을 보려면 로그인이 필요해요')).toBeInTheDocument();
+    expect(currentLocation).toBe('/tech');
+  });
+
+  it('게스트가 /tech/for-you로 바로 들어오면 로그인 화면으로 가고 돌아올 주소를 유지함', async () => {
+    renderWithApp(<App />, '/tech/for-you');
+    await waitFor(() => expect(currentLocation).toBe('/login?redirect=%2Ftech%2Ffor-you'));
+  });
+
+  it('회원은 추천 내부 탭으로 추천 피드에 감', async () => {
     await seedLogin('user@devfeed.dev');
-    renderWithApp(<App />, '/');
+    const user = userEvent.setup();
+    renderWithApp(<App />, '/tech?field=ai');
+    await waitFor(() => expect(sub().getByRole('link', { name: '추천' })).toHaveAttribute('href', '/tech/for-you?field=ai'));
+    await user.click(sub().getByRole('link', { name: '추천' }));
+    await waitFor(() => expect(currentLocation).toBe('/tech/for-you?field=ai'));
+    expect(await screen.findByRole('region', { name: '추천 피드' })).toBeInTheDocument();
+    expect(fieldGroup()).toBeNull();
+  });
+
+  it.each([
+    ['/', '/tech'],
+    ['/?field=ai&tagIds=3', '/tech?field=ai&tagIds=3'],
+    ['/for-you', '/login?redirect=%2Ftech%2Ffor-you'],
+    ['/popular?field=mobile&period=DAY', '/tech/popular?field=mobile&period=DAY'],
+    ['/company?field=backend', '/tech?field=backend&sourceType=COMPANY'],
+    ['/personal', '/tech?sourceType=PERSONAL'],
+  ])('옛 주소 %s 는 %s 로 넘어감', async (from, to) => {
+    renderWithApp(<App />, from);
+    await waitFor(() => expect(currentLocation).toBe(to));
+  });
+
+  it('보안 뉴스 내부 탭 이동 시 지역·출처를 유지함', async () => {
+    renderWithApp(<App />, '/security?region=domestic&sourceIds=901');
     await waitFor(() =>
-      expect(nav().getAllByRole('link').map((l) => l.textContent)).toEqual(['최신', '추천', '인기', '보안 뉴스']),
+      expect(sub().getByRole('link', { name: '인기' })).toHaveAttribute('href', '/security/popular?region=domestic&sourceIds=901'),
     );
   });
 
-  it('로그인 상태 확인 중에는 추천 탭을 그리지 않음', () => {
-    renderWithApp(<App />, '/');
-    expect(nav().queryByRole('link', { name: '추천' })).toBeNull();
-  });
-
-  it('예전 /company·/personal 주소는 소스 유형 필터가 걸린 최신 피드로 이동하고 분야를 유지함', async () => {
-    const { unmount } = renderWithApp(<App />, '/company?field=backend');
-    await waitFor(() => expect(currentLocation).toBe('/?field=backend&sourceType=COMPANY'));
-    unmount();
-    renderWithApp(<App />, '/personal');
-    await waitFor(() => expect(currentLocation).toBe('/?sourceType=PERSONAL'));
-    expect(await screen.findByRole('radio', { name: '개인' })).toHaveAttribute('aria-checked', 'true');
-  });
-
   it('분야 탭은 최신·인기에서만 보임', async () => {
-    for (const path of ['/', '/popular']) {
+    for (const path of ['/tech', '/tech/popular']) {
       const { unmount } = renderWithApp(<App />, path);
       expect(fieldGroup()).not.toBeNull();
       unmount();
     }
-    for (const path of ['/security', '/search?q=react', '/privacy']) {
+    for (const path of ['/tech/for-you', '/security', '/security/popular', '/search?q=react', '/privacy']) {
       const { unmount } = renderWithApp(<App />, path);
       expect(fieldGroup()).toBeNull();
       unmount();
@@ -57,7 +97,7 @@ describe('F-015 상단 탭 (023)', () => {
   });
 
   it('분야 탭은 영어 표기, BE·FE는 풀네임 라벨·툴팁', () => {
-    renderWithApp(<App />, '/');
+    renderWithApp(<App />, '/tech');
     const radios = within(fieldGroup()!).getAllByRole('radio');
     expect(radios.map((r) => r.textContent)).toEqual(['전체', 'BE', 'FE', 'AI', 'Data', 'Infra', 'Mobile', 'Security']);
     const be = within(fieldGroup()!).getByRole('radio', { name: 'Backend' });
@@ -66,12 +106,12 @@ describe('F-015 상단 탭 (023)', () => {
     expect(within(fieldGroup()!).getByRole('radio', { name: 'Frontend' })).toHaveTextContent('FE');
   });
 
-  it('분야를 고르면 URL에 반영하고 해당 분류 태그 글만 보여줌, 다른 탭으로 가도 분야 유지', async () => {
+  it('분야를 고르면 URL에 반영하고 해당 분류 태그 글만 보여줌, 내부 탭을 옮겨도 분야는 유지·태그 필터는 초기화', async () => {
     const user = userEvent.setup();
-    renderWithApp(<App />, '/?tagIds=1');
+    renderWithApp(<App />, '/tech?tagIds=1');
     await screen.findAllByRole('article');
     await user.click(within(fieldGroup()!).getByRole('radio', { name: 'Frontend' }));
-    await waitFor(() => expect(currentLocation).toBe('/?tagIds=1&field=frontend'));
+    await waitFor(() => expect(currentLocation).toBe('/tech?tagIds=1&field=frontend'));
     const allowed = tagNamesOf(['Frontend', 'Design']);
     await waitFor(() => {
       const empty = screen.queryByText('조건에 맞는 글이 없어요');
@@ -79,9 +119,9 @@ describe('F-015 상단 탭 (023)', () => {
       const articles = screen.getAllByRole('article');
       expect(articles.every((a) => allowed.some((n) => a.textContent?.includes(`#${n}`)))).toBe(true);
     });
-    expect(nav().getByRole('link', { name: '인기' })).toHaveAttribute('href', '/popular?field=frontend');
-    await user.click(nav().getByRole('link', { name: '인기' }));
-    await waitFor(() => expect(currentLocation).toBe('/popular?field=frontend'));
+    expect(sub().getByRole('link', { name: '인기' })).toHaveAttribute('href', '/tech/popular?field=frontend');
+    await user.click(sub().getByRole('link', { name: '인기' }));
+    await waitFor(() => expect(currentLocation).toBe('/tech/popular?field=frontend'));
     expect(within(fieldGroup()!).getByRole('radio', { name: 'Frontend' })).toHaveAttribute('aria-checked', 'true');
   });
 
@@ -92,7 +132,7 @@ describe('F-015 상단 탭 (023)', () => {
   });
 
   it('인기 탭에 분야를 적용함', async () => {
-    renderWithApp(<App />, '/popular?field=mobile');
+    renderWithApp(<App />, '/tech/popular?field=mobile');
     expect(await screen.findByRole('heading', { name: /인기 글 · Mobile/ })).toBeInTheDocument();
     const allowed = tagNamesOf(['Mobile']);
     const ranking = await screen.findByRole('list', { name: '인기 글 순위' });

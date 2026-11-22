@@ -78,7 +78,7 @@ describe('F-060 좌우 광고 (025)', () => {
     renderWithApp(<App />, '/');
     await waitFor(() => expect(ads()).toHaveLength(2));
     const nav = within(screen.getByRole('navigation', { name: '피드' }));
-    for (const name of ['인기', '보안 뉴스', '최신']) {
+    for (const name of ['보안 뉴스', '기술 뉴스']) {
       await user.click(nav.getByRole('link', { name }));
       expect(ads()).toHaveLength(2);
     }

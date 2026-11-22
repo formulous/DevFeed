@@ -1,34 +1,63 @@
 import { Fragment, useEffect, useRef, type RefObject } from 'react';
-import { NavLink, useLocation, useSearchParams } from 'react-router';
+import { Link, useLocation, useSearchParams } from 'react-router';
+import { useLoginPrompt } from '@/auth/LoginPromptProvider';
+import { PATHS } from '@/lib/routes';
 import { useAuth } from '@/auth/AuthProvider';
 import { cn } from '@/lib/cn';
 import { M7_API_READY } from '@/lib/features';
 import { FIELDS, parseField } from '@/lib/fields';
 import { SearchBox } from './AppHeader';
 
-interface TabDef {
+type SectionKey = 'tech' | 'security';
+
+interface SubTab {
   to: string;
   label: string;
-  field: boolean;
   memberOnly?: boolean;
+  field?: boolean;
 }
 
-const ALL_TABS: TabDef[] = [
-  { to: '/', label: '최신', field: true },
-  { to: '/for-you', label: '추천', field: false, memberOnly: true },
-  { to: '/popular', label: '인기', field: true },
-  { to: '/security', label: '보안 뉴스', field: false },
+interface Section {
+  key: SectionKey;
+  to: string;
+  label: string;
+  keep: string[];
+  tabs: SubTab[];
+}
+
+const ALL_SECTIONS: Section[] = [
+  {
+    key: 'tech',
+    to: PATHS.tech,
+    label: '기술 뉴스',
+    keep: ['field'],
+    tabs: [
+      { to: PATHS.tech, label: '최신', field: true },
+      { to: PATHS.techForYou, label: '추천', memberOnly: true },
+      { to: PATHS.techPopular, label: '인기', field: true },
+    ],
+  },
+  {
+    key: 'security',
+    to: PATHS.security,
+    label: '보안 뉴스',
+    keep: ['region', 'sourceIds'],
+    tabs: [
+      { to: PATHS.security, label: '최신' },
+      { to: PATHS.securityPopular, label: '인기' },
+    ],
+  },
 ];
 
-export const FEED_TABS = M7_API_READY ? ALL_TABS : ALL_TABS.filter((t) => t.to !== '/security');
+export const SECTIONS = M7_API_READY ? ALL_SECTIONS : ALL_SECTIONS.filter((s) => s.key !== 'security');
 
-const HERO_TITLES: Record<string, string> = {
-  ...Object.fromEntries(FEED_TABS.map((t) => [t.to, t.label])),
-  '/search': '검색',
-};
+export function sectionOf(pathname: string) {
+  return SECTIONS.find((s) => s.tabs.some((t) => t.to === pathname)) ?? null;
+}
 
 export function heroTitle(pathname: string): string | null {
-  return HERO_TITLES[pathname] ?? null;
+  if (pathname === '/search') return '검색';
+  return sectionOf(pathname)?.label ?? null;
 }
 
 const FADE =
@@ -46,17 +75,14 @@ function useScrollActiveIntoView(ref: RefObject<HTMLElement | null>, dep: string
 }
 
 export function isFieldTab(pathname: string) {
-  return M7_API_READY && FEED_TABS.some((t) => t.field && t.to === pathname);
+  return M7_API_READY && SECTIONS.some((s) => s.tabs.some((t) => t.field && t.to === pathname));
 }
 
 export function FeedTabs() {
   const { pathname } = useLocation();
-  const [params] = useSearchParams();
-  const { status } = useAuth();
-  const field = isFieldTab(pathname) ? parseField(params.get('field')) : null;
   const ref = useRef<HTMLElement>(null);
   useScrollActiveIntoView(ref, pathname);
-  const tabs = FEED_TABS.filter((t) => !t.memberOnly || status === 'member');
+  const current = sectionOf(pathname);
 
   return (
     <nav
@@ -64,22 +90,71 @@ export function FeedTabs() {
       aria-label="피드"
       className={cn('scrollbar-none -mx-4 flex items-center gap-5 overflow-x-auto px-4 py-1 lg:mx-0 lg:px-0', FADE)}
     >
-      {tabs.map((tab) => (
-        <NavLink
-          key={tab.to}
-          to={tab.field && field ? `${tab.to}?field=${field.key}` : tab.to}
-          end={tab.to === '/'}
-          className={({ isActive }) =>
-            cn(
-              'shrink-0 whitespace-nowrap py-1 text-[15px] transition-colors duration-150',
-              FOCUS,
-              isActive ? 'font-semibold text-fg' : 'font-medium text-fg-secondary hover:text-fg',
-            )
-          }
+      {SECTIONS.map((section) => (
+        <Link
+          key={section.key}
+          to={section.to}
+          aria-current={current?.key === section.key ? 'page' : undefined}
+          className={cn(
+            'shrink-0 whitespace-nowrap py-1 text-[15px] transition-colors duration-150',
+            FOCUS,
+            current?.key === section.key ? 'font-semibold text-fg' : 'font-medium text-fg-secondary hover:text-fg',
+          )}
         >
-          {tab.label}
-        </NavLink>
+          {section.label}
+        </Link>
       ))}
+    </nav>
+  );
+}
+
+function carry(params: URLSearchParams, keep: string[]) {
+  const out = new URLSearchParams();
+  for (const key of keep) {
+    const v = params.get(key);
+    if (v) out.set(key, v);
+  }
+  const qs = out.toString();
+  return qs ? `?${qs}` : '';
+}
+
+const SUB_ITEM =
+  'flex h-7 items-center whitespace-nowrap rounded-md px-3.5 text-[13px] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring';
+
+export function SectionTabs() {
+  const { pathname } = useLocation();
+  const [params] = useSearchParams();
+  const { status } = useAuth();
+  const { openLoginPrompt } = useLoginPrompt();
+  const section = sectionOf(pathname);
+  if (!section) return null;
+  const query = carry(params, section.keep);
+
+  return (
+    <nav aria-label={`${section.label} 보기`} data-testid="section-tabs">
+      <div className="inline-flex rounded-lg bg-subtle p-0.5">
+        {section.tabs.map((tab) => {
+          const active = tab.to === pathname;
+          const cls = cn(SUB_ITEM, active ? 'bg-surface font-semibold text-fg shadow-sm ring-1 ring-inset ring-line-strong' : 'font-medium text-fg-secondary hover:text-fg');
+          if (tab.memberOnly && status === 'guest') {
+            return (
+              <button
+                key={tab.to}
+                type="button"
+                className={cls}
+                onClick={() => openLoginPrompt('추천 글을 보려면 로그인이 필요해요')}
+              >
+                {tab.label}
+              </button>
+            );
+          }
+          return (
+            <Link key={tab.to} to={`${tab.to}${query}`} aria-current={active ? 'page' : undefined} className={cls}>
+              {tab.label}
+            </Link>
+          );
+        })}
+      </div>
     </nav>
   );
 }

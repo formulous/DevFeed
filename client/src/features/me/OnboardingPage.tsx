@@ -9,6 +9,7 @@ import { useToast } from '@/components/common/Toast';
 import { errorMessage } from '@/lib/errors';
 import { interestTagsQuery } from './queries';
 import { TagPicker } from './TagPicker';
+import { PATHS } from '@/lib/routes';
 
 export function OnboardingPage() {
   const { updateMe } = useAuth();
@@ -24,7 +25,7 @@ export function OnboardingPage() {
     if (current.data && selected === null) setSelected(current.data.map((t) => t.id));
   }, [current.data, selected]);
 
-  const target = params.get('redirect') ? safeRedirect(params.get('redirect')) : '/for-you';
+  const target = params.get('redirect') ? safeRedirect(params.get('redirect')) : PATHS.techForYou;
   const done = (hasInterestTags: boolean) => {
     client.invalidateQueries({ queryKey: ['posts', 'recommendations'] });
     updateMe({ onboardingCompleted: true, ...(hasInterestTags ? { hasInterestTags: true } : {}) });

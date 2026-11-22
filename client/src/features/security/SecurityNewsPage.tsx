@@ -21,7 +21,7 @@ import { securityNewsQuery, securitySourcesQuery } from './queries';
 import { MAX_NEWS_SOURCES, useSecurityNewsState } from './useSecurityNewsState';
 
 const REGION_LABEL: Record<NewsRegion, string> = { DOMESTIC: '국내', OVERSEAS: '해외' };
-const REGION_OPTIONS = [
+export const REGION_OPTIONS = [
   { value: null, label: '전체' },
   { value: 'DOMESTIC', label: '국내' },
   { value: 'OVERSEAS', label: '해외' },

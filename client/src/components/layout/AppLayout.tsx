@@ -4,7 +4,7 @@ import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { AD_MEDIA, AD_SLOTS, useMediaQuery } from '@/lib/ads';
 import { AppFooter } from './AppFooter';
 import { AppHeader } from './AppHeader';
-import { FieldTabs, heroTitle, isFieldTab, PageHero } from './FeedTabs';
+import { FieldTabs, heroTitle, isFieldTab, PageHero, SectionTabs, sectionOf } from './FeedTabs';
 
 export function AppLayout() {
   const { pathname } = useLocation();
@@ -18,9 +18,10 @@ export function AppLayout() {
       <div className="flex w-full flex-1 justify-center gap-6 min-[1440px]:px-4">
         {showAds && <SideAd slot={AD_SLOTS.left} />}
         <main className="w-full min-w-0 max-w-[1200px] flex-1 px-4 py-6 lg:py-8">
-          {isFieldTab(pathname) && (
-            <div className="-mt-2 mb-5 lg:-mt-3 lg:mb-6">
-              <FieldTabs />
+          {sectionOf(pathname) && (
+            <div className="-mt-2 mb-5 space-y-2.5 lg:-mt-3 lg:mb-6">
+              <SectionTabs />
+              {isFieldTab(pathname) && <FieldTabs />}
             </div>
           )}
           <ErrorBoundary resetKey={pathname}>

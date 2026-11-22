@@ -1,5 +1,5 @@
 import { request } from './http';
-import type { CursorPage, NewsRegion, PostSummary, SecurityNewsSource } from './types';
+import type { CursorPage, NewsRegion, PopularPeriod, PopularPost, PostSummary, SecurityNewsSource } from './types';
 
 export interface SecurityNewsQuery {
   region: NewsRegion | null;
@@ -13,6 +13,10 @@ export function fetchSecurityNews(q: SecurityNewsQuery, cursor?: string, signal?
     signal,
     query: { cursor, size: NEWS_PAGE_SIZE, region: q.region, sourceIds: q.sourceIds },
   });
+}
+
+export function fetchSecurityPopular(period: PopularPeriod, region: NewsRegion | null, signal?: AbortSignal) {
+  return request<{ items: PopularPost[] }>('/security-news/popular', { signal, query: { period, region } });
 }
 
 export function fetchSecurityNewsSources(signal?: AbortSignal) {

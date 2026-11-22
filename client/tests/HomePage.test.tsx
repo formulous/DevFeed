@@ -17,7 +17,7 @@ describe('HomePage', () => {
     renderWithApp(<App />);
     await screen.findByText(mockPosts[0].title);
     await user.click(screen.getByRole('radio', { name: '개인' }));
-    await waitFor(() => expect(currentLocation).toBe('/?sourceType=PERSONAL'));
+    await waitFor(() => expect(currentLocation).toBe('/tech?sourceType=PERSONAL'));
     expect(await screen.findByRole('button', { name: '개인 필터 제거' })).toBeInTheDocument();
     await waitFor(() => {
       const names = screen.getAllByRole('article').map((a) => a.textContent ?? '');

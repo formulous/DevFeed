@@ -4,10 +4,11 @@ import { matchPath, useLocation } from 'react-router';
 const APP = 'DevFeed';
 
 const TITLES: [string, string][] = [
-  ['/', '최신 기술 글'],
-  ['/for-you', '나를 위한 추천'],
-  ['/popular', '인기 글'],
+  ['/tech', '최신 기술 글'],
+  ['/tech/for-you', '나를 위한 추천'],
+  ['/tech/popular', '인기 기술 글'],
   ['/security', '보안 뉴스'],
+  ['/security/popular', '인기 보안 뉴스'],
   ['/login', '로그인'],
   ['/signup', '회원가입'],
   ['/onboarding/passkey', '패스키 만들기'],

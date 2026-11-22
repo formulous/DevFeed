@@ -42,9 +42,9 @@ describe('017 필터 요약 패널', () => {
     await user.click(within(dialog).getByRole('tab', { name: '전체' }));
     await user.click(within(dialog).getByRole('button', { name: /^Kafka/ }));
     expect(within(dialog).getByText('선택 2/10')).toBeInTheDocument();
-    expect(currentLocation).toBe('/');
+    expect(currentLocation).toBe('/tech');
     await user.click(within(dialog).getByRole('button', { name: '적용' }));
-    await waitFor(() => expect(currentLocation).toMatch(/^\/\?tagIds=/));
+    await waitFor(() => expect(currentLocation).toMatch(/^\/tech\?tagIds=/));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByLabelText('적용된 필터')).toHaveTextContent(/Rust.*Kafka|Kafka.*Rust/);
   });
@@ -61,7 +61,7 @@ describe('017 필터 요약 패널', () => {
       .forEach((b) => b.click());
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(currentLocation).toBe('/');
+    expect(currentLocation).toBe('/tech');
   });
 
   it('선택 창 안에서 Tab 포커스가 맴돔', async () => {

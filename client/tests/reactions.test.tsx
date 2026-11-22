@@ -67,7 +67,7 @@ describe('F-080·F-081 반응 줄 (026)', () => {
     expect(region.getByText('<script>alert(1)</script> 이건 글자 그대로 보여야 해요')).toBeInTheDocument();
     expect(document.querySelector('section script')).toBeNull();
     expect(region.queryByRole('textbox')).toBeNull();
-    expect(region.getByRole('link', { name: '로그인' })).toHaveAttribute('href', '/login?redirect=%2F');
+    expect(region.getByRole('link', { name: '로그인' })).toHaveAttribute('href', '/login?redirect=%2Ftech');
   });
 
   it('답글은 3개까지 먼저 보이고 더보기로 나머지를, 댓글 더보기로 다음 페이지를 불러옴', async () => {

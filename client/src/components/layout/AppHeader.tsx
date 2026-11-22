@@ -1,3 +1,4 @@
+import { HOME } from '@/lib/routes';
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react';
 import { FiSearch } from 'react-icons/fi';
 import { Link, useNavigate, useSearchParams } from 'react-router';
@@ -118,7 +119,7 @@ export function AppHeader({ showSearchLink = false }: { showSearchLink?: boolean
   return (
     <header ref={ref} className="sticky top-0 z-30 border-b border-line bg-[color:color-mix(in_srgb,var(--color-bg-app)_85%,transparent)] backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-[1200px] items-center gap-2 px-4">
-        <Link to="/" className={cn('mr-auto shrink-0 rounded text-lg font-semibold tracking-tight text-fg', FOCUS)}>
+        <Link to={HOME} className={cn('mr-auto shrink-0 rounded text-lg font-semibold tracking-tight text-fg', FOCUS)}>
           DevFeed
         </Link>
         {showSearchLink && (

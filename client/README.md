@@ -36,11 +36,13 @@
 ## 라우트
 | 경로 | 화면 | 가드 | 레이아웃 |
 |---|---|---|---|
-| `/` (`?field=`) | S-01 HomePage | - | AppLayout + FilterLayout |
-| `/for-you` | S-02 ForYouPage | RequireAuth | AppLayout |
-| `/popular` (`?period=&field=`) | S-03 PopularPage | - | AppLayout |
-| `/company`·`/personal` | 예전 주소 호환: `/?sourceType=COMPANY|PERSONAL`로 `replace` 이동 (다른 쿼리 유지, 023) | - | - |
-| `/security` (`?region=&sourceIds=`) | S-14 SecurityNewsPage | - | AppLayout |
+| `/tech` (`?field=`) | S-01 HomePage (기술 뉴스 > 최신) | - | AppLayout + FilterLayout |
+| `/tech/for-you` | S-02 ForYouPage (기술 뉴스 > 추천) | RequireAuth | AppLayout + ProfileRail |
+| `/tech/popular` (`?period=&field=`) | S-03 PopularPage (기술 뉴스 > 인기) | - | AppLayout + ProfileRail |
+| `/security` (`?region=&sourceIds=`) | S-14 SecurityNewsPage (보안 뉴스 > 최신) | - | AppLayout |
+| `/security/popular` (`?period=&region=`) | S-15 SecurityPopularPage (보안 뉴스 > 인기, 031) | - | AppLayout + ProfileRail |
+| `/`·`/for-you`·`/popular` | 옛 주소: `/tech`·`/tech/for-you`·`/tech/popular`로 쿼리 유지 `replace` 이동 (031) | - | - |
+| `/company`·`/personal` | 예전 주소 호환: `/tech?sourceType=COMPANY|PERSONAL`로 `replace` 이동 (다른 쿼리 유지, 023) | - | - |
 | `/search?q=` | S-04 SearchPage | - | AppLayout + FilterLayout |
 | `/login` | S-05 LoginPage | GuestOnly | AuthLayout |
 | `/signup` | S-06 SignupPage | GuestOnly | AuthLayout |
@@ -139,6 +141,15 @@ App
 - 관리자: A-01 종류 필터(`?kind=`)·종류 열, A-02 종류·지역 표시, A-03 등록 시 종류 선택(보안 뉴스면 유형 대신 지역), 수정 시 종류 읽기 전용
 - 공개 빌드 스위치: `VITE_HIDE_M7=true npm run build:web`이면 보안 뉴스 탭·분야 탭을 숨기고 `field`·`kind`·`region`을 요청에 넣지 않음 (`lib/features.ts`). 서버가 M7 API를 배포하기 전 공개 페이지용. 기본은 노출
 - mock: 보안 뉴스 출처 6곳·기사 30건, 분야는 태그 `category`로 거름, 관리자 소스 목록에 보안 뉴스 6곳
+
+## 기술 뉴스·보안 뉴스 2탭 + 내부 탭 (F-015·F-072, M11, `docs/discussions/031`)
+- 1단 탭(`FeedTabs`, 글자 탭): 기술 뉴스(`/tech`)·보안 뉴스(`/security`). 내부 탭 화면에서도 해당 1단 탭이 선택됨. hero 제목 = 1단 탭 이름. 1단 탭 이동은 각 탭의 최신으로
+- 내부 탭(`SectionTabs`, 본문 맨 위): 연한 트랙 + 선택 칸 흰 배경·테두리 세그먼트(13px). 기술 = 최신·추천·인기, 보안 = 최신·인기. 그 아래 분야 탭(기술 최신·인기만)
+  - 내부 탭 이동 시 기술은 `field`만 유지(태그·소스 필터 초기화), 보안은 `region`·`sourceIds` 유지
+  - 비회원 추천: 링크 대신 버튼 → 로그인 유도 모달("추천 글을 보려면 로그인이 필요해요"), 이동 없음. `/tech/for-you` 직접 진입은 `/login?redirect=`
+- 주소·기본 이동처: `lib/routes.ts` `PATHS`·`HOME`(`/tech`). 로그인 후 기본·로그아웃·탈퇴 → `/tech`, 온보딩 완료 → `/tech/for-you`
+- 보안 인기(S-15) `features/security/SecurityPopularPage.tsx`: `GET /security-news/popular?period=&region=` → `{ items: PopularPost[] }` 상위 20건. 지역 `[전체|국내|해외]` + 기간 `[24시간|7일|30일]`, 출처 선택은 적용 안 함(요청에 안 보냄, URL에는 남겨 최신으로 돌아갈 때 유지). 순위·조회수, 인기 배지 없음, 요약 2줄. 빈 결과 → "최신 보안 뉴스 보기"
+- 기간 선택·순위 목록은 `components/post/RankedPosts.tsx`(`PeriodPicker`·`RankedPosts`)로 빼서 기술·보안 인기가 같이 씀
 
 ## 인기 글 (S-03, M2)
 - 기간 탭 24시간 / 7일 / 30일 (`period=DAY|WEEK|MONTH`, 롤링 윈도우). 기본 7일이고 기본값이면 URL에서 `period`를 뺌

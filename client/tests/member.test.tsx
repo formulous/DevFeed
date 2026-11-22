@@ -68,7 +68,7 @@ describe('S-07 온보딩', () => {
     await user.click(within(list).getByRole('button', { name: 'Redis' }));
     expect(screen.getByText('선택 3/10')).toBeInTheDocument();
     await user.click(done);
-    await waitFor(() => expect(currentLocation).toBe('/for-you'));
+    await waitFor(() => expect(currentLocation).toBe('/tech/for-you'));
     expect(mockState.interestTags).toHaveLength(3);
     expect(mockState.me?.onboardingCompleted).toBe(true);
   });
@@ -235,7 +235,7 @@ describe('S-10 설정', () => {
     await user.clear(pw);
     await user.type(pw, 'pw');
     await user.click(within(dialog).getByRole('button', { name: '탈퇴하기' }));
-    await waitFor(() => expect(currentLocation).toBe('/'));
+    await waitFor(() => expect(currentLocation).toBe('/tech'));
     expect(await within(screen.getByRole('banner')).findByRole('link', { name: '로그인' })).toBeInTheDocument();
     expect(mockState.me).toBeNull();
   });
@@ -261,6 +261,6 @@ describe('로그아웃 후 이동', () => {
     renderWithApp(<App />, '/me/settings');
     await screen.findByRole('button', { name: '회원 탈퇴' });
     await user.click(screen.getAllByRole('button', { name: '로그아웃' }).at(-1)!);
-    await waitFor(() => expect(currentLocation).toBe('/'));
+    await waitFor(() => expect(currentLocation).toBe('/tech'));
   });
 });

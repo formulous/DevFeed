@@ -4,9 +4,10 @@ import { useAuth } from './AuthProvider';
 import { FullPageSpinner } from '@/components/common/FullPageSpinner';
 import { EmptyState } from '@/components/common/EmptyState';
 import { passkeyOffer } from '@/lib/passkey';
+import { HOME } from '@/lib/routes';
 
 export function safeRedirect(value: string | null) {
-  if (!value || !value.startsWith('/') || value.startsWith('//')) return '/';
+  if (!value || !value.startsWith('/') || value.startsWith('//')) return HOME;
   return value;
 }
 
@@ -15,7 +16,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   const location = useLocation();
   if (status === 'loading') return <FullPageSpinner />;
   if (status === 'guest') {
-    if (signedOutByUser) return <Navigate to="/" replace />;
+    if (signedOutByUser) return <Navigate to={HOME} replace />;
     const redirect = encodeURIComponent(location.pathname + location.search);
     return <Navigate to={`/login?redirect=${redirect}`} replace />;
   }

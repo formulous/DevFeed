@@ -194,6 +194,27 @@ export const handlers = [
 
   http.get('*/api/security-news/sources', () => HttpResponse.json({ items: mockNewsSources })),
 
+  http.get('*/api/security-news/popular', ({ request }) => {
+    const url = new URL(request.url);
+    if ([...url.searchParams.keys()].some((k) => k !== 'period' && k !== 'region')) {
+      return error(400, 'VALIDATION_FAILED', '요청 값이 올바르지 않아요');
+    }
+    const hours = { DAY: 24, WEEK: 24 * 7, MONTH: 24 * 30 }[url.searchParams.get('period') ?? ''];
+    if (!hours) return error(400, 'VALIDATION_FAILED', '기간 값이 올바르지 않아요');
+    const region = url.searchParams.get('region');
+    if (region && region !== 'DOMESTIC' && region !== 'OVERSEAS') return error(400, 'VALIDATION_FAILED', '지역 값이 올바르지 않아요');
+    const regionOf = new Map(mockNewsSources.map((s) => [s.id, s.region]));
+    const latest = Math.max(...mockNewsPosts.map((p) => Date.parse(p.publishedAt)));
+    const member = isMember(request);
+    const items = mockNewsPosts
+      .filter((p) => latest - Date.parse(p.publishedAt) <= hours * 3_600_000 && (!region || regionOf.get(p.source.id) === region))
+      .map((p) => ({ ...decorate(p, member), isPopular: false, viewCount: mockViewCount(p.id) }))
+      .filter((p) => p.viewCount >= 1)
+      .sort((a, b) => b.viewCount - a.viewCount || b.publishedAt.localeCompare(a.publishedAt))
+      .slice(0, 20);
+    return HttpResponse.json({ items });
+  }),
+
   http.get('*/api/security-news', ({ request }) => {
     const url = new URL(request.url);
     const region = url.searchParams.get('region');

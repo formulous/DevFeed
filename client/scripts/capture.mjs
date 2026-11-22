@@ -12,15 +12,16 @@ const MOCK_NOW = new Date('2026-11-19T12:00:00.000Z');
 const README_SET = ['S-01', 'S-02', 'S-04', 'A-01'];
 
 const SCREENS = [
-  { id: 'S-01', path: '/', auth: false, ready: 'article' },
-  { id: 'S-03', path: '/popular', auth: false, ready: 'article' },
+  { id: 'S-01', path: '/tech', auth: false, ready: 'article' },
+  { id: 'S-03', path: '/tech/popular', auth: false, ready: 'article' },
   { id: 'S-04', path: '/search?q=%EC%A0%95%EB%A6%AC', auth: false, ready: 'article' },
   { id: 'S-14', path: '/security', auth: false, ready: 'article' },
+  { id: 'S-15', path: '/security/popular', auth: false, ready: 'article' },
   { id: 'S-05', path: '/login', auth: false, ready: 'h1' },
   { id: 'S-06', path: '/signup', auth: false, ready: 'form' },
   { id: 'S-11', path: '/privacy', auth: false, ready: 'article' },
   { id: 'S-07', path: '/onboarding/tags', auth: true, ready: '[aria-label="태그 목록"]' },
-  { id: 'S-02', path: '/for-you', auth: true, ready: 'article' },
+  { id: 'S-02', path: '/tech/for-you', auth: true, ready: 'article' },
   { id: 'S-08', path: '/me/bookmarks', auth: true, ready: 'article' },
   { id: 'S-09', path: '/me/history', auth: true, ready: 'article' },
   { id: 'S-10', path: '/me/settings', auth: true, ready: '[aria-label="관심 태그"]' },
@@ -45,7 +46,7 @@ async function login(page, base) {
   await page.getByLabel('이메일').fill('admin@devfeed.dev');
   await page.getByLabel('비밀번호', { exact: true }).fill('pw1234');
   await page.getByRole('button', { name: '로그인', exact: true }).click();
-  await page.waitForURL(`${base}/`);
+  await page.waitForURL(`${base}/tech`);
   await page.evaluate(() => {
     const s = window.__devfeedMock;
     const now = Date.now();

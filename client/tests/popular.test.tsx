@@ -17,7 +17,7 @@ describe('S-03 인기 글', () => {
   });
 
   it('조회수 내림차순으로 순위와 조회수를 보여줌', async () => {
-    renderWithApp(<App />, '/popular');
+    renderWithApp(<App />, '/tech/popular');
     await screen.findByRole('list', { name: '인기 글 순위' });
     const counts = ranking()
       .getAllByText(/^조회 /)
@@ -29,23 +29,23 @@ describe('S-03 인기 글', () => {
 
   it('기간 탭을 바꾸면 URL에 반영하고 결과가 바뀜', async () => {
     const user = userEvent.setup();
-    renderWithApp(<App />, '/popular');
+    renderWithApp(<App />, '/tech/popular');
     await screen.findByRole('list', { name: '인기 글 순위' });
     const weekCount = ranking().getAllByRole('article').length;
     await user.click(screen.getByRole('radio', { name: '24시간' }));
-    await waitFor(() => expect(currentLocation).toBe('/popular?period=DAY'));
+    await waitFor(() => expect(currentLocation).toBe('/tech/popular?period=DAY'));
     await waitFor(() => expect(ranking().getAllByRole('article').length).toBeLessThan(weekCount));
     await user.click(screen.getByRole('radio', { name: '7일' }));
-    await waitFor(() => expect(currentLocation).toBe('/popular'));
+    await waitFor(() => expect(currentLocation).toBe('/tech/popular'));
   });
 
   it('결과가 없으면 최신 피드 링크가 있는 빈 화면을 보여줌', async () => {
     const user = userEvent.setup();
     server.use(http.get('*/api/posts/popular', () => HttpResponse.json({ items: [] })));
-    renderWithApp(<App />, '/popular?period=DAY');
+    renderWithApp(<App />, '/tech/popular?period=DAY');
     expect(await screen.findByText('이 기간에 읽힌 글이 아직 없어요')).toBeInTheDocument();
     await user.click(screen.getByRole('link', { name: '최신 피드 보기' }));
-    await waitFor(() => expect(currentLocation).toBe('/'));
+    await waitFor(() => expect(currentLocation).toBe('/tech'));
   });
 
   it('조회수 0인 글은 순위에 없음', async () => {
@@ -57,7 +57,7 @@ describe('S-03 인기 글', () => {
   it('회원이 북마크하면 인기 글 목록에 즉시 반영함', async () => {
     const user = userEvent.setup();
     await seedLogin('admin@devfeed.dev');
-    renderWithApp(<App />, '/popular');
+    renderWithApp(<App />, '/tech/popular');
     await screen.findByRole('list', { name: '인기 글 순위' });
     const first = ranking().getAllByRole('article')[0];
     await user.click(within(first).getByRole('button', { name: '북마크' }));

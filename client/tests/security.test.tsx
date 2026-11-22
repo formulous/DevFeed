@@ -1,6 +1,8 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
+import { server } from '@/mocks/node';
 import { App } from '@/App';
 import { parseSecurityNews } from '@/features/security/useSecurityNewsState';
 import { dayLabel } from '@/lib/time';
@@ -59,5 +61,64 @@ describe('S-14 보안 뉴스', () => {
     expect(dayLabel(new Date(2026, 10, 19, 23).toISOString(), now)).toBe('어제');
     expect(dayLabel(new Date(2026, 10, 3, 9).toISOString(), now)).toBe('11월 3일');
     expect(dayLabel(new Date(2025, 11, 31, 9).toISOString(), now)).toBe('2025년 12월 31일');
+  });
+});
+
+describe('F-072 보안 뉴스 인기 (031)', () => {
+  const ranking = () => within(screen.getByRole('list', { name: '인기 보안 뉴스 순위' }));
+  const newsTitles = new Set(mockNewsPosts.map((p) => p.title));
+  const titlesShown = () => ranking().getAllByRole('article').map((a) => within(a).getAllByRole('link')[0].textContent ?? '');
+
+  it('보안 뉴스만 조회수 순으로, 순위 번호·조회수와 함께 보여 주고 인기 배지는 없음', async () => {
+    const requests: string[] = [];
+    server.events.on('request:start', ({ request }) => {
+      if (request.url.includes('/security-news/popular')) requests.push(request.url);
+    });
+    renderWithApp(<App />, '/security/popular');
+    await screen.findByRole('list', { name: '인기 보안 뉴스 순위' });
+    const titles = titlesShown();
+    expect(titles.length).toBeGreaterThan(0);
+    expect(titles.every((t) => newsTitles.has(t))).toBe(true);
+    const counts = ranking().getAllByText(/^조회 [\d,]+$/).map((el) => Number(el.textContent!.replace(/\D/g, '')));
+    expect([...counts].sort((a, b) => b - a)).toEqual(counts);
+    expect(ranking().queryByText('인기')).toBeNull();
+    expect(new URL(requests[0]).search).toBe('?period=WEEK');
+    server.events.removeAllListeners();
+  });
+
+  it('지역·기간을 바꾸면 URL과 요청에 반영하고 출처 선택은 보내지 않음', async () => {
+    const requests: string[] = [];
+    server.events.on('request:start', ({ request }) => {
+      if (request.url.includes('/security-news/popular')) requests.push(new URL(request.url).search);
+    });
+    const user = userEvent.setup();
+    renderWithApp(<App />, '/security/popular?sourceIds=901');
+    await screen.findByRole('list', { name: '인기 보안 뉴스 순위' });
+    await user.click(screen.getByRole('radio', { name: '국내' }));
+    await waitFor(() => expect(currentLocation).toBe('/security/popular?sourceIds=901&region=domestic'));
+    await user.click(screen.getByRole('radio', { name: '30일' }));
+    await waitFor(() => expect(currentLocation).toBe('/security/popular?sourceIds=901&region=domestic&period=MONTH'));
+    await waitFor(() => expect(requests.at(-1)).toBe('?period=MONTH&region=DOMESTIC'));
+    expect(requests.every((q) => !q.includes('sourceIds'))).toBe(true);
+    const domesticNames = new Set(mockNewsSources.filter((s) => s.region === 'DOMESTIC').map((s) => s.name));
+    await waitFor(() =>
+      expect(ranking().getAllByRole('article').every((a) => [...domesticNames].some((n) => a.textContent?.includes(n)))).toBe(true),
+    );
+    server.events.removeAllListeners();
+  });
+
+  it('결과가 없으면 안내와 함께 최신 보안 뉴스로 가는 링크를 보여 줌 (지역·출처 유지)', async () => {
+    server.use(http.get('*/api/security-news/popular', () => HttpResponse.json({ items: [] })));
+    const user = userEvent.setup();
+    renderWithApp(<App />, '/security/popular?region=overseas&sourceIds=901&period=DAY');
+    expect(await screen.findByText('이 기간에 읽힌 보안 뉴스가 아직 없어요')).toBeInTheDocument();
+    await user.click(screen.getByRole('link', { name: '최신 보안 뉴스 보기' }));
+    await waitFor(() => expect(currentLocation).toBe('/security?region=overseas&sourceIds=901'));
+  });
+
+  it('보안 인기 화면에도 프로필 카드가 좌측 맨 위에 있음', async () => {
+    renderWithApp(<App />, '/security/popular');
+    const guest = await screen.findByTestId('guest-card');
+    expect(guest.closest('aside')!.firstElementChild).toBe(guest);
   });
 });

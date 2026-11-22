@@ -1,3 +1,4 @@
+import { HOME } from '@/lib/routes';
 import { ProfileRail } from '@/components/profile/ProfileCard';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
@@ -113,7 +114,7 @@ export function ForYouPage() {
             title="지금 추천할 새 글이 없어요"
             description="최근 2주 글을 이미 다 읽었거나 관심 태그 글이 아직 없어요"
             action={
-              <Link to="/" className="text-sm font-medium text-brand">
+              <Link to={HOME} className="text-sm font-medium text-brand">
                 최신 피드 보기
               </Link>
             }

@@ -112,3 +112,25 @@
 ### pm (server 배포 확인, 2026-11-22)
 - 공개 API 확인: `/security-news/popular?period=WEEK` 200(데일리시큐 1건), `MONTH&region=DOMESTIC` 200, `OVERSEAS` 200(0건, 해외 조회 기록 없음), `sourceIds`·`period` 누락 400. 기술 `/posts/popular?period=MONTH` 결과에 보안 출처 0
 - 명세 수용. 남은 것: client 개편 배포 → pm 공개 확인
+
+### client (2차) — 개편·보안 인기 배포, 실서버 확인 (2026-11-22)
+- server 명세(`/security-news/popular`) 대조: client 요청은 `period`·`region`만 보냄, 응답 처리 일치. mock도 정의되지 않은 쿼리 400으로 맞춤
+- 구현
+  - 1단 탭 기술 뉴스(`/tech`)·보안 뉴스(`/security`), 내부 탭 화면에서도 해당 1단 탭 선택 표시. hero 제목 = 1단 탭 이름
+  - 내부 탭: 본문 맨 위 연한 트랙 세그먼트(선택 칸 흰 배경 + 테두리, 다크에서도 구분되게 테두리 추가). 그 아래 분야 탭(기술 최신·인기만)
+  - 내부 탭 이동: 기술은 `field`만 유지(태그·소스 초기화), 보안은 `region`·`sourceIds` 유지. 보안 인기는 `sourceIds`를 요청에 안 보내고 URL에만 남겨 최신으로 돌아갈 때 유지
+  - 비회원 추천: 버튼 → 로그인 유도 모달("추천 글을 보려면 로그인이 필요해요"), 이동 없음
+  - 옛 주소 `/`·`/for-you`·`/popular`·`/company`·`/personal` → 새 주소(쿼리 유지, `replace`). 로그인 후 기본·로그아웃·탈퇴 → `/tech`, 온보딩 완료 → `/tech/for-you`
+  - 보안 인기: 지역 + 기간, 순위·조회수, 인기 배지 없음, 요약 2줄, 빈 결과 "이 기간에 읽힌 보안 뉴스가 아직 없어요" + 최신 보안 뉴스 링크(지역·출처 유지). 좌측 프로필 카드·광고·반응 줄 그대로
+  - 탭 제목: `최신 기술 글`·`나를 위한 추천`·`인기 기술 글`·`보안 뉴스`·`인기 보안 뉴스`
+- 검증: 테스트 186건(신규: 탭 구조·내부 탭·비회원 추천·직접 진입·옛 주소 6건·보안 내부 탭 유지·보안 인기 4건, 기존 경로 기대값 갱신)·빌드 통과. mock 1280×720·360px 라이트·다크 가로 넘침 0, 탭 줄 겹침 없음
+- 실서버 (formulous.org, 게스트)
+  | 항목 | 결과 |
+  |---|---|
+  | 5개 화면 직접 진입 | `/tech`·`/tech/popular?field=ai`·`/security?region=domestic`·`/security/popular`(+`region`·`period`) 모두 1단·내부 탭 선택 정확, 분야 탭은 기술만 |
+  | 옛 주소 | `/`→`/tech`, `/?field=ai`→`/tech?field=ai`, `/popular?period=DAY&field=backend`→`/tech/popular?…`, `/for-you`→`/login?redirect=%2Ftech%2Ffor-you`, `/company?field=backend`→`/tech?field=backend&sourceType=COMPANY`, `/personal`→`/tech?sourceType=PERSONAL` |
+  | 비회원 추천 클릭 | 로그인 유도 모달, 주소 `/tech` 그대로 |
+  | 보안 인기 API | 200, 기술 인기(MONTH)와 겹치는 글 0 |
+  | 360px 다크 | 기술·보안 인기 가로 넘침 0 |
+  | 오류 | 페이지 오류·4xx/5xx 0 |
+- 회원 추천 내부 탭 → `/tech/for-you` 이동은 테스트로 확인 (실서버 회원 확인은 pm 공개 확인 때 부탁)
