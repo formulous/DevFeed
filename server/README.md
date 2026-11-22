@@ -89,7 +89,7 @@ src/
   - `RATE_LIMIT_ENABLED`: IP 기준 속도 제한 (기본 `true`, e2e는 기본 `false`)
   - `WEBAUTHN_RP_ID`·`WEBAUTHN_RP_NAME`·`WEBAUTHN_ORIGINS`(쉼표 구분 origin): 패스키 RP 설정. 기본값은 로컬 개발용 `localhost`·`DevFeed`·`http://localhost:5175`, 운영은 `formulous.org`·`DevFeed`·`https://formulous.org`
   - `WEB_BASE_URL`: 커뮤니티 글 정식 주소(`posts.url`)의 웹 기준 주소. 기본 `http://localhost:5175`, 운영 `https://formulous.org/dev-feed`
-  - `POST_NEW_ACCOUNT_LIMIT_ENABLED`: 커뮤니티 글쓰기 가입 24시간 제한. 034 시연 데이터 생성 동안 기본 `false`로 임시 해제, 끝나면 기본 `true`로 복구함. 하루 5개·60초 간격은 항상 적용
+  - `POST_NEW_ACCOUNT_LIMIT_ENABLED`: 커뮤니티 글쓰기 가입 24시간 제한 (기본 `true`). 034 시연 데이터 생성 때 잠시 기본 `false`로 해제했다가 복구함. 하루 5개·60초 간격은 항상 적용
 - DB 스키마는 `../db/migrations`(dba)로만 반영함. 서버는 DDL을 실행하지 않음
 
 ## 실행

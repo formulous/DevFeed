@@ -89,7 +89,7 @@ export function loadEnv(env: NodeJS.ProcessEnv = process.env): AppEnv {
       origins: origins(env, 'WEBAUTHN_ORIGINS', ['http://localhost:5175']),
     },
     webBaseUrl: baseUrl(env, 'WEB_BASE_URL', 'http://localhost:5175'),
-    postNewAccountLimitEnabled: bool(env, 'POST_NEW_ACCOUNT_LIMIT_ENABLED', false),
+    postNewAccountLimitEnabled: bool(env, 'POST_NEW_ACCOUNT_LIMIT_ENABLED', true),
   };
 }
 
