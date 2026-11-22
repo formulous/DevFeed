@@ -187,6 +187,9 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - `GET /api/security-news/popular?period=DAY|WEEK|MONTH&region=`: 기술 인기와 같은 기준(롤링 기간, 조회수 1 이상 상위 20건, 동점 최신순)·같은 응답(`PopularPost`). 출처 선택은 받지 않음
   - `PopularIdsService`가 종류별 캐시 키(`BLOG:`·`SECURITY_NEWS:`)로 10분 캐시. 기술 인기·`isPopular` 집합은 `kind = 'BLOG'` 쿼리 그대로라 섞이지 않음
   - 지역은 출처 ID 목록으로 바꿔 거름. dba 측정(`devfeed_perf` 뉴스 4만 건) MONTH 전체 DB p95 1.4ms
+- M12 커뮤니티 (032, 스키마 `0015`) — 진행 중
+  - 0015 호환: 댓글 숨김은 `hidden_reason`(`ADMIN`, 신고 자동 숨김은 `REPORTS`)을 함께 씀. 내부 소스(`kind = 'COMMUNITY'`, `internal:community`)는 관리자 소스 API·통계·수집 스케줄러에서 제외
+  - 명세: `docs/api/openapi.yaml`의 `/community/*`·`/reports`·`/admin/reports`. 구현은 명세 검토 후
 - M9 패스키 로그인 (027, 스키마 `0013`)
   - `@simplewebauthn/server`는 CBOR·COSE 파싱과 서명 검증만 맡김. 챌린지 발급·1회 소비·만료, origin·RP ID 고정, 사용자 확인 강제, 서명 횟수 역행 거부, 10개 제한, 토큰 발급 통합은 `passkeys/`에서 직접 처리
   - 로그인 `POST /api/auth/passkeys/login/options`·`/login`(IP당 분당 10회, 기존 로그인과 같은 토큰·쿠키). 등록·관리 `POST /api/me/passkeys/registration/options`, `GET`·`POST /api/me/passkeys`, `PATCH`·`DELETE /api/me/passkeys/{id}`
