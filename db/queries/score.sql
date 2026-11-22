@@ -58,7 +58,7 @@ SELECT user_id, 'COMMENT', id, 5, created_at, IF(status = 'HIDDEN', hidden_at, N
 UPDATE users u LEFT JOIN (SELECT user_id, SUM(points) s FROM score_events WHERE revoked_at IS NULL GROUP BY user_id) e ON e.user_id = u.id
 SET u.score = IFNULL(e.s, 0);
 
--- retention (proposal): fold READ rows older than 1 year into one ARCHIVE row per user; score unchanged
+-- retention (029 adopted, daily job with read_histories expiry, same transaction): fold READ rows older than 1 year into one ARCHIVE row per user; score unchanged
 INSERT INTO score_events (user_id, kind, ref_id, points)
 SELECT user_id, 'ARCHIVE', 0, SUM(points) FROM score_events
 WHERE kind = 'READ' AND created_at < UTC_TIMESTAMP(3) - INTERVAL 1 YEAR GROUP BY user_id HAVING SUM(points) > 0

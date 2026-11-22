@@ -1,7 +1,7 @@
 # 테이블 명세
 
 - 작성: dba
-- 상태: v1.4 (M10, 2026-11-22). 마이그레이션 0001~0014 기준. `0014`는 `devfeed_perf`·`devfeed_test` 적용, `devfeed`는 사용자 확인 후. `devfeed`·`devfeed_perf`·`devfeed_test` 적용 완료
+- 상태: v1.4 (M10, 2026-11-22). 마이그레이션 0001~0014 기준. `devfeed`·`devfeed_perf`·`devfeed_test` 적용 완료. `devfeed`·`devfeed_perf`·`devfeed_test` 적용 완료
 - 공통: InnoDB, utf8mb4_unicode_ci, 시간은 `DATETIME(3)` UTC, PK `BIGINT UNSIGNED AUTO_INCREMENT` (D-01)
 - 결정 번호(D-xx)는 `decisions.md` 참고
 
@@ -221,7 +221,7 @@
 | 컬럼 | 타입 | 제약 | 설명·이유 |
 |---|---|---|---|
 | user_id | BIGINT UNSIGNED | PK, FK → users CASCADE | 탈퇴 시 원장 삭제 |
-| kind | ENUM('READ','LIKE','COMMENT','ARCHIVE') | PK | `ARCHIVE`는 오래된 READ 접기(보관 제안, D-24) |
+| kind | ENUM('READ','LIKE','COMMENT','ARCHIVE') | PK | `ARCHIVE`는 1년 지난 READ를 회원당 1행으로 접은 합계 (D-24) |
 | ref_id | BIGINT UNSIGNED | PK | READ·LIKE = post_id, COMMENT = comment_id, ARCHIVE = 0 |
 | points | INT UNSIGNED | NOT NULL | 실제 적립 점수. 하루 한도 넘은 댓글은 0 |
 | created_at | DATETIME(3) | NOT NULL | 하루 한도 계산 기준 (KST 자정 범위를 UTC로 변환해 비교) |
