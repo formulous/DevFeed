@@ -279,7 +279,7 @@ function validatePost(body: Record<string, unknown>, partial: boolean) {
   if (!partial || body.body !== undefined) {
     const b = typeof body.body === 'string' ? body.body : '';
     const len = b.trim().length;
-    if (len < 10 || len > 20_000) errors.push({ field: 'body', message: '본문은 10~20,000자로 입력해 주세요' });
+    if (len < 10 || b.length > 20_000) errors.push({ field: 'body', message: '본문은 10~20,000자로 입력해 주세요' });
     else if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(b)) errors.push({ field: 'body', message: '쓸 수 없는 문자가 들어 있어요' });
   }
   if (body.tagIds !== undefined) {

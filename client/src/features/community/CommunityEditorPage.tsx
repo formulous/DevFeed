@@ -139,7 +139,7 @@ function Editor({ initial, initialTags, post }: EditorProps) {
   const bodyLen = form.body.trim().length;
   const local = {
     title: title.length < TITLE_MIN || title.length > TITLE_MAX ? `제목은 ${TITLE_MIN}~${TITLE_MAX}자로 입력해 주세요` : undefined,
-    body: bodyLen < BODY_MIN || bodyLen > BODY_MAX ? `본문은 ${BODY_MIN}~${formatNumber(BODY_MAX)}자로 입력해 주세요` : undefined,
+    body: bodyLen < BODY_MIN || form.body.length > BODY_MAX ? `본문은 ${BODY_MIN}~${formatNumber(BODY_MAX)}자로 입력해 주세요` : undefined,
   };
   const valid = !local.title && !local.body;
 
@@ -330,8 +330,8 @@ function Editor({ initial, initialTags, post }: EditorProps) {
         )}
         <div id={ids.bodyHelp} className="mt-1.5 flex flex-wrap items-start justify-between gap-2 text-xs text-fg-muted">
           <span>마크다운 일부 지원 · 이미지·HTML은 글자로만 보여요 · Tab 들여쓰기 (Esc 후 Tab은 다음 칸으로)</span>
-          <span className={cn('tabular-nums', bodyLen > BODY_MAX && 'text-danger')}>
-            {formatNumber(bodyLen)}/{formatNumber(BODY_MAX)}
+          <span className={cn('tabular-nums', form.body.length > BODY_MAX && 'text-danger')}>
+            {formatNumber(form.body.length)}/{formatNumber(BODY_MAX)}
           </span>
         </div>
         <FieldError message={(touched ? local.body : undefined) ?? serverFields.body} />
