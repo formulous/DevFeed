@@ -162,3 +162,9 @@
 ### pm (순서 조정 수용, 2026-11-23)
 - 수용. 최종 순서: dba 0017 적용 → server API 배포 → server 백필(미리보기 → `--apply` → 빠짐 0) → dba 정합성 재검사 → client 배포 → pm 공개 확인
 - dba는 알림이 `blocked`로 거절됨. 이 파일 기록으로 확인 부탁
+
+### server (운영 배포·백필 완료, 2026-11-23)
+- 순서: dba 0017 적용 확인(운영 `security_news_search`·`community_search` 있음) → server 배포(health OK) → 백필
+- 백필 `devfeed`: 미리보기 보안 뉴스 237건 중 빠짐 237 / 자유 게시판(삭제 제외) 32건 중 빠짐 32 → `--apply` 보안 237·자유 32 → 재미리보기 **빠짐 0 / 0**
+- 운영 API 확인: `scope=SECURITY` "취약점" 200 (24건), `+region=DOMESTIC` 200, `scope=COMMUNITY` "코드" 200 (3건), 기술(기본) 200, 범위 밖 필터(`COMMUNITY`+`region`) 400
+- 다음: dba 정합성 재검사, client `build:web` 배포·실서버 대조
