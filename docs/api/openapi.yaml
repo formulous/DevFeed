@@ -816,7 +816,13 @@ paths:
         관련도는 제목 일치 가중. 하이라이트는 client가 검색어로 처리 (서버는 HTML·구간 정보 미제공).
         page는 최대 50 (상위 1,000건). total은 최대 1,000이고 넘으면 totalCapped=true.
         같은 검색어·필터 결과(글 목록·건수)는 최대 1분 캐시될 수 있음. 회원 플래그는 매번 조회.
-        기술 블로그 글만 (보안 뉴스 검색 포함은 Next, 021)
+        범위(scope, 038)
+          - TECH(기본): 기술 블로그 글만. 제목·요약·태그(동의어)·소스 이름. 필터 tagIds·sourceIds
+          - SECURITY: 보안 뉴스만. 제목·요약·출처 이름. 필터 region
+          - COMMUNITY: 보이는(VISIBLE) 자유 게시판 글만. 제목·본문(마크다운 제거 앞 2,000자)·태그(동의어). 필터 category.
+            캐시 없음(숨김·삭제·수정 즉시 반영). 하이라이트 대상은 title·summary(excerpt)라 본문 뒤쪽에서만 걸린 글은 하이라이트 없음
+        범위에 없는 필터(예: SECURITY에 tagIds, TECH에 region)를 보내면 400 VALIDATION_FAILED.
+        카드는 PostSummary 그대로 (kind, 자유 게시판은 community 포함)
       security:
         - {}
         - bearerAuth: []
@@ -826,8 +832,27 @@ paths:
           required: true
           description: 앞뒤 공백 제거 후 2~50자
           schema: { type: string, minLength: 2, maxLength: 50 }
+        - name: scope
+          in: query
+          description: 검색 범위 (038). 생략하면 TECH
+          schema:
+            type: string
+            enum: [TECH, SECURITY, COMMUNITY]
+            default: TECH
         - $ref: '#/components/parameters/TagIds'
         - $ref: '#/components/parameters/SourceIds'
+        - name: region
+          in: query
+          description: SECURITY 범위 전용
+          schema:
+            type: string
+            enum: [DOMESTIC, OVERSEAS]
+        - name: category
+          in: query
+          description: COMMUNITY 범위 전용
+          schema:
+            type: string
+            enum: [QUESTION, DISCUSSION, SHARE]
         - name: period
           in: query
           description: 발행일 기준 롤링 기간 (1W=7일, 1M=30일, 1Y=365일)
