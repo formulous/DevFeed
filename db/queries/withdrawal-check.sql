@@ -12,4 +12,6 @@ UNION ALL SELECT 'post_likes', COUNT(*) FROM post_likes WHERE user_id = @uid
 UNION ALL SELECT 'comments', COUNT(*) FROM comments WHERE user_id = @uid
 UNION ALL SELECT 'user_passkeys', COUNT(*) FROM user_passkeys WHERE user_id = @uid
 UNION ALL SELECT 'webauthn_challenges', COUNT(*) FROM webauthn_challenges WHERE user_id = @uid
-UNION ALL SELECT 'score_events', COUNT(*) FROM score_events WHERE user_id = @uid;
+UNION ALL SELECT 'score_events', COUNT(*) FROM score_events WHERE user_id = @uid
+UNION ALL SELECT 'community_posts', COUNT(*) FROM community_posts WHERE user_id = @uid
+UNION ALL SELECT 'reports', COUNT(*) FROM reports WHERE reporter_id = @uid;

@@ -1,7 +1,7 @@
 # 테이블 명세
 
 - 작성: dba
-- 상태: v1.4 (M10, 2026-11-22). 마이그레이션 0001~0014 기준. `devfeed`·`devfeed_perf`·`devfeed_test` 적용 완료. `devfeed`·`devfeed_perf`·`devfeed_test` 적용 완료
+- 상태: v1.5 (M12, 2026-11-22). 마이그레이션 0001~0015 기준. `0015`는 `devfeed_perf`·`devfeed_test` 적용, `devfeed`는 사용자 확인 후
 - 공통: InnoDB, utf8mb4_unicode_ci, 시간은 `DATETIME(3)` UTC, PK `BIGINT UNSIGNED AUTO_INCREMENT` (D-01)
 - 결정 번호(D-xx)는 `decisions.md` 참고
 
@@ -14,7 +14,7 @@
 | feed_url | VARCHAR(2048) | NOT NULL | RSS/Atom URL |
 | feed_url_hash | BINARY(32) | STORED 생성, UK | `UNHEX(SHA2(feed_url,256))`. 중복 등록 방지. 서버는 쓰지 않음 (D-05) |
 | source_type | ENUM('COMPANY','PERSONAL') | NOT NULL | 보안 뉴스는 `COMPANY` 고정 저장, 화면에서 안 씀 (021) |
-| kind | ENUM('BLOG','SECURITY_NEWS') | NOT NULL, 기본 BLOG | `0010`. 등록 후 변경 불가 (서버 보장). 기존 36곳 BLOG (D-18) |
+| kind | ENUM('BLOG','SECURITY_NEWS','COMMUNITY') | NOT NULL, 기본 BLOG | `0010`. 등록 후 변경 불가 (서버 보장). 기존 36곳 BLOG (D-18). `COMMUNITY`는 `0015`의 내부 소스 1행(`internal:community`, INACTIVE)만 (D-25) |
 | region | ENUM('DOMESTIC','OVERSEAS') | NULL | `0010`. 보안 뉴스만 필수, 블로그는 NULL (`ck_sources_kind_region`) |
 | logo_url | VARCHAR(2048) | NULL | |
 | crawl_interval_min | SMALLINT UNSIGNED | NOT NULL, 기본 60, CHECK ≥ 30 | F-001 |
@@ -80,7 +80,7 @@
 | id | BIGINT UNSIGNED | PK | 커서 동률 해소 키 |
 | source_id | BIGINT UNSIGNED | FK → sources | |
 | source_type | ENUM('COMPANY','PERSONAL') | NOT NULL | 비정규화. 유형 필터 + 커서 (D-07) |
-| kind | ENUM('BLOG','SECURITY_NEWS') | NOT NULL, 기본 BLOG | `0010`. `sources.kind` 비정규화. 블로그 전용 목록과 보안 뉴스 탭 분리 (D-18) |
+| kind | ENUM('BLOG','SECURITY_NEWS','COMMUNITY') | NOT NULL, 기본 BLOG | `0010`. `sources.kind` 비정규화. 블로그·보안 뉴스·커뮤니티 목록 분리 (D-18, D-25) |
 | guid | VARCHAR(1024) | NULL | 피드 guid/id |
 | guid_hash | BINARY(32) | STORED 생성 | guid NULL이면 NULL (D-05) |
 | url | VARCHAR(2048) | NOT NULL | 서버가 정규화한 원문 URL |
@@ -110,7 +110,7 @@
 | tag_id | BIGINT UNSIGNED | PK, FK → tags CASCADE | 태그 삭제 시 연결만 삭제 |
 | tag_rank | TINYINT UNSIGNED | NOT NULL, CHECK 1~5 | 카드 태그 노출 순서, 제목 등장 우선 (F-005). `rank`는 예약어 |
 | published_at | DATETIME(3) | NOT NULL | `posts.published_at` 비정규화 (D-07) |
-| kind | ENUM('BLOG','SECURITY_NEWS') | NOT NULL, 기본 BLOG | `0010`. `posts.kind` 비정규화. 태그·분야 필터에서 보안 뉴스 건너뛰기 방지 (D-18) |
+| kind | ENUM('BLOG','SECURITY_NEWS','COMMUNITY') | NOT NULL, 기본 BLOG | `0010`. `posts.kind` 비정규화. 태그·분야 필터에서 다른 종류 건너뛰기 방지 (D-18) |
 
 인덱스
 - PK `(post_id, tag_id)`: 글의 태그 조회 (카드 렌더링)
@@ -155,17 +155,63 @@
 | reply_count | INT UNSIGNED | NOT NULL, 기본 0 | 남아 있는 답글 행 수(VISIBLE+HIDDEN). "답글 N개 더보기", 자리 표시 판단 |
 | edited_at | DATETIME(3) | NULL | "(수정됨)" |
 | hidden_at / hidden_by | DATETIME(3) / BIGINT UNSIGNED | NULL, `hidden_by` FK → users SET NULL | 관리자 숨김. `HIDDEN`일 때만 `hidden_at` 있음 |
+| hidden_reason | ENUM('ADMIN','REPORTS') | NULL | `0015`. `HIDDEN`일 때 필수. 신고 3건 자동 숨김은 `REPORTS`, `hidden_by` NULL (D-25) |
 | created_at / updated_at | DATETIME(3) | NOT NULL | |
 
 제약
 - `ck_comments_status_body`: `DELETED` ↔ `body`·`user_id` NULL, 그 외는 둘 다 필수·1자 이상
-- `ck_comments_hidden`: `status = 'HIDDEN'` ↔ `hidden_at IS NOT NULL`
+- `ck_comments_hidden`: `status = 'HIDDEN'` ↔ `hidden_at`·`hidden_reason` 있음 (`0015`)
 
 인덱스
 - `idx_comments_post_parent (post_id, parent_id, id)`: 글의 댓글 오래된 순 커서 (`parent_id IS NULL AND id > ?`)
 - `idx_comments_parent (parent_id, id)`: 답글 처음 3개(부모 20개 한 번에 `ROW_NUMBER`), 답글 더보기 커서, FK
 - `idx_comments_user_created (user_id, created_at)`: 속도 제한(1분 5개·하루 200개), 탈퇴 처리, FK
 - `idx_comments_hidden_by (hidden_by)`: FK
+
+## community_posts — `0015` (`posts` 1:1 확장)
+| 컬럼 | 타입 | 제약 | 설명·이유 |
+|---|---|---|---|
+| post_id | BIGINT UNSIGNED | PK, FK → posts CASCADE | `posts.kind = 'COMMUNITY'` 행. 좋아요·댓글·북마크·읽은 기록·원장·태그를 `posts.id`로 그대로 재사용 |
+| user_id | BIGINT UNSIGNED | NULL, FK → users (RESTRICT) | 작성자. `DELETED`면 NULL |
+| category | ENUM('QUESTION','DISCUSSION','SHARE') | NOT NULL | 말머리 |
+| body | MEDIUMTEXT | NULL, CHECK 10~20,000자 | 원문 마크다운 (utf8mb4 최대 80KB라 TEXT 초과). `DELETED`면 NULL |
+| status | ENUM('VISIBLE','HIDDEN','DELETED') | NOT NULL | 목록은 `VISIBLE`만. 삭제는 항상 이 값으로 (행 삭제 안 함, D-25) |
+| accepted_comment_id | BIGINT UNSIGNED | NULL, FK → comments SET NULL | 채택 댓글. 질문글·같은 글·최상위·다른 회원 조건은 server + 정합성 검사 |
+| published_at | DATETIME(3) | NOT NULL | `posts.published_at` 복사(불변). 목록 커서 인덱스용 |
+| edited_at | DATETIME(3) | NULL | "수정됨" |
+| hidden_at / hidden_by / hidden_reason | | NULL | 댓글과 같은 숨김 규칙 (`ADMIN`·`REPORTS`) |
+| created_at / updated_at | DATETIME(3) | NOT NULL | |
+
+- `posts` 쪽: `source_id` = 내부 소스, `source_type` `PERSONAL`(쓰지 않음), `url` = 정식 주소(`{base}/community/posts/{id}`, 삽입 후 같은 트랜잭션에서 갱신), `title` 2~100자, `summary` = 마크다운을 걷어낸 앞부분(목록 excerpt), `thumbnail_url` NULL, `post_search` 행 없음(검색 제외)
+
+인덱스
+- `idx_community_posts_status_published (status, published_at, post_id)`: 최신 커서, 인기 기간 범위
+- `idx_community_posts_status_category_published (status, category, published_at, post_id)`: 말머리 필터 커서
+- `idx_community_posts_user_created (user_id, created_at)`: 프로필 글 수, FK
+- `idx_community_posts_accepted`, `idx_community_posts_hidden_by`: FK
+
+## report_targets — `0015`
+| 컬럼 | 타입 | 제약 | 설명·이유 |
+|---|---|---|---|
+| target_type / target_id | ENUM('POST','COMMENT') / BIGINT UNSIGNED | PK | 대상 (FK 없음: 다형 대상) |
+| report_count | INT UNSIGNED | NOT NULL | 서로 다른 신고자 수 = `reports` 행 수 |
+| state | ENUM('PENDING','HIDDEN','CLEARED') | NOT NULL | 3건이면 `PENDING` → `HIDDEN`(자동 숨김). `CLEARED`(문제없음)면 이후 자동 숨김 제외 |
+| first_reported_at / last_reported_at | DATETIME(3) | NOT NULL | A-05 정렬 |
+| resolved_at / resolved_by | | NULL, `resolved_by` FK → users SET NULL | 관리자 처리 |
+
+인덱스: `idx_report_targets_state_last (state, last_reported_at)` (A-05 대기 목록)
+
+## reports — `0015`
+| 컬럼 | 타입 | 제약 | 설명·이유 |
+|---|---|---|---|
+| id | BIGINT UNSIGNED | PK | |
+| target_type / target_id | | FK → report_targets CASCADE | 대상 행을 먼저 upsert 후 삽입 |
+| reporter_id | BIGINT UNSIGNED | NULL, FK → users SET NULL | 탈퇴 시 NULL (신고 사실·개수는 유지, 신고자만 지움) |
+| reason | ENUM('SPAM','ABUSE','PRIVACY','OTHER') | NOT NULL | |
+| detail | VARCHAR(200) | NULL, CHECK `OTHER`만 | |
+| created_at | DATETIME(3) | NOT NULL | |
+
+인덱스: `uk_reports_target_reporter (target_type, target_id, reporter_id)` (1인 1회, `INSERT IGNORE` 영향 행), `idx_reports_reporter` (FK)
 
 ## users — `0004`
 | 컬럼 | 타입 | 제약 | 설명·이유 |
@@ -221,14 +267,15 @@
 | 컬럼 | 타입 | 제약 | 설명·이유 |
 |---|---|---|---|
 | user_id | BIGINT UNSIGNED | PK, FK → users CASCADE | 탈퇴 시 원장 삭제 |
-| kind | ENUM('READ','LIKE','COMMENT','ARCHIVE') | PK | `ARCHIVE`는 1년 지난 READ를 회원당 1행으로 접은 합계 (D-24) |
-| ref_id | BIGINT UNSIGNED | PK | READ·LIKE = post_id, COMMENT = comment_id, ARCHIVE = 0 |
+| kind | ENUM('READ','LIKE','COMMENT','ARCHIVE','POST_WRITE','LIKE_RECEIVED') | PK | `ARCHIVE`는 1년 지난 READ를 회원당 1행으로 접은 합계 (D-24) |
+| ref_id | BIGINT UNSIGNED | PK | READ·LIKE·POST_WRITE·LIKE_RECEIVED = post_id, COMMENT = comment_id, ARCHIVE = 0 |
+| actor_id | BIGINT UNSIGNED | PK, 기본 0 | `0015`. LIKE_RECEIVED만 좋아요 누른 회원 id, 나머지 0 (CHECK) |
 | points | INT UNSIGNED | NOT NULL | 실제 적립 점수. 하루 한도 넘은 댓글은 0 |
 | created_at | DATETIME(3) | NOT NULL | 하루 한도 계산 기준 (KST 자정 범위를 UTC로 변환해 비교) |
-| revoked_at | DATETIME(3) | NULL, CHECK COMMENT만 | 댓글 삭제·숨김 회수. 숨김 해제 시 NULL |
+| revoked_at | DATETIME(3) | NULL, CHECK COMMENT·POST_WRITE만 | 댓글 삭제·숨김 회수. 숨김 해제 시 NULL |
 
 인덱스
-- PK `(user_id, kind, ref_id)`: 같은 글 재읽기·중복 좋아요 차단(`INSERT IGNORE` 영향 행), 회수 대상 조회. 별도 id 없음 (행 크기 절약)
+- PK `(user_id, kind, ref_id, actor_id)` (`0015`에서 `actor_id` 추가): 같은 글 재읽기·중복 좋아요 차단(`INSERT IGNORE` 영향 행), 회수 대상 조회. 별도 id 없음 (행 크기 절약)
 - `idx_score_events_user_kind_created (user_id, kind, created_at)`: 하루 한도(읽기 30·댓글 10) 계산
 
 ## refresh_tokens — `0004`

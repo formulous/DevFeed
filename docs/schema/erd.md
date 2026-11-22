@@ -1,9 +1,9 @@
 # ERD — 데브피드
 
 - 작성: dba
-- 상태: v1.4 (M10, 2026-11-22). 마이그레이션 0001~0014 기준
+- 상태: v1.5 (M12, 2026-11-22). 마이그레이션 0001~0015 기준
 - DB: `devfeed` (MariaDB 12.1, InnoDB, utf8mb4_unicode_ci)
-- DDL: `db/migrations/0001~0014`, 컬럼 상세: `tables.md`, 결정 근거: `decisions.md`
+- DDL: `db/migrations/0001~0015`, 컬럼 상세: `tables.md`, 결정 근거: `decisions.md`
 
 ```mermaid
 erDiagram
@@ -26,6 +26,32 @@ erDiagram
     users ||--o{ post_likes : likes
     users ||--o{ user_passkeys : has
     users ||--o{ score_events : earns
+    posts ||--o| community_posts : "kind=COMMUNITY 확장"
+    users |o--o{ community_posts : writes
+    community_posts |o--o| comments : accepted
+    report_targets ||--o{ reports : has
+    users |o--o{ reports : reports
+
+    community_posts {
+        bigint post_id PK, FK
+        bigint user_id FK
+        enum category "QUESTION|DISCUSSION|SHARE"
+        mediumtext body "마크다운"
+        enum status "VISIBLE|HIDDEN|DELETED"
+        bigint accepted_comment_id FK
+        datetime published_at
+    }
+    report_targets {
+        enum target_type PK "POST|COMMENT"
+        bigint target_id PK
+        int report_count
+        enum state "PENDING|HIDDEN|CLEARED"
+    }
+    reports {
+        bigint id PK
+        bigint reporter_id FK
+        enum reason
+    }
 
     score_events {
         bigint user_id PK, FK
@@ -194,7 +220,9 @@ erDiagram
 | 태그 | `tags`, `tag_synonyms` | 태그 사전과 동의어 | F-005, A-04 |
 | 태그 | `post_tags` | 글-태그 연결, 노출 순서, 태그 필터용 정렬 키 | F-005, F-011 |
 | 회원 | `users`, `refresh_tokens` | 계정·로그인 제한·리프레시 토큰 | F-030, F-032 |
-| 회원 | `score_events` | 활동 점수 원장 (`users.score` 캐시) | F-082, F-083 |
+| 회원 | `score_events` | 활동 점수 원장 (`users.score` 캐시) | F-082, F-083, F-093 |
+| 커뮤니티 | `community_posts` | 사용자 글 본문·말머리·상태·채택 (`posts` 1:1 확장) | F-090, F-091 |
+| 커뮤니티 | `report_targets`, `reports` | 신고 대상 요약·신고 1건 | F-092 |
 | 회원 | `user_passkeys`, `webauthn_challenges` | 패스키 공개키·서명 횟수, 1회용 챌린지(5분) | F-034 |
 | 개인화 | `user_interest_tags` | 관심 태그 | F-031, F-042 |
 | 개인화 | `bookmarks`, `read_histories` | 북마크, 읽은 기록(1년) | F-040, F-041, F-042 |

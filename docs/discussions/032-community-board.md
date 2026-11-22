@@ -217,3 +217,26 @@ dba 초안 작성에 참고. 최종 검토는 초안이 나온 뒤에 함
 - 숨김·삭제 글 반응 409: 상세에서 좋아요·댓글 입력을 미리 비활성화하고, 409가 와도 토스트만 띄움
 - 탈퇴 글 규칙 수용. S-11 개인정보 안내와 탈퇴 확인 창 목록에 "커뮤니티 글" 한 줄 추가는 커뮤니티 화면 배포 때 함께 반영함 (지금 넣으면 없는 기능 안내가 됨)
 - dba 초안·server 명세 대기
+
+### dba (1차) — 스키마 초안 `0015` (server 사전 의견·pm 답변 반영)
+- `db/migrations/0015_create_community.sql`, 쿼리 `db/queries/community.sql`, 결정 D-25
+- **저장: `posts`(`kind = 'COMMUNITY'`) + 1:1 확장 `community_posts`** (server·client 선호와 같음)
+  | 테이블 | 내용 |
+  |---|---|
+  | `posts` | `kind`·`post_tags.kind`에 `COMMUNITY` 추가 (`INSTANT`). `title`, `summary`(= 마크다운 걷어낸 excerpt, server가 저장 시 생성), 카운터·조회수 그대로 |
+  | `community_posts` | `post_id` PK/FK, `user_id`(RESTRICT), `category`, `body MEDIUMTEXT`(10~20,000자 CHECK), `status VISIBLE·HIDDEN·DELETED`, `accepted_comment_id`(FK SET NULL), `published_at`(복사), `edited_at`, `hidden_at·hidden_by·hidden_reason` |
+  | `report_targets` | PK `(target_type, target_id)`, `report_count`, `state PENDING·HIDDEN·CLEARED`, 처리자·시각, `(state, last_reported_at)` 인덱스 |
+  | `reports` | UK `(target_type, target_id, reporter_id)`, `reason SPAM·ABUSE·PRIVACY·OTHER`, `detail`(OTHER만), 신고자 FK SET NULL, 대상 FK → `report_targets` |
+  | `comments` | `hidden_reason ADMIN·REPORTS` 추가 (기존 숨김은 `ADMIN`으로 채움) |
+  | `score_events` | `POST_WRITE`·`LIKE_RECEIVED` 추가, **PK에 `actor_id`(기본 0) 추가** → LIKE_RECEIVED 키 = (작성자, post_id, 누른 회원) |
+- server 사전 의견의 "NOT NULL 컬럼 NULL 허용" 대신: **내부 소스 1행**(`internal:community`, `kind = 'COMMUNITY'`, `INACTIVE` → 수집 스케줄러 대상 아님)을 `source_id`로 쓰고, `url`은 삽입 직후 정식 주소(`{base}/community/posts/{id}`)로 갱신. `posts` 재구성·API `url` 필수 계약 변경이 없음
+  - server 확인 부탁: 관리자 소스 목록·통계, `/security-news/sources` 등 `FROM sources` 쿼리에서 `kind = 'COMMUNITY'` 제외 (`/sources`는 이미 `BLOG`만)
+- **삭제는 항상 `DELETED` 상태로 남김** (행 삭제 없음). 행을 지우면 CASCADE로 다른 회원의 좋아요·북마크·읽은 기록이 사라지고 그 회원들의 원장 LIKE 점수가 어긋남. pm 화면 규칙(목록 제외, 댓글 있으면 "삭제된 글이에요", 없으면 404)은 상태와 `comment_count`로 처리. 삭제 시 본문·작성자 NULL, `posts.title` 빈 값, 태그 삭제, POST_WRITE 회수
+  - 탈퇴(pm: 댓글 규칙): 같은 처리. `community_posts.user_id`가 RESTRICT라 빠뜨리면 회원 삭제가 실패함. `withdrawal-check.sql`에 `community_posts`·`reports(reporter_id)` 추가 (14개 테이블)
+- 신고 흐름: 대상 행 upsert → 대상 행 `FOR UPDATE` → `INSERT IGNORE` 신고(영향 1이면 `report_count + 1`) → 3건 이상이고 `PENDING`이면 `HIDDEN` + 대상 숨김(`hidden_reason = 'REPORTS'`, 점수 회수, 채택 해제). `CLEARED`는 이후 자동 숨김 없음
+- 점수: 글 +10 하루 처음 3개(회수 포함), 받은 좋아요 +1 하루 50점(초과분 행 없음, 자기 글 0). **작성 제한(5개·60초)도 POST_WRITE 행으로 셈** → 삭제한 글도 셈
+- 잠금 순서: 회원 행(행위자·글 작성자 두 명이면 **id 오름차순**, server 제안 그대로) → 글 → 확장 → 부모 댓글 → 댓글 → 신고 대상 → 원장
+- 정합성 검사 7항목 (`community.sql` 끝): 확장 없는 커뮤니티 글, 잘못된 채택, 신고 수 불일치, POST_WRITE 회수 불일치, 좋아요 없는 LIKE_RECEIVED, 검색 색인된 커뮤니티 글 등
+- 검증: `devfeed_test`·`devfeed_perf` up → down → up 통과 (perf 14초, 운영 규모는 즉시). CHECK·FK 거부 6종 확인. 시나리오(롤백): 글 4개 → 30점, 서로 다른 3명 신고 → 자동 숨김, 중복 신고 0, 받은 좋아요 켜기·끄기
+- 측정 (`devfeed_perf` 커뮤니티 2만 건, DB p95): 최신·말머리 커서 0.01ms, 카드 20건 0.05ms, 인기 MONTH 0.99ms·말머리 0.35ms, 프로필 글 수 0.01ms → 기준 300ms 대비 여유 큼
+- 다음: server 검토 → 사용자 승인 후 운영 적용

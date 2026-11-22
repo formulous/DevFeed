@@ -7,9 +7,9 @@
 db/
 ├── conf/devfeed.cnf     # MariaDB 서버 설정 (FULLTEXT 토큰 2자, stopword 끔, UTC)
 ├── perf/                # 성능 측정용 대량 시드 생성기, 측정 스크립트
-├── queries/            # feed.sql(007·021 분야·보안 뉴스·kind 정합성 검사), reactions.sql(026 좋아요·댓글·탈퇴·정합성 검사), passkeys.sql(027 패스키·챌린지), score.sql(029 점수 적립·회수·백필·정합성 검사), personal.sql·withdrawal-check.sql(012), recommendation.sql(013) 기준 쿼리
+├── queries/            # feed.sql(007·021 분야·보안 뉴스·kind 정합성 검사), reactions.sql(026 좋아요·댓글·탈퇴·정합성 검사), passkeys.sql(027 패스키·챌린지), score.sql(029 점수 적립·회수·백필·정합성 검사), community.sql(032 커뮤니티 글·신고·채택·점수·정합성 검사), personal.sql·withdrawal-check.sql(012), recommendation.sql(013) 기준 쿼리
 ├── ops/                 # launchd 일일 백업 템플릿·설치 스크립트
-├── migrations/          # 0001~0014, -- migrate:up / -- migrate:down
+├── migrations/          # 0001~0015, -- migrate:up / -- migrate:down
 ├── scripts/migrate.sh   # 컨테이너에 마이그레이션 적용
 ├── scripts/seed.sh      # seeds/*.sql 순서대로 적용 (재실행 안전)
 ├── scripts/perf-seed.sh # 측정 DB(devfeed_perf)에 글 10만·회원 1만 생성
@@ -75,11 +75,13 @@ MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_recommendation.py # 추천 �
 MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_field.py  # 분야·기업/개인·보안 뉴스 쿼리 p50/p95 (021)
 MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_reactions.py # 좋아요·댓글 쿼리 p50/p95 (026)
 MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_score.py # 프로필·등급·하루 한도 쿼리 p50/p95 (029)
+MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_community.py # 커뮤니티 목록·인기·작성 제한 쿼리 p50/p95 (032)
 ```
 - DB `devfeed_perf`는 미리 생성 (`utf8mb4_unicode_ci`). 개발 DB `devfeed`와 분리해 합성 글이 섞이지 않게 함
 - 글 10만, post_tags 약 20만, 회원 1만, 북마크 약 50만, 읽은 기록 약 190만. 디스크 약 800MB
 - 글 텍스트는 `devfeed` 실제 글 단어를 재조합. 토큰은 서버 `tokenizer.ts`와 같은 규칙 (`perf/generate_posts.py`)
 - 좋아요 50만·댓글 10만·답글 5만 합성: `perf/reactions.sql` (약 4분)
+- 커뮤니티 글 2만 합성(1년 분포, 2% 숨김): `perf/community.sql` (`0015` 후)
 - 보안 뉴스 합성 4만 건(2년 분포, `보안` 태그 + 원본 1순위 태그): `003` 시드 후 `perf/news.sql` 실행
 - 고정 시드라 재생성해도 같은 분포. 측정 결과는 discussion 007 (피드), 010 (검색), 013 (추천), 021 (분야·보안 뉴스, `decisions.md` D-19)
 
@@ -124,3 +126,9 @@ MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_score.py # 프로필·등급
 - 시나리오 (롤백): 읽기 31회+중복 1회 → 30점·30행 / 좋아요 2번 +2, 취소 −2 / 댓글 11개 50점, 삭제 −5·중복 삭제 0·복구 +5, 0점 댓글 회수 0, 회수 후 12번째 0점
 - 백필 255만 행 22초, 정합성 6항목 0. READ 1년 접기 21만 행 2.6초·점수 불변·재실행 변화 0 (롤백)
 - `devfeed` 적용 (2026-11-22, 사용자 승인): 회원 3·읽은 기록 12·좋아요 3·댓글 2 전후 동일, `score` 전부 0, 서버 200. 백필 완료(원장 17행·점수 합 28, 정합성 0)
+
+## 검증 기록 (2026-11-22, `0015`, 032)
+- `devfeed_test`·`devfeed_perf` up → down → up 통과 (perf 14초)
+- CHECK 거부: 본문 10자 미만, 숨김인데 시각·사유 없음, `OTHER` 아닌 사유에 detail, LIKE_RECEIVED인데 actor 0, 커뮤니티 소스에 region. 대상 행 없는 신고 FK 거부
+- 시나리오 (롤백): 글 4개 → POST_WRITE 30점(4번째 0점), 서로 다른 3명 신고 → 자동 숨김(`REPORTS`)·중복 신고 0, 받은 좋아요 켜기 2번 1행·끄기 0행
+- `devfeed` 적용은 사용자 확인 대기
