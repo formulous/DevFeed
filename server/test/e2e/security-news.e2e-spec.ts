@@ -114,6 +114,25 @@ describe('분야 필터·보안 뉴스 분리 (021)', () => {
     expect((await api(t, 'GET', `/security-news/popular?period=DAY&sourceIds=${src.domestic}`)).status).toBe(400);
   });
 
+  it('기술 댓글순: 댓글 1 이상 블로그 글만, 분야 필터, 기본은 조회수순 (035)', async () => {
+    await t.db.query('UPDATE posts SET comment_count = CASE id WHEN ? THEN 3 WHEN ? THEN 1 WHEN ? THEN 9 ELSE 0 END WHERE id IN (?, ?, ?, ?)', [
+      post.b2,
+      post.p1,
+      post.n1,
+      post.b1,
+      post.b2,
+      post.p1,
+      post.n1,
+    ]);
+    const comments = await api(t, 'GET', '/posts/popular?period=DAY&sort=COMMENTS');
+    expect(ids(comments.body)).toEqual([post.b2, post.p1]);
+    expect(comments.body.items.find((i: { id: number }) => i.id === post.b2)).toMatchObject({ commentCount: 3 });
+    expect(ids((await api(t, 'GET', '/posts/popular?period=WEEK&sort=COMMENTS&field=SECURITY')).body)).toEqual([post.p1]);
+    expect(ids((await api(t, 'GET', '/posts/popular?period=MONTH&sort=VIEWS')).body)).toEqual([post.b1, post.b2]);
+    expect((await api(t, 'GET', '/posts/popular?period=DAY&sort=LIKES')).status).toBe(400);
+    await t.db.query('UPDATE posts SET comment_count = 0 WHERE id IN (?, ?, ?)', [post.b2, post.p1, post.n1]);
+  });
+
   it('출처 목록은 국내 → 해외, /sources와 태그 글 수에는 뉴스 제외', async () => {
     const sources = await api(t, 'GET', '/security-news/sources');
     const mine = sources.body.items.filter((s: { id: number }) => s.id === src.domestic || s.id === src.overseas);

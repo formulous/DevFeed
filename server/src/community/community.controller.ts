@@ -34,7 +34,7 @@ export class CommunityController {
   @Get('popular')
   @UseGuards(OptionalAuthGuard)
   popular(@Query() query: CommunityPopularQuery, @CurrentUser() user?: AuthUser) {
-    return this.community.popular(query.period, query.category, user?.id);
+    return this.community.popular(query.period, query.category, user?.id, Date.now(), query.sort ?? 'SCORE');
   }
 
   @Get('write-status')

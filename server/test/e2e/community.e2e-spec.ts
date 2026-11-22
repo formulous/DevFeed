@@ -223,6 +223,16 @@ describe('F-090~F-093 커뮤니티 (032)', () => {
     posts.cb = cb;
   });
 
+  it('댓글순·좋아요순: 1 이상만, 수 내림차순·같으면 최신, 말머리 필터 (035)', async () => {
+    const mine = (path: string) => listIds(path).then((ids) => ids.filter((id) => Object.values(posts).includes(id)));
+    expect(await mine('/community/popular?period=DAY&sort=COMMENTS')).toEqual([posts.p1, posts.p2]);
+    expect(await mine('/community/popular?period=WEEK&sort=LIKES')).toEqual([posts.p2, posts.p1]);
+    expect(await mine('/community/popular?period=MONTH&sort=LIKES&category=QUESTION')).toEqual([posts.p1]);
+    const items = (await api(t, 'GET', '/community/popular?period=DAY&sort=COMMENTS')).body.items;
+    expect(items.find((i: { id: number }) => i.id === posts.p1)).toMatchObject({ commentCount: 3, kind: 'COMMUNITY' });
+    expect((await api(t, 'GET', '/community/popular?period=DAY&sort=VIEWS')).status).toBe(400);
+  });
+
   it('수정: 작성자만, 요약 갱신, 태그 교체', async () => {
     const res = await api(t, 'PATCH', `/community/posts/${posts.p2}`, {
       token: a.token,

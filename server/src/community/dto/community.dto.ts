@@ -16,6 +16,7 @@ import {
 } from 'class-validator';
 import { toInt } from '../../common/validation/query-transforms';
 import type { PopularPeriod } from '../../posts/period';
+import type { CommunityPopularSort } from '../community.service';
 import type { CommunityCategory } from '../../posts/post-cards';
 
 export const CATEGORIES: CommunityCategory[] = ['QUESTION', 'DISCUSSION', 'SHARE'];
@@ -84,6 +85,10 @@ export class CommunityPopularQuery {
   @IsOptional()
   @IsIn(CATEGORIES, CATEGORY_MESSAGE)
   category?: CommunityCategory;
+
+  @IsOptional()
+  @IsIn(['SCORE', 'COMMENTS', 'LIKES'], { message: 'SCORE, COMMENTS, LIKES 중 하나여야 해요' })
+  sort?: CommunityPopularSort;
 }
 
 export class CreateCommunityPostDto {

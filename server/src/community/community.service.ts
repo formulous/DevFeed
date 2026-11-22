@@ -35,6 +35,14 @@ interface CommunityRow {
 const postNotFound = () => Errors.notFound('글을 찾을 수 없어요');
 const notMine = () => new AppException(403, 'FORBIDDEN', '내 글만 수정할 수 있어요');
 
+export type CommunityPopularSort = 'SCORE' | 'COMMENTS' | 'LIKES';
+
+const COMMUNITY_SORT: Record<CommunityPopularSort, string> = {
+  SCORE: 'p.like_count * 2 + p.comment_count + p.view_count * 0.1',
+  COMMENTS: 'p.comment_count',
+  LIKES: 'p.like_count',
+};
+
 @Injectable()
 export class CommunityService {
   private sourceId?: Promise<number>;
@@ -73,11 +81,11 @@ export class CommunityService {
     };
   }
 
-  async popular(period: PopularPeriod, category?: CommunityCategory, userId?: number, now = Date.now()) {
-    const key = `${period}:${category ?? ''}`;
+  async popular(period: PopularPeriod, category?: CommunityCategory, userId?: number, now = Date.now(), sort: CommunityPopularSort = 'SCORE') {
+    const key = `${period}:${category ?? ''}:${sort}`;
     let entry = this.popularCache.get(key);
     if (!entry || now - entry.at > POPULAR_TTL_MS) {
-      const ids = this.popularIds(period, category, new Date(now)).catch((error) => {
+      const ids = this.popularIds(period, category, new Date(now), sort).catch((error) => {
         if (this.popularCache.get(key)?.ids === ids) this.popularCache.delete(key);
         throw error;
       });
@@ -272,8 +280,10 @@ export class CommunityService {
     });
   }
 
-  private async popularIds(period: PopularPeriod, category: CommunityCategory | undefined, now: Date): Promise<number[]> {
+  private async popularIds(period: PopularPeriod, category: CommunityCategory | undefined, now: Date, sort: CommunityPopularSort): Promise<number[]> {
+    const order = COMMUNITY_SORT[sort];
     const where = ["cp.status = 'VISIBLE'", 'cp.published_at >= ?'];
+    if (sort !== 'SCORE') where.push(`${order} > 0`);
     const params: unknown[] = [popularSince(period, now)];
     if (category) {
       where.push('cp.category = ?');
@@ -282,7 +292,7 @@ export class CommunityService {
     const rows = (await this.dataSource.query(
       `SELECT p.id FROM community_posts cp JOIN posts p ON p.id = cp.post_id
         WHERE ${where.join(' AND ')}
-        ORDER BY p.like_count * 2 + p.comment_count + p.view_count * 0.1 DESC, p.published_at DESC, p.id DESC LIMIT ?`,
+        ORDER BY ${order} DESC, p.published_at DESC, p.id DESC LIMIT ?`,
       [...params, POPULAR_LIMIT],
     )) as { id: number | string }[];
     return rows.map((r) => Number(r.id));

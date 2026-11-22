@@ -552,7 +552,9 @@ paths:
         기간은 요청 시각 기준 롤링 윈도우. DAY=최근 24시간, WEEK=최근 7일, MONTH=최근 30일 발행 글 중 viewCount 내림차순.
         viewCount 1 이상인 글만 포함 (008). 조회수가 같으면 최신 발행순. 최대 20건이며 0건이면 items 빈 배열.
         기술 블로그 글만 (보안 뉴스 제외, 021). field가 있으면 그 분야 글 중 상위 20건 (기간 × 분야별 10분 캐시).
-        isPopular 배지 집합은 field 없는 WEEK 결과 기준
+        isPopular 배지 집합은 field 없는 WEEK 결과 기준.
+        sort=COMMENTS(035)면 같은 기간·분야의 commentCount 1 이상 글을 commentCount 내림차순(같으면 최신 발행순)으로 상위 20건.
+        캐시는 기간 × 분야 × 정렬별 10분. 배지 집합은 sort와 무관
       security:
         - {}
         - bearerAuth: []
@@ -564,6 +566,14 @@ paths:
             type: string
             enum: [DAY, WEEK, MONTH]
         - $ref: '#/components/parameters/Field'
+        - name: sort
+          in: query
+          required: false
+          description: VIEWS=조회수순(기본), COMMENTS=댓글순 (035)
+          schema:
+            type: string
+            enum: [VIEWS, COMMENTS]
+            default: VIEWS
       responses:
         '200':
           description: OK
@@ -1064,7 +1074,8 @@ paths:
       description: |
         기간(DAY=24시간, WEEK=7일, MONTH=30일 롤링) 안에 작성된 보이는 글 중
         점수 = likeCount × 2 + commentCount + viewCount × 0.1 내림차순, 같으면 최신 작성순. 점수 0인 글도 포함.
-        기간 × 말머리별 10분 캐시. 0건이면 items 빈 배열
+        sort=COMMENTS면 commentCount, sort=LIKES면 likeCount가 1 이상인 보이는 글을 그 수 내림차순(같으면 최신 작성순)으로 상위 20건 (035).
+        기간 × 말머리 × 정렬별 10분 캐시. 0건이면 items 빈 배열
       security:
         - {}
         - bearerAuth: []
@@ -1076,6 +1087,14 @@ paths:
             type: string
             enum: [DAY, WEEK, MONTH]
         - $ref: '#/components/parameters/CommunityCategory'
+        - name: sort
+          in: query
+          required: false
+          description: SCORE=인기 점수순(기본), COMMENTS=댓글순, LIKES=좋아요순 (035)
+          schema:
+            type: string
+            enum: [SCORE, COMMENTS, LIKES]
+            default: SCORE
       responses:
         '200':
           description: OK

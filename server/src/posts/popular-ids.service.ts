@@ -8,6 +8,10 @@ import { PopularPeriod, popularSince } from './period';
 export const POPULAR_LIMIT = 20;
 export const POPULAR_TTL_MS = 10 * 60 * 1000;
 
+export type TechPopularSort = 'VIEWS' | 'COMMENTS';
+
+const TECH_SORT: Record<TechPopularSort, string> = { VIEWS: 'p.view_count', COMMENTS: 'p.comment_count' };
+
 interface Entry {
   at: number;
   ids: Promise<number[]>;
@@ -22,8 +26,8 @@ export class PopularIdsService {
     private readonly directory: DirectoryService,
   ) {}
 
-  ids(period: PopularPeriod, field?: Field, now = Date.now()): Promise<number[]> {
-    return this.cached(`BLOG:${period}:${field ?? ''}`, now, () => this.query(period, field, new Date(now)));
+  ids(period: PopularPeriod, field?: Field, now = Date.now(), sort: TechPopularSort = 'VIEWS'): Promise<number[]> {
+    return this.cached(`BLOG:${period}:${field ?? ''}:${sort}`, now, () => this.query(period, field, new Date(now), sort));
   }
 
   securityIds(period: PopularPeriod, region?: NewsRegion, now = Date.now()): Promise<number[]> {
@@ -47,8 +51,8 @@ export class PopularIdsService {
     return new Set(await this.ids('WEEK', undefined, now));
   }
 
-  private async query(period: PopularPeriod, field: Field | undefined, now: Date): Promise<number[]> {
-    const where = ["p.kind = 'BLOG'", 'p.published_at >= ?', 'p.view_count > 0'];
+  private async query(period: PopularPeriod, field: Field | undefined, now: Date, sort: TechPopularSort): Promise<number[]> {
+    const where = ["p.kind = 'BLOG'", 'p.published_at >= ?', `${TECH_SORT[sort]} > 0`];
     const params: unknown[] = [popularSince(period, now)];
     if (field) {
       const tagIds = await this.directory.fieldTagIds(field);
@@ -56,7 +60,7 @@ export class PopularIdsService {
       where.push(`EXISTS (SELECT 1 FROM post_tags fx WHERE fx.post_id = p.id AND fx.tag_id IN (${tagIds.map(() => '?').join(', ')}))`);
       params.push(...tagIds);
     }
-    return this.top(where, params);
+    return this.top(where, params, TECH_SORT[sort]);
   }
 
   private async securityQuery(period: PopularPeriod, region: NewsRegion | undefined, now: Date): Promise<number[]> {
@@ -71,10 +75,10 @@ export class PopularIdsService {
     return this.top(where, params);
   }
 
-  private async top(where: string[], params: unknown[]): Promise<number[]> {
+  private async top(where: string[], params: unknown[], order = 'p.view_count'): Promise<number[]> {
     const rows = (await this.dataSource.query(
       `SELECT p.id FROM posts p WHERE ${where.join(' AND ')}
-        ORDER BY p.view_count DESC, p.published_at DESC, p.id DESC LIMIT ?`,
+        ORDER BY ${order} DESC, p.published_at DESC, p.id DESC LIMIT ?`,
       [...params, POPULAR_LIMIT],
     )) as { id: number | string }[];
     return rows.map((r) => Number(r.id));

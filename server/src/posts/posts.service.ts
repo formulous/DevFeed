@@ -7,7 +7,7 @@ import { DirectoryService } from './directory.service';
 import type { NewsRegion } from '../entities/source.entity';
 import type { Field } from './fields';
 import { PopularPeriod } from './period';
-import { PopularIdsService } from './popular-ids.service';
+import { PopularIdsService, TechPopularSort } from './popular-ids.service';
 import { PostCardsService } from './post-cards.service';
 import { PostSummary, withoutViewCount } from './post-cards';
 
@@ -81,9 +81,9 @@ export class PostsService {
     return { items: items.map(withoutViewCount), nextCursor };
   }
 
-  async popular(period: PopularPeriod, field?: Field, userId?: number, now = Date.now()) {
-    const ids = await this.popularIds.ids(period, field, now);
-    return this.popularCards(`BLOG:${period}:${field ?? ''}`, ids, userId);
+  async popular(period: PopularPeriod, field?: Field, userId?: number, now = Date.now(), sort: TechPopularSort = 'VIEWS') {
+    const ids = await this.popularIds.ids(period, field, now, sort);
+    return this.popularCards(`BLOG:${period}:${field ?? ''}:${sort}`, ids, userId);
   }
 
   async securityPopular(period: PopularPeriod, region?: NewsRegion, userId?: number, now = Date.now()) {

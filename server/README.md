@@ -22,6 +22,7 @@ NestJS 12 + TypeORM(MariaDB, mysql2) API 서버. 명세는 `../docs/api/openapi.
 - M2 피드 (F-010~F-013)
   - `GET /api/posts`: 커서 `(published_at, id)`, 태그(OR, 최대 10)·소스(최대 20)·유형 필터, 복수 필터는 서브쿼리 `UNION`/`UNION ALL` 분해 (007)
   - `GET /api/posts/popular?period=DAY|WEEK|MONTH`: 최근 24시간·7일·30일 조회수 상위 20건(조회수 1 이상만, 동점은 최신순, 008), 10분 캐시
+    - `sort=VIEWS|COMMENTS` (035, 기본 `VIEWS`): `COMMENTS`면 댓글 수 1 이상 글을 댓글 수순. 캐시 키는 기간·분야·정렬
   - `POST /api/posts/{id}/views`: 같은 viewer(회원 ID 또는 `df_vid` 쿠키) 24시간 1회 집계, 회원은 읽은 기록 저장. `recommendationId`는 형식만 검증 (추천 클릭 기록은 M5)
   - `GET /api/tags`, `GET /api/sources` (소스별 `postCount`·최근 30일 `recentPostCount` 포함, 10분 캐시, 018·019)
   - 로그인 선택 API: 토큰 없으면 게스트, 만료·위조면 401 `TOKEN_EXPIRED`. 회원이면 `isBookmarked`·`isRead` 포함
@@ -186,6 +187,7 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - 탈퇴: 원장 FK CASCADE
   - 성능 (`devfeed_perf` 원장 256만 행, `perf/profile-latency.js`, 읽은 기록 1,000·북마크 300·좋아요 50 회원, API p95): 프로필 0.8·10동시 3.9ms, 조회(적립 경로) 3.8·9.8ms, 좋아요 1.8·11.3ms, 최신 피드 2.8·5.9ms, 댓글 2,000개 글 첫 페이지 3.0·7.2ms
 - M11 보안 뉴스 인기 (031, 스키마 변경 없음)
+  - `GET /api/community/popular?sort=SCORE|COMMENTS|LIKES` (035, 기본 `SCORE` 인기 점수): 댓글순·좋아요순은 그 수 1 이상인 보이는 글만, 동점 최신순, 말머리 필터 그대로
   - `GET /api/security-news/popular?period=DAY|WEEK|MONTH&region=`: 기술 인기와 같은 기준(롤링 기간, 조회수 1 이상 상위 20건, 동점 최신순)·같은 응답(`PopularPost`). 출처 선택은 받지 않음
   - `PopularIdsService`가 종류별 캐시 키(`BLOG:`·`SECURITY_NEWS:`)로 10분 캐시. 기술 인기·`isPopular` 집합은 `kind = 'BLOG'` 쿼리 그대로라 섞이지 않음
   - 지역은 출처 ID 목록으로 바꿔 거름. dba 측정(`devfeed_perf` 뉴스 4만 건) MONTH 전체 DB p95 1.4ms

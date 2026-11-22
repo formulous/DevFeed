@@ -4,6 +4,7 @@ import { toIdList, toInt } from '../../common/validation/query-transforms';
 import type { NewsRegion } from '../../entities/source.entity';
 import { FIELDS, type Field } from '../fields';
 import type { PopularPeriod } from '../period';
+import type { TechPopularSort } from '../popular-ids.service';
 
 export class FeedQuery {
   @IsOptional()
@@ -50,6 +51,10 @@ export class PopularQuery {
   @IsOptional()
   @IsIn(FIELDS, { message: `${FIELDS.join(', ')} 중 하나여야 해요` })
   field?: Field;
+
+  @IsOptional()
+  @IsIn(['VIEWS', 'COMMENTS'], { message: 'VIEWS 또는 COMMENTS여야 해요' })
+  sort?: TechPopularSort;
 }
 
 export class SecurityPopularQuery {
