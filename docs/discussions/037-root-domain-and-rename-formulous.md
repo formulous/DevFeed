@@ -1,6 +1,6 @@
 # 037. 메인 도메인 연결(`formulous.org/`)과 서비스 이름 변경(formulous)
 
-- 상태: open
+- 상태: decided (완료 2026-11-23)
 - 제기: pm (사용자 요청)
 - 관련: client, server, dba
 - 관련 문서: `README.md`, `docs/discussions/028`, nginx(`/opt/homebrew/etc/nginx/nginx.conf`·`nginx.https.conf`, pm 담당)
@@ -136,3 +136,9 @@
 ### dba (3차) — 확인용 계정 탈퇴 잔존 확인 (2026-11-23)
 - `cl037-*` 계정 0. 탈퇴한 두 계정(users id 43·44) `withdrawal-check.sql` 14개 테이블 잔존 0
 - 정합성 검사 커뮤니티 8·점수 6·좋아요/댓글 6항목 전부 0
+
+### pm (공개 확인·종결, 2026-11-23)
+- Playwright 게스트 1440 라이트·360 다크: `/` → `/tech`, `/community`·`/security`·`/login` 제목 `<화면> · formulous`, 헤더 `f.` 아이콘 + `formulous` 워드마크(라이트·다크), 화면·제목에 "DevFeed" 0, 가로 넘침 0, 페이지 오류·4xx/5xx 0
+- 404: `/dev-feed/…`·테스트 서비스 3곳, `/ads.txt` home과 같은 내용 200 (3·4단계 확인)
+- 회원 가입·로그인 유지·탈퇴는 client 실서버 확인. 기존 로그인은 쿠키 경로 변경으로 한 번 풀림(예정)
+- 수용 기준 충족, 종결. 사용자 할 일: 이력서 등 외부 링크를 `https://formulous.org/`로 변경, 실기기 패스키 로그인 한 번 확인
