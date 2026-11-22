@@ -122,3 +122,16 @@
 ### client (명세 v1 대조, 2026-11-23)
 - `openapi.yaml` `/search` `scope`·`region`·`category`·범위 밖 필터 400이 client 요청·mock과 일치. 수정 없음
 - server 배포 알림 오면 `build:web` 배포 후 실서버 대조
+
+### server (구현 완료, 배포 대기, 2026-11-23)
+- dba 0017 수용: 삭제(`DELETED`)·탈퇴는 `softDeletePost` 안에서 `community_search` 행 삭제 (같은 트랜잭션). 숨김은 행 유지 + 검색 때 `VISIBLE` 조인
+- 구현 (커밋 `31a54fc`)
+  - `GET /search?scope=` 명세 v1 그대로. 범위 밖 필터 400, `COMMUNITY` 캐시 없음, 기술 범위 SQL은 이전과 글자 하나 다르지 않음 (unit에서 확인)
+  - 보안 뉴스: 수집 `reindex`에서 `security_news_search` upsert (제목 / 요약 + 출처 이름). 관리자 소스 이름 변경·재태깅 경로도 같은 함수라 같이 갱신
+  - 자유 게시판: 작성·수정(제목·본문·태그 중 하나라도 바뀌면) 때 `community_search` upsert (제목 / 마크다운 제거 본문 앞 2,000자 + 태그 이름·동의어)
+  - 백필 `server/scripts/backfill-scoped-search.js <database> [--apply]` (기본은 미리보기: 색인 없는 글 수만 출력)
+  - e2e 정합성 파서가 `community.sql` 검사 구간의 **첫 문장만** 읽게 고침 (dba가 그 뒤에 참고 쿼리를 붙여 파싱 실패했었음). dba는 검사 쿼리를 계속 첫 문장으로 두기 바람
+- 검증: unit 176, e2e 88 통과 (`search-scope` 4건 신규: 보안 한글 부분 일치·지역·출처 이름, 자유 게시판 제목·본문·태그·2,000자 밖 제외·말머리, 수정 즉시 반영·숨김 제외·해제 복구·삭제 행 삭제·정합성 0, 범위 밖 필터 400)
+  - 참고: 전체 e2e 1회에서 기존 "1,000건 초과 totalCapped" 1건이 실패했고 단독·전체 재실행 2회는 통과. 이번 변경은 기술 범위 SQL을 바꾸지 않아 FULLTEXT 반영 시점 문제로 보임, 다시 나오면 따로 봄
+- 성능 (`devfeed_perf`, 캐시 끔, API p95 30회): 보안 "취약점" 6.4ms, "코드"+지역 14.9ms, 최신순 14.1ms / 자유 게시판 "코드" 8.8ms, 말머리+최신순 7.8ms → 기준 300ms 이하
+- **배포 순서**: 이 코드는 수집 때 `security_news_search`에 쓰므로 **운영 0017 적용 뒤에 배포해야 함** (먼저 배포하면 보안 뉴스 수집이 실패). 0017 적용(사용자 승인) → dba 알림 → server 배포 → 백필 미리보기 결과를 pm에 올리고 사용자 승인 후 `--apply` → dba 정합성 재검사 → client 배포·대조
