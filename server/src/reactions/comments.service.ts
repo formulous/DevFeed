@@ -3,12 +3,13 @@ import { DataSource, EntityManager } from 'typeorm';
 import { withDeadlockRetry } from '../common/database/deadlock-retry';
 import { AppException, Errors } from '../common/errors/app.exception';
 import { decodeIdCursor, encodeIdCursor } from '../common/pagination/cursor';
+import { awardComment, setCommentRevoked } from '../score/score-ledger';
 import { commentRetryAfterSec, COMMENT_RATE } from './comment-rate';
 import { CommentRow, CommentView, toCommentView, Viewer } from './comment-view';
 
 const DEFAULT_SIZE = 20;
 const REPLY_PREVIEW = 3;
-const COLUMNS = `c.id, c.post_id, c.parent_id, c.user_id, c.body, c.status, c.reply_count, c.edited_at, c.created_at, u.nickname`;
+const COLUMNS = `c.id, c.post_id, c.parent_id, c.user_id, c.body, c.status, c.reply_count, c.edited_at, c.created_at, u.nickname, u.score`;
 
 type Affected = { affectedRows: number };
 type LockedComment = { id: number | string; post_id: number | string; parent_id: number | string | null; user_id: number | string | null; status: CommentRow['status'] };
@@ -83,7 +84,7 @@ export class CommentsService {
     };
   }
 
-  create(viewer: Viewer, postId: number, content: string, parentId?: number) {
+  create(viewer: Viewer, postId: number, content: string, parentId?: number, now = new Date()) {
     return withDeadlockRetry(() =>
       this.dataSource.transaction(async (manager) => {
         await manager.query('SELECT id FROM users WHERE id = ? FOR UPDATE', [viewer.id]);
@@ -106,6 +107,7 @@ export class CommentsService {
         ])) as { insertId: number };
         if (parent !== null) await manager.query('UPDATE comments SET reply_count = reply_count + 1 WHERE id = ?', [parent]);
         await manager.query('UPDATE posts SET comment_count = comment_count + 1 WHERE id = ?', [postId]);
+        await awardComment(manager, viewer.id, Number(inserted.insertId), now);
         return { comment: await this.view(manager, Number(inserted.insertId), viewer), commentCount: await this.count(manager, postId) };
       }),
     );
@@ -124,17 +126,18 @@ export class CommentsService {
     );
   }
 
-  remove(viewer: Viewer, commentId: number) {
+  remove(viewer: Viewer, commentId: number, now = new Date()) {
     return withDeadlockRetry(() =>
       this.dataSource.transaction(async (manager) => {
         const found = await this.find(manager, commentId);
         if (!found || found.status === 'DELETED') throw commentNotFound();
         if (Number(found.user_id) !== viewer.id) throw notMine();
         const postId = Number(found.post_id);
+        await manager.query('SELECT id FROM users WHERE id = ? FOR UPDATE', [viewer.id]);
         await manager.query('SELECT id FROM posts WHERE id = ? FOR UPDATE', [postId]);
         if (found.parent_id !== null) await this.lock(manager, Number(found.parent_id));
         const target = await this.lock(manager, commentId);
-        if (!target || target.status === 'DELETED') throw commentNotFound();
+        if (!target || target.status === 'DELETED' || Number(target.user_id) !== viewer.id) throw commentNotFound();
         let removed = true;
         let parentRemoved = false;
         if (target.parent_id === null) {
@@ -158,20 +161,23 @@ export class CommentsService {
         if (target.status === 'VISIBLE') {
           await manager.query('UPDATE posts SET comment_count = comment_count - 1 WHERE id = ?', [postId]);
         }
+        await setCommentRevoked(manager, viewer.id, commentId, true, now);
         return { commentCount: await this.count(manager, postId), removed, parentRemoved };
       }),
     );
   }
 
-  setHidden(admin: Viewer, commentId: number, hidden: boolean) {
+  setHidden(admin: Viewer, commentId: number, hidden: boolean, now = new Date()) {
     return withDeadlockRetry(() =>
       this.dataSource.transaction(async (manager) => {
         const found = await this.find(manager, commentId);
-        if (!found || found.status === 'DELETED') throw commentNotFound();
+        if (!found || found.status === 'DELETED' || found.user_id === null) throw commentNotFound();
         const postId = Number(found.post_id);
+        const authorId = Number(found.user_id);
+        await manager.query('SELECT id FROM users WHERE id = ? FOR UPDATE', [authorId]);
         await manager.query('SELECT id FROM posts WHERE id = ? FOR UPDATE', [postId]);
         const target = await this.lock(manager, commentId);
-        if (!target || target.status === 'DELETED') throw commentNotFound();
+        if (!target || target.status === 'DELETED' || Number(target.user_id) !== authorId) throw commentNotFound();
         const changed = (await manager.query(
           hidden
             ? "UPDATE comments SET status = 'HIDDEN', hidden_at = UTC_TIMESTAMP(3), hidden_by = ? WHERE id = ? AND status = 'VISIBLE'"
@@ -180,6 +186,7 @@ export class CommentsService {
         )) as Affected;
         if (changed.affectedRows === 1) {
           await manager.query(`UPDATE posts SET comment_count = comment_count ${hidden ? '-' : '+'} 1 WHERE id = ?`, [postId]);
+          await setCommentRevoked(manager, authorId, commentId, hidden, now);
         }
         return { comment: await this.view(manager, commentId, admin), commentCount: await this.count(manager, postId) };
       }),

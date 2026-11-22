@@ -9,6 +9,7 @@ import type { UserRole } from '../entities/user.entity';
 import { withoutViewCount } from '../posts/post-cards';
 import { PostCardsService } from '../posts/post-cards.service';
 import { removeReactions } from '../reactions/withdraw-reactions';
+import { gradeOf } from '../score/score-policy';
 import { BOOKMARK_LIMIT, bookmarkListQuery, historyListQuery } from './personal-list';
 
 export interface MeResponse {
@@ -37,6 +38,38 @@ export class MeService {
     private readonly dataSource: DataSource,
     private readonly cards: PostCardsService,
   ) {}
+
+  async profile(userId: number) {
+    const [row] = (await this.dataSource.query(
+      `SELECT u.nickname, u.score,
+              (SELECT COUNT(*) FROM post_likes WHERE user_id = u.id) AS like_count,
+              (SELECT COUNT(*) FROM comments WHERE user_id = u.id AND status = 'VISIBLE') AS comment_count,
+              (SELECT COUNT(*) FROM read_histories WHERE user_id = u.id) AS read_count,
+              (SELECT COUNT(*) FROM bookmarks WHERE user_id = u.id) AS bookmark_count
+         FROM users u WHERE u.id = ?`,
+      [userId],
+    )) as {
+      nickname: string;
+      score: number;
+      like_count: number | string;
+      comment_count: number | string;
+      read_count: number | string;
+      bookmark_count: number | string;
+    }[];
+    if (!row) throw Errors.unauthenticated();
+    const score = Number(row.score);
+    return {
+      nickname: row.nickname,
+      score,
+      grade: gradeOf(score),
+      stats: {
+        likes: Number(row.like_count),
+        comments: Number(row.comment_count),
+        reads: Number(row.read_count),
+        bookmarks: Number(row.bookmark_count),
+      },
+    };
+  }
 
   async get(userId: number): Promise<MeResponse> {
     const [row] = (await this.dataSource.query(

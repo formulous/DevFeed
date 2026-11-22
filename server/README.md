@@ -67,7 +67,7 @@ src/
 ├── config/            # 환경변수 로드·검증
 ├── common/            # 에러 형식, 예외 필터, 검증 파이프, 커서, DB 설정
 ├── auth/              # 로그인·리프레시·로그아웃, JWT 가드, @Roles
-├── entities/          # DDL 매핑 (synchronize: false), 0012 post_likes·comments, 0013 user_passkeys·webauthn_challenges 포함
+├── entities/          # DDL 매핑 (synchronize: false), 0012 post_likes·comments, 0013 user_passkeys·webauthn_challenges, 0014 score_events 포함
 ├── ingest/            # 순수 함수: URL 정규화, 텍스트·요약, 토큰화, 태깅, 피드 파싱·fetch, 백오프
 ├── crawl/             # 스케줄러, 수집 실행, 글 저장·재색인, 태그 사전 캐시, 일일 정리
 ├── admin/             # 관리자 컨트롤러·서비스, 백그라운드 작업(재태깅)
@@ -76,6 +76,7 @@ src/
 ├── posts/             # 피드·분야·인기 글·보안 뉴스·조회 기록, 카드 조립
 ├── reactions/         # 좋아요·댓글·관리자 숨김, 탈퇴 시 반응 정리
 ├── passkeys/          # 패스키(WebAuthn) 등록·로그인·목록·이름 바꾸기·삭제
+├── score/             # 활동 점수 원장 쓰기·등급 계산
 └── scripts/           # 관리자 계정 생성, 개발용 토큰 발급
 ```
 
@@ -171,6 +172,16 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - 속도 제한: DB의 최근 24시간 작성 시각으로 1분 5개·하루 200개, 429 `COMMENT_RATE_LIMITED` + `retryAfterSec` + `Retry-After`
   - 탈퇴: `reactions/withdraw-reactions.ts`가 `db/queries/reactions.sql` 순서대로 카운터 감소 → 좋아요·답글 삭제 → 자리 표시·삭제 → 빈 자리 표시 정리 (FK RESTRICT라 빠뜨리면 회원 삭제 실패)
   - 성능 (`devfeed_perf` 글 14만·좋아요 50만·댓글 15만, `perf/reactions-latency.js`, API p95): 최신 피드 게스트 2.5·회원 3.5·회원 10동시 7.8ms, 검색 "개발" 37~38·10동시 137.5ms, 댓글 2,000개 글 첫 페이지 2.0·10동시 6.9ms → 기준 300ms 이하
+- M10 프로필 카드·활동 점수 (029, 스키마 `0014`)
+  - `GET /api/me/profile`: 닉네임·누적 점수·등급(`level`·`name`·`minScore`·`nextMinScore`)·수치 4개(좋아요·보이는 댓글·읽은 기록·북마크, 요청 시점 `COUNT`). 댓글 `author.grade` 추가
+  - 점수 원장 `score_events`(PK `(user_id, kind, ref_id)`) + `users.score` 카운터를 같은 트랜잭션에서 증감. 증감 여부는 원장 쓰기 영향 행 수로만 판단 (`score/score-ledger.ts`)
+    - 읽기 +1: 같은 글 1회(PK), KST 하루 30점. 한도 초과분은 행을 남기지 않아 다음 날 다시 적립 가능. 이미 적립한 글은 잠금 없이 먼저 확인해 건너뜀
+    - 좋아요 +2: 취소하면 행 삭제·회수, 다시 누르면 다시 +2
+    - 댓글 +5: KST 하루 처음 10개(회수된 행도 셈, 11번째부터 0점 행). 본인 삭제·관리자 숨김은 `revoked_at`으로 회수, 숨김 해제는 복구
+  - 잠금 순서: 회원 → 글 → 부모 댓글 → 댓글 → 원장. 관리자 숨김은 요청자가 아니라 작성자 회원 행을 먼저 잠그고, 댓글을 다시 잠가 작성자가 같은지 확인
+  - 등급 표(`score/score-policy.ts`)는 spec 값을 단위 테스트로 고정. 하루 경계는 KST 자정을 UTC로 바꿔 비교
+  - 탈퇴: 원장 FK CASCADE
+  - 성능 (`devfeed_perf` 원장 256만 행, `perf/profile-latency.js`, 읽은 기록 1,000·북마크 300·좋아요 50 회원, API p95): 프로필 0.8·10동시 3.9ms, 조회(적립 경로) 3.8·9.8ms, 좋아요 1.8·11.3ms, 최신 피드 2.8·5.9ms, 댓글 2,000개 글 첫 페이지 3.0·7.2ms
 - M9 패스키 로그인 (027, 스키마 `0013`)
   - `@simplewebauthn/server`는 CBOR·COSE 파싱과 서명 검증만 맡김. 챌린지 발급·1회 소비·만료, origin·RP ID 고정, 사용자 확인 강제, 서명 횟수 역행 거부, 10개 제한, 토큰 발급 통합은 `passkeys/`에서 직접 처리
   - 로그인 `POST /api/auth/passkeys/login/options`·`/login`(IP당 분당 10회, 기존 로그인과 같은 토큰·쿠키). 등록·관리 `POST /api/me/passkeys/registration/options`, `GET`·`POST /api/me/passkeys`, `PATCH`·`DELETE /api/me/passkeys/{id}`
@@ -199,6 +210,7 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   node perf/search-profile.js           # 검색 쿼리 단계별 DB 시간
   node perf/search-accuracy.js          # 검색 정확성 (개발 서버 :3000 + devfeed, 읽기 전용)
   node perf/field-latency.js            # 분야·유형·보안 뉴스 피드 쿼리 DB 시간 (빌드 필요)
+  node perf/profile-latency.js          # 프로필·조회·좋아요·피드 (측정 회원을 만들고 끝에 탈퇴)
   node perf/reactions-latency.js        # 좋아요·댓글 필드 포함 목록·댓글 API (측정 회원을 만들고 끝에 탈퇴)
   ```
 - 각 스크립트는 연결된 DB 이름을 확인하고 다르면 중단함 (`perf/_db.js`)
@@ -261,8 +273,8 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - `server/.env.test`가 있으면 그것을, 없으면 `.env`를 읽음. `.env`를 쓸 때는 `DB_DATABASE=devfeed_test npm run test:e2e`
   - 테스트가 실패해 데이터가 남으면 `db/scripts/test-db-reset.sh`(dba)로 초기화
 - 각 테스트가 소스·태그·글·회원을 직접 만들고 끝나면 지움 (실행 후 테스트 DB 0행 확인)
-- 현재 61건
-  - 탈퇴 잔존 (002 필수): `db/queries/withdrawal-check.sql`(dba)을 그대로 읽어 실행. 탈퇴 전 데이터가 있음을 확인한 뒤 탈퇴 → 11개 테이블(좋아요·댓글·패스키·등록 챌린지 포함) 0건, 추천 로그 `user_id` NULL, 조회수 유지. 비밀번호 틀림 403, 탈퇴 후 로그인·리프레시·남은 토큰 거부
+- 현재 69건
+  - 탈퇴 잔존 (002 필수): `db/queries/withdrawal-check.sql`(dba)을 그대로 읽어 실행. 탈퇴 전 데이터가 있음을 확인한 뒤 탈퇴 → 12개 테이블(좋아요·댓글·패스키·등록 챌린지·점수 원장 포함) 0건, 추천 로그 `user_id` NULL, 조회수 유지. 비밀번호 틀림 403, 탈퇴 후 로그인·리프레시·남은 토큰 거부
   - 회원 흐름: 가입 검증·중복 → 관심 태그(개수·없는 태그 검증) → 온보딩 완료 → 북마크(멱등·커서·태그 필터·피드 플래그·해제) → 조회 → 읽은 기록(순서·개별·전체 삭제) → 닉네임 변경, 온보딩 건너뛰기, 북마크 5,000건 제한
   - 인증: 리프레시 교체, 30초 이내 재사용 401, 30초 지난 재사용 시 계열 전체 폐기, 로그아웃, 5회 실패 잠금
   - 추천: 콜드 스타트, 개인화(이유·제외·채움·다양성·커서), 다른 회원 커서 거부, 클릭 1회 기록·타인 클릭 무시, 일별 집계
@@ -278,4 +290,5 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - 오류 메시지 해요체 (024): 검증·중복 가입·로그인 실패·미인증·검색어·커서·분야·404 응답의 `code` 유지, `message`·`fieldErrors` 해요체
   - 좋아요·댓글 (026): 게스트 401·없는 글 404, 같은 회원 20개 동시 요청(켜기·끄기 섞음/켜기만) 후 행·카운터 일치, 카드 `likeCount`·`likedByMe`, 작성 검증(공백·1,001자)·원문 그대로·답글의 답글 승격·다른 글 부모 404, 목록 커서·답글 3개·이어 받기, 수정 본인만·`editedAt`, 관리자 숨김 수 감소·멱등·내용 가림·숨김 수정 409, 삭제 자리 표시·자리 표시 정리, 속도 제한 429·`Retry-After`, 탈퇴 후 잔존 0·자리 표시·수 일치, 정합성 검사 6항목(`db/queries/reactions.sql`) 0
   - 패스키 (027, `test/e2e/support/webauthn.ts` P-256 가상 인증기로 응답 직접 서명): 등록 → 로그아웃 → 패스키 로그인 → 리프레시, 옵션 형태·user handle 고정·제외 목록, 챌린지 재사용·다른 origin·다른 RP ID·사용자 확인 없음·서명 횟수 역행(작음·같음)·userHandle 불일치·발급 안 한 챌린지 거부, 0을 계속 쓰는 인증기 허용, 같은 응답 5개 동시 제출 1건만 성공, 등록 안 된 패스키 `PASSKEY_NOT_FOUND`, 다른 회원 챌린지·재사용·origin·사용자 확인 없음 등록 400, 중복 409, 이름 자동 생성·40자 제한·바꾸기·삭제·남의 것 404, 11번째 409, 잠금 중 패스키 로그인, 탈퇴 후 잔존 0
+  - 프로필·점수 (029): 초기값·비회원 401, 읽기 같은 글 1회·하루 30점·다음 날 재적립·기록 삭제 후 점수 유지, 한도 경계 동시 조회 10건 정확히 5점, 좋아요 멱등·회수·재적립·20개 동시 요청 후 점수 = 행 수×2, 댓글 하루 10개·삭제·숨김 회수·해제 복구·회수 행도 한도에 셈·숨김 후 삭제, 답글 있는 댓글 삭제 회수, 등급 경계(99→100, 5000 최고 등급 `nextMinScore` null)·댓글 작성자 등급, 수치 = 실제 행 수, 정합성 검사 6항목(`db/queries/score.sql`) 0
   - 스모크: `GET /api/sources`

@@ -20,6 +20,9 @@ export class User {
   @Column({ name: 'webauthn_handle', type: 'binary', length: 32, nullable: true, select: false })
   webauthnHandle: Buffer | null;
 
+  @Column({ type: 'int', unsigned: true, default: 0 })
+  score: number;
+
   @Column({ type: 'enum', enum: ['USER', 'ADMIN'], default: 'USER' })
   role: UserRole;
 

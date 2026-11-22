@@ -23,6 +23,12 @@ export class MeController {
     return this.me.get(user.id);
   }
 
+  @Get('profile')
+  profile(@CurrentUser() user: AuthUser, @Res({ passthrough: true }) res: Response) {
+    res.setHeader('Cache-Control', 'no-store');
+    return this.me.profile(user.id);
+  }
+
   @Patch()
   update(@CurrentUser() user: AuthUser, @Body() dto: UpdateMeDto) {
     return this.me.updateNickname(user.id, dto.nickname);

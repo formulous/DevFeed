@@ -1,4 +1,5 @@
 import type { CommentStatus } from '../entities/comment.entity';
+import { Grade, gradeBrief } from '../score/score-policy';
 
 export interface CommentRow {
   id: number | string;
@@ -11,6 +12,7 @@ export interface CommentRow {
   edited_at: Date | null;
   created_at: Date;
   nickname: string | null;
+  score: number | null;
 }
 
 export interface Viewer {
@@ -24,7 +26,7 @@ export interface CommentView {
   parentId: number | null;
   status: CommentStatus;
   content: string | null;
-  author: { id: number; nickname: string } | null;
+  author: { id: number; nickname: string; grade: Grade } | null;
   createdAt: Date;
   editedAt: Date | null;
   mine: boolean;
@@ -40,7 +42,7 @@ export function toCommentView(row: CommentRow, viewer?: Viewer): CommentView {
     parentId: row.parent_id === null ? null : Number(row.parent_id),
     status: row.status,
     content: visible ? row.body : null,
-    author: visible && userId !== null && row.nickname !== null ? { id: userId, nickname: row.nickname } : null,
+    author: visible && userId !== null && row.nickname !== null ? { id: userId, nickname: row.nickname, grade: gradeBrief(Number(row.score ?? 0)) } : null,
     createdAt: row.created_at,
     editedAt: row.edited_at,
     mine: viewer !== undefined && userId !== null && userId === viewer.id,

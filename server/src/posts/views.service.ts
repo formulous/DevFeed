@@ -4,6 +4,7 @@ import { withDeadlockRetry } from '../common/database/deadlock-retry';
 import { isMissingReference } from '../common/database/mysql-errors';
 import { Errors } from '../common/errors/app.exception';
 import { viewerKey } from '../common/visitor/visitor';
+import { awardRead, hasReadEvent } from '../score/score-ledger';
 import { uuidToBuffer } from '../recommendations/snapshot';
 
 export const VIEW_DEDUP_HOURS = 24;
@@ -36,15 +37,23 @@ export class ViewsService {
     });
 
     if (viewer.userId !== undefined) {
-      await this.dataSource
+      const userId = viewer.userId;
+      const recorded = await this.dataSource
         .query(
           `INSERT INTO read_histories (user_id, post_id, first_read_at, last_read_at) VALUES (?, ?, ?, ?)
            ON DUPLICATE KEY UPDATE last_read_at = VALUES(last_read_at)`,
-          [viewer.userId, postId, now, now],
+          [userId, postId, now, now],
         )
+        .then(() => true)
         .catch((error: unknown) => {
           if (!isMissingReference(error)) throw error;
+          return false;
         });
+      if (recorded && !(await hasReadEvent(this.dataSource.manager, userId, postId))) {
+        await withDeadlockRetry(() =>
+          this.dataSource.transaction((manager) => awardRead(manager, userId, postId, now)),
+        );
+      }
     }
 
     if (recommendationId && viewer.userId !== undefined) {

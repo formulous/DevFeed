@@ -161,3 +161,13 @@ export async function reactionMismatches(t: TestApp): Promise<Record<string, num
   const [row] = (await t.db.query(REACTIONS_CHECK)) as Record<string, number | string>[];
   return Object.fromEntries(Object.entries(row).map(([k, v]) => [k, Number(v)]));
 }
+
+const SCORE_CHECK = (() => {
+  const sql = readFileSync(join(__dirname, '..', '..', '..', '..', 'db', 'queries', 'score.sql'), 'utf8');
+  return sql.slice(sql.indexOf('-- 029 consistency check')).split('\n').filter((line) => !line.trim().startsWith('--')).join('\n').trim().replace(/;$/, '');
+})();
+
+export async function scoreMismatches(t: TestApp): Promise<Record<string, number>> {
+  const [row] = (await t.db.query(SCORE_CHECK)) as Record<string, number | string>[];
+  return Object.fromEntries(Object.entries(row).map(([k, v]) => [k, Number(v)]));
+}

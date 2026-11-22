@@ -11,6 +11,7 @@ const row = (over: Partial<CommentRow> = {}): CommentRow => ({
   edited_at: null,
   created_at: new Date('2026-11-21T00:00:00Z'),
   nickname: '작성자',
+  score: 500,
   ...over,
 });
 
@@ -19,7 +20,7 @@ describe('toCommentView', () => {
     expect(toCommentView(row(), { id: 7, role: 'USER' })).toMatchObject({
       id: 10,
       content: '<script>alert(1)</script>',
-      author: { id: 7, nickname: '작성자' },
+      author: { id: 7, nickname: '작성자', grade: { level: 3, name: 'Senior Dev' } },
       mine: true,
       replyCount: 2,
     });
