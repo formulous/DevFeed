@@ -319,3 +319,4 @@
 - 데이터 마이그레이션 `0016`: 내부 소스 이름 "formulous 커뮤니티"·`site_url` 변경, 커뮤니티 글 url을 `…/dev-feed/community/posts/{id}` 형태와 **정확히 일치할 때만** `…/community/posts/{id}`로 변경 (다른 형태는 건드리지 않음). down은 역변환
   - 새 DB는 `0015`가 옛 이름으로 넣고 `0016`이 바꿈 → 운영·테스트·측정 DB가 같은 결과
   - 적용 순서: server `WEB_BASE_URL` 변경·재시작(037 2단계) 뒤에 적용해야 그 사이 새 글이 옛 주소로 남지 않음
+  - 부수 효과: `posts.updated_at`(ON UPDATE)이 변경 32행에서 적용 시각으로 갱신됨. 커뮤니티 글은 이 컬럼을 화면에 쓰지 않아(수정 표시는 `community_posts.edited_at`) 영향 없음

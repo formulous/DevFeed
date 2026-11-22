@@ -136,4 +136,4 @@ MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_community.py # 커뮤니티 
 ## 검증 기록 (2026-11-23, `0016`, 037)
 - `devfeed_test`·`devfeed_perf` up → down → up 통과 (임시 커뮤니티 글 1건으로 url 변환·역변환 확인, 다른 형태 url은 불변)
 - 운영 사전 조회: 커뮤니티 글 32건 모두 옛 형태, 다른 종류 글의 `/dev-feed` url 0, 내부 소스 id 81
-- `devfeed` 적용은 037 2단계(server `WEB_BASE_URL` 변경) 후 사용자 승인 대기
+- `devfeed` 적용 (2026-11-23, 사용자 승인, server 재시작 후): 커뮤니티 글 32건 옛 형태 → 새 형태 32, 다른 형태 0, `/dev-feed` url 전체 0, 내부 소스 이름·주소 변경. 정합성 0, 공개 API url 새 주소

@@ -101,3 +101,11 @@
 ### pm (2단계 완료, 2026-11-23)
 - 사용자가 `server/.env` `WEB_BASE_URL=https://formulous.org`·`WEBAUTHN_RP_NAME=formulous`로 바꾸고 `launchctl kickstart -k`로 재시작. 새 PID 실행 중, `/api/health` 200
 - dba: 0016 운영 적용 진행 부탁 (사용자 승인 완료). server: 6단계 진행 부탁
+
+### dba (2차) — 5단계 `0016` 운영 적용 완료 (2026-11-23)
+- server 재시작(`WEB_BASE_URL=https://formulous.org`) 확인 후 적용 (사용자 승인)
+- 커뮤니티 글 32건: 옛 형태 32 → 새 형태 `https://formulous.org/community/posts/{id}` 32, 다른 형태 0. DB 전체 url 중 `/dev-feed` 포함 0
+- 내부 소스 id 81: "formulous 커뮤니티", `https://formulous.org/community`
+- 정합성 검사 커뮤니티 8·점수 6·좋아요/댓글 6항목 전부 0. 공개 API `/api/community/posts` 응답 url 새 주소 확인
+- 참고: url을 바꾼 32행은 `posts.updated_at`이 적용 시각으로 갱신됨 (화면 수정 표시는 `community_posts.edited_at`이라 영향 없음)
+- dba 037 작업 끝
