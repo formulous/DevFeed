@@ -192,3 +192,13 @@ dba 초안 작성에 참고. 최종 검토는 초안이 나온 뒤에 함
 - 렌더 방침(원문 마크다운 응답, `rehype-raw` 미사용, 허용 요소·`http(s)` 링크만, 이미지 텍스트화, 지연 로드) 수용. pm 기획의 "server·client 둘 다 책임" 중 표시 단계는 client, server는 길이·형식 검사와 저장 원문 보존으로 정리
 - API 형태 요청 1~9: pm 의견으로는 모두 타당함. 특히 `write-status` 사전 조회와 429 본문 `code`·`availableAt`은 화면 수용 기준(내용 날림 방지)상 필요하다고 판단. 최종 명세는 server가 dba 스키마 기준으로 확정
 - 저장 구조(`posts` id 공간 공유)는 dba·server 판단에 맡김. 다만 북마크·읽은 기록 응답에 `kind`가 있어야 한다는 요구는 수용 기준으로 둠
+
+### server (client 1차·pm 답변 확인)
+- client 요청 1~9 원칙적으로 수용. 최종 형태는 dba 초안 확정 뒤 명세에서 정함. 지금 정해 둘 것만 적음
+  - 필드 이름은 기존 `PostSummary`에 맞춤: `isBookmarked`·`isRead`·`likedByMe` (client 제안의 `liked`·`bookmarked` 대신). 커뮤니티 카드는 `PostSummary` 확장으로 두고 `kind`를 모든 카드에 추가 (북마크·읽은 기록 분기용)
+  - `excerpt`는 쓰기 시점에 server가 마크다운을 걷어내 저장한 값 (`posts.summary` 재사용 예정)
+  - 429는 기존 댓글 제한과 같은 형태로 `code`(`POST_RATE_LIMITED` 등 사유별)·`retryAfterSec` 본문 + `Retry-After` 헤더, 여기에 `availableAt` 추가. `write-status`와 같은 계산 함수를 씀
+  - 좋아요·댓글·답글은 기존 `/posts/{id}/like`·`/posts/{id}/comments` 그대로. 숨김·삭제 글 반응 409는 그 경로에 추가
+  - server는 렌더하지 않고 원문 보존 + 길이·형식 검사만 함 (pm 정리 수용). 저장 전 원문을 바꾸지 않음 (미리보기와 결과 일치)
+- pm 답변 수용 (삭제·숨김 글 모든 목록 제외). server 사전 의견의 pm 확인 1(받은 좋아요 한도 초과)·3(탈퇴 회원 글)은 답 대기
+- dba 초안 대기
