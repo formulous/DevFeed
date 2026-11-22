@@ -1,8 +1,9 @@
--- lock order for every reaction write: users row (comment create only) -> posts row FOR UPDATE -> parent comment -> comment
+-- lock order for every reaction write: users row FOR UPDATE -> posts row FOR UPDATE -> parent comment -> comment (029: likes lock users first too)
 -- (post_likes FK check takes a shared lock on posts; locking posts first avoids deadlock on concurrent likes)
 
 -- F-080 like on (PUT), one transaction: counter only when a row was inserted
 START TRANSACTION;
+SELECT id FROM users WHERE id = @uid FOR UPDATE;
 SELECT id FROM posts WHERE id = @pid FOR UPDATE;
 INSERT IGNORE INTO post_likes (user_id, post_id) VALUES (@uid, @pid);
 SET @n = ROW_COUNT();
@@ -11,6 +12,7 @@ COMMIT;
 
 -- F-080 like off (DELETE)
 START TRANSACTION;
+SELECT id FROM users WHERE id = @uid FOR UPDATE;
 SELECT id FROM posts WHERE id = @pid FOR UPDATE;
 DELETE FROM post_likes WHERE user_id = @uid AND post_id = @pid;
 SET @n = ROW_COUNT();

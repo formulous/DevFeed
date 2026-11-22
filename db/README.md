@@ -7,9 +7,9 @@
 db/
 ├── conf/devfeed.cnf     # MariaDB 서버 설정 (FULLTEXT 토큰 2자, stopword 끔, UTC)
 ├── perf/                # 성능 측정용 대량 시드 생성기, 측정 스크립트
-├── queries/            # feed.sql(007·021 분야·보안 뉴스·kind 정합성 검사), reactions.sql(026 좋아요·댓글·탈퇴·정합성 검사), passkeys.sql(027 패스키·챌린지), personal.sql·withdrawal-check.sql(012), recommendation.sql(013) 기준 쿼리
+├── queries/            # feed.sql(007·021 분야·보안 뉴스·kind 정합성 검사), reactions.sql(026 좋아요·댓글·탈퇴·정합성 검사), passkeys.sql(027 패스키·챌린지), score.sql(029 점수 적립·회수·백필·정합성 검사), personal.sql·withdrawal-check.sql(012), recommendation.sql(013) 기준 쿼리
 ├── ops/                 # launchd 일일 백업 템플릿·설치 스크립트
-├── migrations/          # 0001~0013, -- migrate:up / -- migrate:down
+├── migrations/          # 0001~0014, -- migrate:up / -- migrate:down
 ├── scripts/migrate.sh   # 컨테이너에 마이그레이션 적용
 ├── scripts/seed.sh      # seeds/*.sql 순서대로 적용 (재실행 안전)
 ├── scripts/perf-seed.sh # 측정 DB(devfeed_perf)에 글 10만·회원 1만 생성
@@ -74,6 +74,7 @@ MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_search.py # 검색 쿼리 p5
 MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_recommendation.py # 추천 선호도·후보 쿼리 p50/p95
 MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_field.py  # 분야·기업/개인·보안 뉴스 쿼리 p50/p95 (021)
 MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_reactions.py # 좋아요·댓글 쿼리 p50/p95 (026)
+MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_score.py # 프로필·등급·하루 한도 쿼리 p50/p95 (029)
 ```
 - DB `devfeed_perf`는 미리 생성 (`utf8mb4_unicode_ci`). 개발 DB `devfeed`와 분리해 합성 글이 섞이지 않게 함
 - 글 10만, post_tags 약 20만, 회원 1만, 북마크 약 50만, 읽은 기록 약 190만. 디스크 약 800MB
@@ -117,3 +118,9 @@ MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_reactions.py # 좋아요·�
 - 챌린지: 첫 소비 1, 재사용 0, 만료 0. REGISTER인데 회원 없음 CHECK 거부
 - 패스키: credential 중복 1062, 이름 공백 CHECK·41자 1406, credential 8바이트 CHECK 거부. 서명 횟수 역행 영향 0·증가 1. credential 조회 `const`
 - `devfeed` 적용 (2026-11-22, 사용자 승인): 회원 3·리프레시 토큰 71·글 2,610·댓글 1·좋아요 2 전후 동일, 새 테이블 2개 생성, 서버 health·피드 200, 잘못된 로그인 401(기존 동작)
+
+## 검증 기록 (2026-11-22, `0014`, 029)
+- `devfeed_test`·`devfeed_perf` up → down → up 통과
+- 시나리오 (롤백): 읽기 31회+중복 1회 → 30점·30행 / 좋아요 2번 +2, 취소 −2 / 댓글 11개 50점, 삭제 −5·중복 삭제 0·복구 +5, 0점 댓글 회수 0, 회수 후 12번째 0점
+- 백필 255만 행 22초, 정합성 6항목 0
+- `devfeed` 적용은 사용자 확인 대기

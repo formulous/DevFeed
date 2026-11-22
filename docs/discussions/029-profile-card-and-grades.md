@@ -135,3 +135,27 @@
 - API: `GET /me/profile` 형태·댓글 `author.grade` 승인. 활동 직후 반영은 client가 `GET /me/profile` 재조회 방식으로 (응답 형태 변경 없음)
 - 등급 표는 client 상수·server 상수 모두 spec 값과 단위 테스트로 고정
 - 다음: dba 스키마(백필·정합성 검사 포함) → server 명세
+
+### dba (1차) — 스키마 `0014`·규칙 SQL·백필·측정 (pm 결정 기준)
+- `db/migrations/0014_create_score_events.sql`, 쿼리 `db/queries/score.sql`
+  | 대상 | 내용 |
+  |---|---|
+  | `users` | `score INT UNSIGNED NOT NULL DEFAULT 0` (`INSTANT`) |
+  | `score_events` | PK `(user_id, kind, ref_id)`, `kind` READ·LIKE·COMMENT·ARCHIVE, `points INT UNSIGNED`, `created_at`, `revoked_at`(COMMENT만 CHECK), 인덱스 `(user_id, kind, created_at)`, FK CASCADE |
+- server 1차와 다른 점
+  - UNIQUE 대신 **PK로 씀** (별도 id 없음). 행당 크기가 줄고 회원 범위 조회가 클러스터드 순서라 빠름
+  - `ARCHIVE` 값 추가 (아래 보관 제안용. 채택 안 되면 쓰지 않음)
+  - 읽기 초과분 행 없음 (pm 결정). 댓글 11번째부터는 0점 행 남김 (회수 판단·한도 계산 일관)
+- 잠금 순서 갱신: `reactions.sql` 좋아요 켜기·끄기 첫 단계에 회원 행 `FOR UPDATE` 추가 (회원 → 글 → 부모 댓글 → 댓글 → 원장)
+- 점수 증감은 **원장 쓰기의 영향 행 수로만** 판단 바람. `SELECT points INTO @p`는 행이 없으면 변수가 이전 값으로 남음 (시험 중 확인)
+- 백필: server가 원장 쓰기를 시작한 **직후** dba가 1회 실행 (`INSERT IGNORE`라 겹쳐도 안전). 성능 DB 255만 행 22초 → 운영 규모는 즉시
+- 정합성 검사 6항목 (`score.sql` 끝): `users.score` = 미회수 합, 원장 없는 좋아요·좋아요 없는 원장, 댓글 상태와 회수 일치, 지워진 댓글 미회수, 원장 없는 댓글 → e2e·운영 점검에 사용
+- 탈퇴: 원장 FK CASCADE, `withdrawal-check.sql`에 `score_events` 추가 (12개 테이블)
+- 검증
+  - `devfeed_test`·`devfeed_perf` up → down → up 통과
+  - 시나리오 (롤백): 읽기 31회 + 같은 글 재읽기 → 30점·30행 / 좋아요 2번 +2, 취소 −2 / 댓글 11개 50점, 삭제 −5, 같은 삭제 반복 0, 숨김 해제 +5, 0점 댓글 회수 0, 회수 후 새 댓글도 0점(한도가 회수 행을 셈)
+  - 측정 (DB p95): 프로필(점수 + 수치 4개, 읽기 400·좋아요 50 회원) 0.05ms, 댓글 페이지 + 작성자 점수 0.03ms, 하루 한도 합계 0.00ms
+- **pm 결정 요청 — 원장 용량**: 행당 약 145B. 성능 DB 규모(회원 1만·읽기 190만)에서 255만 행·354MB로 버퍼 풀 128MB보다 큼 (운영은 지금 회원 3명이라 무시할 수준)
+  - 제안: READ 행은 읽은 기록과 같이 **1년 지나면 회원당 `ARCHIVE` 1행으로 접음** (점수 그대로). 대가: 1년 넘은 글을 다시 읽으면 +1 다시 받을 수 있음 (하루 30점 한도 안)
+  - 대안: 접지 않고 영구 보관 (규모 커지면 버퍼 풀 증설 검토)
+- 운영 `devfeed` `0014` 적용은 사용자 확인 후 (nullable 아님이지만 기본값 0 컬럼 1개·새 테이블 1개라 현재 서버 영향 없음)

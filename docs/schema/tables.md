@@ -1,7 +1,7 @@
 # 테이블 명세
 
 - 작성: dba
-- 상태: v1.3 (M9, 2026-11-22). 마이그레이션 0001~0013 기준. `devfeed`·`devfeed_perf`·`devfeed_test` 적용 완료. `devfeed`·`devfeed_perf`·`devfeed_test` 적용 완료
+- 상태: v1.4 (M10, 2026-11-22). 마이그레이션 0001~0014 기준. `0014`는 `devfeed_perf`·`devfeed_test` 적용, `devfeed`는 사용자 확인 후. `devfeed`·`devfeed_perf`·`devfeed_test` 적용 완료
 - 공통: InnoDB, utf8mb4_unicode_ci, 시간은 `DATETIME(3)` UTC, PK `BIGINT UNSIGNED AUTO_INCREMENT` (D-01)
 - 결정 번호(D-xx)는 `decisions.md` 참고
 
@@ -175,6 +175,7 @@
 | password_hash | VARCHAR(255) | NOT NULL | argon2/bcrypt 문자열 |
 | nickname | VARCHAR(30) | NOT NULL | 중복 허용 (기획 요구 없음) |
 | webauthn_handle | BINARY(32) | NULL, UK | `0013`. WebAuthn user handle. 첫 패스키 등록 옵션 발급 때 랜덤 32바이트로 채움, 바뀌지 않음 (D-23) |
+| score | INT UNSIGNED | NOT NULL, 기본 0 | `0014`. 활동 점수 캐시 = `score_events` 미회수 `points` 합. 원장 변경과 같은 트랜잭션에서 증감. 등급은 server 상수로 계산 (D-24) |
 | role | ENUM('USER','ADMIN') | NOT NULL, 기본 USER | 관리자 API 권한 분리 |
 | failed_login_count | TINYINT UNSIGNED | NOT NULL, 기본 0 | 5회 → `locked_until = now + 10분` |
 | locked_until | DATETIME(3) | NULL | |
@@ -215,6 +216,20 @@
 - PK: 1회 소비 `DELETE ... WHERE challenge_hash = ? AND purpose = ? AND expires_at > now` 영향 행 1일 때만 통과
 - `idx_webauthn_challenges_expires`: 발급 때 만료 행 100개씩 정리
 - `idx_webauthn_challenges_user`: FK
+
+## score_events — `0014`
+| 컬럼 | 타입 | 제약 | 설명·이유 |
+|---|---|---|---|
+| user_id | BIGINT UNSIGNED | PK, FK → users CASCADE | 탈퇴 시 원장 삭제 |
+| kind | ENUM('READ','LIKE','COMMENT','ARCHIVE') | PK | `ARCHIVE`는 오래된 READ 접기(보관 제안, D-24) |
+| ref_id | BIGINT UNSIGNED | PK | READ·LIKE = post_id, COMMENT = comment_id, ARCHIVE = 0 |
+| points | INT UNSIGNED | NOT NULL | 실제 적립 점수. 하루 한도 넘은 댓글은 0 |
+| created_at | DATETIME(3) | NOT NULL | 하루 한도 계산 기준 (KST 자정 범위를 UTC로 변환해 비교) |
+| revoked_at | DATETIME(3) | NULL, CHECK COMMENT만 | 댓글 삭제·숨김 회수. 숨김 해제 시 NULL |
+
+인덱스
+- PK `(user_id, kind, ref_id)`: 같은 글 재읽기·중복 좋아요 차단(`INSERT IGNORE` 영향 행), 회수 대상 조회. 별도 id 없음 (행 크기 절약)
+- `idx_score_events_user_kind_created (user_id, kind, created_at)`: 하루 한도(읽기 30·댓글 10) 계산
 
 ## refresh_tokens — `0004`
 | 컬럼 | 타입 | 제약 | 설명·이유 |
