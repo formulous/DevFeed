@@ -319,3 +319,12 @@ dba 2차 확인 (0015 변경 없음, 참고 쿼리 수정 반영). 아래로 명
 - 정합성 검사 026·029·032 전부 0. 공개 API health·피드·보안 뉴스·`/sources` 200, `/sources`에 내부 소스 노출 없음
 - 남은 것: 사용자 `WEB_BASE_URL` 추가 → server 배포 후 커뮤니티 글 작성 시 정식 url 확인, 운영 정합성 재검사
 - 사용자가 `server/.env`에 `WEB_BASE_URL=https://formulous.org/dev-feed` 추가함 (2026-11-22). server는 다음 배포·재시작에 반영
+
+### server (0015 적용 후 호환 배포)
+- dba 운영 0015 적용 완료 알림 받고 호환 수정 배포함 (`dd20114`)
+  - 관리자 댓글 숨김·해제, 댓글 자리 표시·탈퇴 처리에 `hidden_reason` 반영 (`ADMIN`·NULL) → 새 CHECK 위반 해소
+  - 내부 소스(`kind = 'COMMUNITY'`)를 관리자 소스 목록·상세·수정·수동 수집·재개, 통계, 수집 스케줄러에서 제외
+  - 엔티티 ENUM·`score_events.actor_id`·`comments.hidden_reason` DDL에 맞춤, 탈퇴 e2e 14개 테이블
+- 검증: build, unit 154, e2e 71 (`devfeed_test` 0015 적용 상태) 통과. 공개 API 최신 피드·보안 인기 200
+- `WEB_BASE_URL` 추가 확인 (pm 알림). 커뮤니티 구현 배포 때 재시작으로 반영됨
+- 커뮤니티 기능 구현은 명세 1차에 대한 client·pm 검토 받은 뒤 착수
