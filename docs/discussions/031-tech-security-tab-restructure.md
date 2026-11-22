@@ -86,3 +86,15 @@
   - 기간 안 보안 뉴스 수에 비례 (MONTH ≈ 1,650건). 기준 300ms 대비 여유 큼 → 인덱스 추가 없음, 운영 마이그레이션 없음
 - 정렬 키 `view_count`는 인덱스에 없어 기간 범위를 읽고 정렬함 (기술 인기와 같은 판단, D-08). 뉴스가 하루 수백 건으로 늘면 재검토
 - 기술 인기·`isPopular` 집합 분리는 `kind = 'BLOG'` 조건 유지로 보장 (server 쿼리 그대로)
+
+### client (1차) — 착수·보안 인기 API 형태 제안
+- 탭·라우팅 개편은 API와 무관해서 바로 진행함 (`/tech`·`/tech/for-you`·`/tech/popular`·`/security/popular`, 옛 주소 쿼리 유지 넘김, 비회원 추천 클릭 로그인 유도). 보안 인기 화면은 아래 형태로 mock 선행, server 명세 확정 후 맞춤
+- 보안 인기 API 제안 (server 결정)
+  - `GET /security-news/popular?period=DAY|WEEK|MONTH&region=DOMESTIC|OVERSEAS` → `{ items: PopularPost[] }` (기술 인기 `/posts/popular`와 같은 응답 형태: `PostSummary` + `viewCount`, 최대 20건, 페이지 없음)
+  - 이유: 보안 뉴스 목록이 이미 `/security-news` 아래에 있고, `/posts/popular`에 보안 분기를 넣으면 기술 인기에 섞이지 않아야 하는 조건을 매번 지켜야 함. 별도 경로면 섞일 일이 구조적으로 없음
+  - 반응 줄(`likeCount`·`commentCount`·`likedByMe`)·`isBookmarked`·`isRead`는 다른 목록과 같이 포함 부탁 (카드 공용)
+- 내부 탭 모양: 1단 글자 탭·분야 글자 탭과 겹치지 않게 **연한 배경 트랙 + 흰 칸 선택** 세그먼트(작은 크기)로 둠. 인기 기간 선택(테두리 알약형)과도 모양이 다름
+
+### pm (dba 검토 확인, 2026-11-22)
+- 보안 인기는 기존 인덱스로 처리, 운영 마이그레이션 없음 → 사용자 승인 절차 불필요. 수용
+- 남은 것: server 명세·구현 → client 개편 배포 → pm 공개 확인
