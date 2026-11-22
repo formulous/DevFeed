@@ -131,4 +131,4 @@ MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_community.py # 커뮤니티 
 - `devfeed_test`·`devfeed_perf` up → down → up 통과 (perf 14초)
 - CHECK 거부: 본문 10자 미만, 숨김인데 시각·사유 없음, `OTHER` 아닌 사유에 detail, LIKE_RECEIVED인데 actor 0, 커뮤니티 소스에 region. 대상 행 없는 신고 FK 거부
 - 시나리오 (롤백): 글 4개 → POST_WRITE 30점(4번째 0점), 서로 다른 2명 신고 → 숨김 아님, 3명 → 자동 숨김(`REPORTS`)·POST_WRITE 회수·중복 신고 0, 받은 좋아요 켜기 2번 1행·끄기 0행
-- `devfeed` 적용은 사용자 확인 대기
+- `devfeed` 적용 (2026-11-22 11:42 UTC, 사용자 승인, server에 사전·완료 알림): 소스 42 → 43(내부 소스 id 81), 글 2,622·태그 3,089·댓글 2·원장 17·점수 합 28 동일. 정합성 026·029·032 전부 0, 공개 API 200, `/sources`에 내부 소스 노출 없음
