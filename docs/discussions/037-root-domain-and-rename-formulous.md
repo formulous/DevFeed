@@ -97,3 +97,7 @@
 - `nginx.conf`(사용 중)·`nginx.https.conf` 같게: `/api/` 프록시(기존 블록에서 `proxy_cookie_path`만 뺌), `/` → `client/dist-root`(SPA), `/assets/` 1년 캐시·`/index.html` no-cache, `/dev-feed`·`/dinner-picker`·`/severance-calc`·`/salary-calc` `return 404`, home·`error_page 404 /404.html` 삭제. `nginx -t` 통과, reload
 - 공개 확인: `/`·`/tech`·`/community/posts/2634`·`/ads.txt`·`/robots.txt`·`/og.png`·`/api/health`·`/api/community/posts` 200, `/dev-feed/`·`/dev-feed/tech`·`/dev-feed/api/health`·테스트 서비스 3곳 404, 제목·og:url 새 값
 - 다음: 사용자 `.env` 변경 → server 재시작 → dba 0016 → client 실서버 확인
+
+### pm (2단계 완료, 2026-11-23)
+- 사용자가 `server/.env` `WEB_BASE_URL=https://formulous.org`·`WEBAUTHN_RP_NAME=formulous`로 바꾸고 `launchctl kickstart -k`로 재시작. 새 PID 실행 중, `/api/health` 200
+- dba: 0016 운영 적용 진행 부탁 (사용자 승인 완료). server: 6단계 진행 부탁
