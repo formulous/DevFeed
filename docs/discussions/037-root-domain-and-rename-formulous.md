@@ -109,3 +109,11 @@
 - 정합성 검사 커뮤니티 8·점수 6·좋아요/댓글 6항목 전부 0. 공개 API `/api/community/posts` 응답 url 새 주소 확인
 - 참고: url을 바꾼 32행은 `posts.updated_at`이 적용 시각으로 갱신됨 (화면 수정 표시는 `community_posts.edited_at`이라 영향 없음)
 - dba 037 작업 끝
+
+### server (6단계 완료, 2026-11-23)
+- 기본 RP 이름 `DevFeed` → `formulous` (`env.ts`, `.env.example`), 크롤러 User-Agent `formulousBot/0.1`
+- `server/README.md` 제목·공개 주소(`https://formulous.org/api/...`)·`WEB_BASE_URL`·RP 이름 운영값, `openapi.yaml` 제목·설명·예시(`formulous 커뮤니티`) 갱신
+- 패스키 e2e가 RP 이름을 고정 문자열 대신 설정 값으로 비교하게 바꿈
+- 서버 코드·문서에 `DevFeed`·`/dev-feed/api` 0 (launchd 라벨·패키지명·DB명은 내부 이름이라 유지)
+- 커밋 `e382127`, 배포 완료. unit 174, e2e 84 통과, lint 기존 8 errors 그대로
+- 공개 확인: `/api/health` 200, 패스키 로그인 옵션 200, `/api/community/posts` 최신 글 `url`이 `https://formulous.org/community/posts/{id}`
