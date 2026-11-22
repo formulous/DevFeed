@@ -144,3 +144,43 @@
 #### pm 확인 요청
 - 삭제된 글(댓글 있음)은 목록에 남기는지, 상세 주소로만 접근 가능한지. client 제안: **목록에서는 빼고 상세에서만 "삭제된 글이에요"**
 - 숨김 글은 작성자 본인의 목록에도 안 보이는 것으로 이해함. 맞는지
+
+### server (사전 의견) — dba 초안 전에 조회·쓰기 패턴 공유
+dba 초안 작성에 참고. 최종 검토는 초안이 나온 뒤에 함
+
+#### 저장 구조
+- server 선호: `posts`에 `kind = 'COMMUNITY'` 행 + 1:1 확장 테이블 (예: `community_posts(post_id PK/FK, user_id, category, body, status, accepted_comment_id, edited_at, hidden_*)`)
+  - 이유: `post_likes`·`comments`·`bookmarks`·`read_histories`·`score_events(READ/LIKE)`·`post_tags`·카드 조회(`PostCardsService`)·조회수 기록이 모두 `posts.id` 기준이라 그대로 재사용됨. 별도 테이블이면 이 6~7곳이 두 갈래가 됨
+  - 걸리는 점: `posts.source_id`·`url`·`url_hash`(UK)·`source_type`이 NOT NULL. 커뮤니티 행은 NULL 허용이 필요하고, 그 경우 UK·FK·CHECK를 dba가 정리 부탁
+  - 목록 본문 앞 2줄은 `posts.summary`(300자)에 server가 쓰기 시점에 마크다운을 걷어낸 텍스트로 저장 → 목록이 20KB 본문을 읽지 않게 함
+  - 본문 20,000자 utf8mb4는 최대 80KB라 `TEXT`(64KB) 초과 → `MEDIUMTEXT` 필요
+- 기존 목록 분리: 블로그 목록·인기·추천은 `kind = 'BLOG'`, 보안 뉴스는 `kind = 'SECURITY_NEWS'`로 이미 명시해서 거름. 검색은 `post_search`(수집 시 채움)라 커뮤니티 글이 들어가지 않음. 구현 때 `FROM posts` 쿼리 13개 파일을 다시 확인함
+  - `post_tags.kind` ENUM에도 `COMMUNITY` 추가 필요 (태그 필터·태그별 글 수에서 섞이지 않게)
+
+#### 조회 패턴 (인덱스 검토 요청)
+| 용도 | 조건·정렬 | 비고 |
+|---|---|---|
+| 최신 목록 | 보이는 글, `category` 선택, `(published_at, id)` 커서 | 말머리 필터 커서용 인덱스 필요 (`posts`에 비정규화하거나 확장 테이블에 `(category, status, published_at, id)` 등) |
+| 인기 | 기간 안 보이는 글, `like×2 + comment + view×0.1` 상위 20 | 기술 인기처럼 기간 범위 스캔 후 정렬, 10분 캐시. 커뮤니티 규모면 충분할 것으로 봄 |
+| 작성 제한 | 회원의 KST 오늘 글 수, 마지막 작성 시각 | `(user_id, created_at)` 인덱스. 회원 행 `FOR UPDATE` 후 계산(댓글 속도 제한과 같은 방식) |
+| 프로필 "글" 수 | 회원의 보이는 글 수 | 위 인덱스로 `COUNT` |
+| 신고 대기 목록 | 대상별 신고 수·사유별 수, 대기 상태만 | 아래 |
+
+#### 신고
+- 제안: 신고 행 테이블 + 대상 요약 테이블 2개
+  - `reports(target_type POST|COMMENT, target_id, reporter_id, reason, detail, created_at)` UK `(target_type, target_id, reporter_id)` → 1인 1회를 `INSERT IGNORE` 영향 행으로 판단
+  - `report_targets(target_type, target_id, report_count, state PENDING|HIDDEN|CLEARED, ...)` → 관리자 목록 커서·"문제없음 후 자동 숨김 제외" 상태·신고 동시성 잠금 지점. 3번째 신고는 이 행 `FOR UPDATE` 후 `report_count`로 판단
+- 자동 숨김: 댓글 `hidden_by`가 지금은 관리자 ID라 자동 숨김을 구분할 값 필요 (`hidden_by NULL` + 사유 컬럼 등)
+
+#### 채택
+- `accepted_comment_id`를 글 쪽에 두고 FK → comments `SET NULL` 정도 예상. 채택 댓글 삭제 거부·숨김 시 해제는 server가 글 행 잠금 아래에서 처리
+
+#### 점수 원장 (dba 결정 필요)
+- `POST_WRITE`: `ref_id = post_id`, 회수 있음 → `revoked_at` CHECK(지금 COMMENT만)에 포함 필요
+- `LIKE_RECEIVED`: PK `(user_id=작성자, kind, ref_id)`인데 한 글에 좋아요가 여러 명이라 `ref_id = post_id`로는 중복됨. 좋아요 1건을 가리킬 값이 필요 (예: `post_likes`에 대리 키 추가 후 그 id, 또는 원장 키 확장). dba 판단 부탁
+- 잠금 순서: 커뮤니티 글 좋아요는 누른 회원 + 작성자 회원 2행을 잠가야 함. 서로의 글을 동시에 좋아요하면 교차 잠금이 생기므로 **회원 행은 id 오름차순**으로 잠그고 그 뒤 글 → 댓글 → 원장 (026·029 순서에 포함)
+
+#### pm 확인 요청 (3건)
+1. 하루 50점 넘은 받은 좋아요: 읽기처럼 행을 남기지 않음(취소·재좋아요 시 다시 계산) vs 댓글처럼 0점 행 남김. server 제안은 **행 남기지 않음** (취소 시 회수 대상만 명확)
+2. 답글 달린 글을 삭제해 "삭제된 글이에요"로 남은 글이 목록·인기에 계속 나오는지. server 제안은 **목록·인기에서 제외, 상세 주소로만 접근**
+3. 탈퇴 회원의 커뮤니티 글: 지금 댓글처럼 남기고 작성자 "탈퇴한 회원" 표시 vs 삭제. 탈퇴 처리 순서(`withdrawal-check`)에 영향이 있어 스키마 전에 정해 주면 좋음
