@@ -98,3 +98,18 @@
   - 결과 없음: "<범위>에서 찾지 못했어요" + 다른 두 범위 검색 링크
 - 검증: 테스트 220건(038 6건 신규)·빌드 통과, 로컬 mock 1440 라이트·360 다크·결과 없음 화면 넘침 0
 - 배포 보류: 지금 운영 서버는 `scope`를 모르므로 server 배포 후 `build:web` 배포·실서버 대조함. 명세가 위 형태와 다르면 알려 주면 맞춤
+
+### dba (1차) — 색인 설계 `0017` (pm 결정·server 희망 반영)
+- **범위별 별도 색인 테이블 2개**: `security_news_search`, `community_search` (구조는 `post_search`와 같음: `title_tokens`·`body_tokens` TEXT, FULLTEXT 제목·전체 2개). `post_search`는 블로그 전용 그대로 → 기술 검색 쿼리·성능 변화 없음
+  - 종류 컬럼 1개 테이블 대신 2개로 나눈 이유: 범위마다 크기·증가 속도가 달라 FULLTEXT 일치 집합을 섞지 않음, 자유 게시판은 FK를 `community_posts`에 걸어 다른 종류가 들어갈 수 없게 함
+- 자유 게시판: 숨김은 행 유지 + `JOIN community_posts cp ... AND cp.status = 'VISIBLE'` (pm 결정). **단 삭제(`DELETED`)·탈퇴는 색인 행 삭제 필요** — 본문 토큰도 작성 내용이라 탈퇴 후 남기면 안 됨 (soft delete UPDATE와 같은 트랜잭션에서 `DELETE FROM community_search WHERE post_id = ?`). `community.sql` 삭제 절차에 반영, 정합성 검사 `deleted_post_still_indexed` 추가
+- 보안 뉴스: 지역 필터는 `posts FORCE INDEX (idx_posts_search_filter)` 조인으로 `source_id IN (...)` (기술 검색과 같은 방식). 정합성 검사 `news_index_wrong_kind` 추가
+- 본문 색인 길이: 마크다운 제거 앞 **2,000자** + 태그 이름·동의어 (결정대로)
+- 측정 (`devfeed_perf`, DB 시간, 검색어 6개 중 최악, `db/perf/measure_scoped_search.py`)
+  | 범위 | 규모 | 관련도 | + 필터 | 최신순 | 건수(상한) |
+  |---|---|---|---|---|---|
+  | 보안 뉴스 | 4만 건 | 8.0ms | 9.4ms | 8.6ms | 2.7ms |
+  | 자유 게시판 | 2천 건 | 2.6ms | 2.6ms | 2.5ms | 1.8ms |
+  | 기술 (기존, 재측정) | 10만 건 | "코드" 28ms | | 28ms | |
+- **한계점 (pm 참고)**: 자유 게시판 2만 건·2,000자 가정에서는 색인이 121MB로 버퍼 풀(128MB)을 넘어 흔한 검색어("코드") 관련도가 0.8~0.9초. 행당 약 7KB라 **약 8천 글(색인 60MB)에서 재검토** — 본문 색인 1,000자로 축소하거나 버퍼 풀 증설. 지금 운영 32건이라 당분간 문제 없음
+- 운영 적용: `0017`은 빈 테이블 2개 생성뿐이라 현재 서버 영향 없음 → 사용자 승인 후 적용. 그 뒤 server 백필(보안 뉴스·기존 자유 게시판 글) 실행, dba가 정합성 재검사

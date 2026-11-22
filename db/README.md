@@ -9,7 +9,7 @@ db/
 ├── perf/                # 성능 측정용 대량 시드 생성기, 측정 스크립트
 ├── queries/            # feed.sql(007·021 분야·보안 뉴스·kind 정합성 검사), reactions.sql(026 좋아요·댓글·탈퇴·정합성 검사), passkeys.sql(027 패스키·챌린지), score.sql(029 점수 적립·회수·백필·정합성 검사), community.sql(032 커뮤니티 글·신고·채택·점수·정합성 검사), personal.sql·withdrawal-check.sql(012), recommendation.sql(013) 기준 쿼리
 ├── ops/                 # launchd 일일 백업 템플릿·설치 스크립트
-├── migrations/          # 0001~0016, -- migrate:up / -- migrate:down
+├── migrations/          # 0001~0017, -- migrate:up / -- migrate:down
 ├── scripts/migrate.sh   # 컨테이너에 마이그레이션 적용
 ├── scripts/seed.sh      # seeds/*.sql 순서대로 적용 (재실행 안전)
 ├── scripts/perf-seed.sh # 측정 DB(devfeed_perf)에 글 10만·회원 1만 생성
@@ -76,6 +76,8 @@ MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_field.py  # 분야·기업/�
 MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_reactions.py # 좋아요·댓글 쿼리 p50/p95 (026)
 MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_score.py # 프로필·등급·하루 한도 쿼리 p50/p95 (029)
 MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_community.py # 커뮤니티 목록·인기·작성 제한 쿼리 p50/p95 (032)
+MYSQL_PWD=<비밀번호> python3 -I db/perf/scoped_search.py        # 보안 뉴스·커뮤니티 합성 색인 적재 (038, 0017 후)
+MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_scoped_search.py # 범위별 검색 p50/최악 (038)
 ```
 - DB `devfeed_perf`는 미리 생성 (`utf8mb4_unicode_ci`). 개발 DB `devfeed`와 분리해 합성 글이 섞이지 않게 함
 - 글 10만, post_tags 약 20만, 회원 1만, 북마크 약 50만, 읽은 기록 약 190만. 디스크 약 800MB
@@ -137,3 +139,9 @@ MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_community.py # 커뮤니티 
 - `devfeed_test`·`devfeed_perf` up → down → up 통과 (임시 커뮤니티 글 1건으로 url 변환·역변환 확인, 다른 형태 url은 불변)
 - 운영 사전 조회: 커뮤니티 글 32건 모두 옛 형태, 다른 종류 글의 `/dev-feed` url 0, 내부 소스 id 81
 - `devfeed` 적용 (2026-11-23, 사용자 승인, server 재시작 후): 커뮤니티 글 32건 옛 형태 → 새 형태 32, 다른 형태 0, `/dev-feed` url 전체 0, 내부 소스 이름·주소 변경. 정합성 0, 공개 API url 새 주소
+
+## 검증 기록 (2026-11-23, `0017`, 038)
+- `devfeed_test`·`devfeed_perf` up → down → up 통과
+- 합성 색인: 보안 뉴스 4만, 자유 게시판 2만(한계 시험) → 2천으로 줄여 재측정. 결과는 decisions D-27
+- 기술 검색(`post_search`) 재측정 "코드" 관련도 p95 28ms, 변화 없음
+- `devfeed` 적용은 사용자 확인 대기

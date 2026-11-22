@@ -1,9 +1,9 @@
 # ERD — 데브피드
 
 - 작성: dba
-- 상태: v1.5 (M12, 2026-11-22). 마이그레이션 0001~0015 기준
+- 상태: v1.6 (M13, 2026-11-23). 마이그레이션 0001~0017 기준
 - DB: `devfeed` (MariaDB 12.1, InnoDB, utf8mb4_unicode_ci)
-- DDL: `db/migrations/0001~0015`, 컬럼 상세: `tables.md`, 결정 근거: `decisions.md`
+- DDL: `db/migrations/0001~0017`, 컬럼 상세: `tables.md`, 결정 근거: `decisions.md`
 
 ```mermaid
 erDiagram
@@ -27,6 +27,8 @@ erDiagram
     users ||--o{ user_passkeys : has
     users ||--o{ score_events : earns
     posts ||--o| community_posts : "kind=COMMUNITY 확장"
+    posts ||--o| security_news_search : "보안 뉴스 색인"
+    community_posts ||--o| community_search : "자유 게시판 색인"
     users |o--o{ community_posts : writes
     community_posts |o--o| comments : accepted
     report_targets ||--o{ reports : has
@@ -223,6 +225,7 @@ erDiagram
 | 회원 | `score_events` | 활동 점수 원장 (`users.score` 캐시) | F-082, F-083, F-093 |
 | 커뮤니티 | `community_posts` | 사용자 글 본문·말머리·상태·채택 (`posts` 1:1 확장) | F-090, F-091 |
 | 커뮤니티 | `report_targets`, `reports` | 신고 대상 요약·신고 1건 | F-092 |
+| 검색 | `security_news_search`, `community_search` | 보안 뉴스·자유 게시판 bigram 색인 (블로그는 `post_search`) | F-024 |
 | 회원 | `user_passkeys`, `webauthn_challenges` | 패스키 공개키·서명 횟수, 1회용 챌린지(5분) | F-034 |
 | 개인화 | `user_interest_tags` | 관심 태그 | F-031, F-042 |
 | 개인화 | `bookmarks`, `read_histories` | 북마크, 읽은 기록(1년) | F-040, F-041, F-042 |

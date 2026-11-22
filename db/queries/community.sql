@@ -56,6 +56,7 @@ DELETE FROM report_targets WHERE target_type = 'COMMENT' AND target_id = @cid;
 UPDATE community_posts SET status = 'DELETED', body = NULL, user_id = NULL, accepted_comment_id = NULL,
   hidden_at = NULL, hidden_by = NULL, hidden_reason = NULL WHERE post_id = @pid;
 UPDATE posts SET title = '', summary = NULL WHERE id = @pid;
+DELETE FROM community_search WHERE post_id = @pid;
 DELETE FROM post_tags WHERE post_id = @pid;
 UPDATE score_events SET revoked_at = UTC_TIMESTAMP(3) WHERE user_id = @author AND kind = 'POST_WRITE' AND ref_id = @pid AND revoked_at IS NULL;
 
@@ -104,4 +105,18 @@ SELECT
   (SELECT COUNT(*) FROM posts WHERE kind = 'COMMUNITY' AND id IN (SELECT post_id FROM post_search)) AS community_in_search,
   (SELECT COUNT(*) FROM report_targets rt LEFT JOIN comments c ON rt.target_type = 'COMMENT' AND c.id = rt.target_id
     LEFT JOIN community_posts cp ON rt.target_type = 'POST' AND cp.post_id = rt.target_id
-    WHERE c.id IS NULL AND cp.post_id IS NULL) AS orphan_report_target;
+    WHERE c.id IS NULL AND cp.post_id IS NULL) AS orphan_report_target,
+  (SELECT COUNT(*) FROM community_search s JOIN community_posts cp ON cp.post_id = s.post_id WHERE cp.status = 'DELETED') AS deleted_post_still_indexed,
+  (SELECT COUNT(*) FROM security_news_search s JOIN posts p ON p.id = s.post_id WHERE p.kind <> 'SECURITY_NEWS') AS news_index_wrong_kind;
+
+-- F-024 scoped search (038): community, VISIBLE by join; no cache
+SELECT s.post_id, MATCH(s.title_tokens) AGAINST(@bq IN BOOLEAN MODE) * 2 + MATCH(s.title_tokens, s.body_tokens) AGAINST(@bq IN BOOLEAN MODE) AS score
+FROM community_search s JOIN community_posts cp ON cp.post_id = s.post_id AND cp.status = 'VISIBLE'
+WHERE MATCH(s.title_tokens, s.body_tokens) AGAINST(@bq IN BOOLEAN MODE) AND cp.category = 'QUESTION'
+ORDER BY score DESC, s.post_id DESC LIMIT 20;
+
+-- F-024 scoped search (038): security news, region -> source ids via posts covering index
+SELECT s.post_id, MATCH(s.title_tokens) AGAINST(@bq IN BOOLEAN MODE) * 2 + MATCH(s.title_tokens, s.body_tokens) AGAINST(@bq IN BOOLEAN MODE) AS score
+FROM security_news_search s JOIN posts p FORCE INDEX (idx_posts_search_filter) ON p.id = s.post_id
+WHERE MATCH(s.title_tokens, s.body_tokens) AGAINST(@bq IN BOOLEAN MODE) AND p.source_id IN (75, 76, 77)
+ORDER BY score DESC, s.post_id DESC LIMIT 20;

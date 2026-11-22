@@ -1,7 +1,7 @@
 # 테이블 명세
 
 - 작성: dba
-- 상태: v1.5 (M12, 2026-11-22). 마이그레이션 0001~0015 기준. `devfeed`·`devfeed_perf`·`devfeed_test` 적용 완료
+- 상태: v1.6 (M13, 2026-11-23). 마이그레이션 0001~0017 기준. `0017`은 `devfeed_perf`·`devfeed_test` 적용, `devfeed`는 사용자 확인 후
 - 공통: InnoDB, utf8mb4_unicode_ci, 시간은 `DATETIME(3)` UTC, PK `BIGINT UNSIGNED AUTO_INCREMENT` (D-01)
 - 결정 번호(D-xx)는 `decisions.md` 참고
 
@@ -117,7 +117,7 @@
 - `idx_post_tags_tag_kind_published (tag_id, kind, published_at, post_id)`: `0010`. 태그·분야 필터 커서, 태그별 사용 글 수, 추천 후보 (D-11, D-19). 기존 `idx_post_tags_tag_published` 대체
 
 ## post_search — `0003`
-- 보안 뉴스 글은 행을 만들지 않음 → 검색에서 쿼리 조건 없이 제외 (D-20)
+- 보안 뉴스 글은 행을 만들지 않음 → 검색에서 쿼리 조건 없이 제외 (D-20). 038부터 보안 뉴스·자유 게시판은 별도 색인 `security_news_search`·`community_search` (D-27)
 
 | 컬럼 | 타입 | 제약 | 설명·이유 |
 |---|---|---|---|
@@ -212,6 +212,27 @@
 | created_at | DATETIME(3) | NOT NULL | |
 
 인덱스: `uk_reports_target_reporter (target_type, target_id, reporter_id)` (1인 1회, `INSERT IGNORE` 영향 행), `idx_reports_reporter` (FK)
+
+## security_news_search — `0017` (038)
+| 컬럼 | 타입 | 제약 | 설명·이유 |
+|---|---|---|---|
+| post_id | BIGINT UNSIGNED | PK, FK → posts CASCADE | `kind = 'SECURITY_NEWS'` 글만 (server 보장, 정합성 검사) |
+| title_tokens | TEXT | NOT NULL | 제목 bigram 토큰 (D-03) |
+| body_tokens | TEXT | NOT NULL | 요약(150자)·출처 이름 토큰 |
+| updated_at | DATETIME(3) | NOT NULL | |
+
+인덱스: `ft_security_news_search_title (title_tokens)`, `ft_security_news_search_all (title_tokens, body_tokens)`. 지역 필터는 `posts` 커버링 인덱스(`idx_posts_search_filter`) 조인
+
+## community_search — `0017` (038)
+| 컬럼 | 타입 | 제약 | 설명·이유 |
+|---|---|---|---|
+| post_id | BIGINT UNSIGNED | PK, FK → community_posts CASCADE | 커뮤니티 글만 들어갈 수 있음 (FK가 구조적으로 보장) |
+| title_tokens | TEXT | NOT NULL | 제목 토큰 |
+| body_tokens | TEXT | NOT NULL | 마크다운 제거 본문 앞 2,000자 + 태그 이름·동의어 토큰 |
+| updated_at | DATETIME(3) | NOT NULL | 작성·수정 때 server가 갱신 |
+
+- 숨김은 행을 남기고 검색 때 `community_posts.status = 'VISIBLE'` 조인으로 거름 (해제 시 바로 복구). **삭제(`DELETED`)·탈퇴는 행 삭제** (본문 토큰도 개인 작성 내용이라 남기지 않음)
+- 인덱스: `ft_community_search_title`, `ft_community_search_all`
 
 ## users — `0004`
 | 컬럼 | 타입 | 제약 | 설명·이유 |
