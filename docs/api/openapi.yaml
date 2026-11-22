@@ -955,6 +955,46 @@ paths:
                     type: array
                     items: { $ref: '#/components/schemas/SecurityNewsSource' }
 
+  /security-news/popular:
+    get:
+      tags: [security-news]
+      summary: 보안 뉴스 인기 (F-072, 031). 상위 20건 고정, 최대 10분 지연
+      description: |
+        /posts/popular와 같은 기준. 기간은 요청 시각 기준 롤링 윈도우(DAY=24시간, WEEK=7일, MONTH=30일),
+        그 기간 발행 보안 뉴스 중 viewCount 1 이상, viewCount 내림차순, 같으면 최신 발행순. 최대 20건, 0건이면 items 빈 배열.
+        region이 있으면 그 지역 출처 글 중 상위 20건 (기간 × 지역별 10분 캐시). 출처 선택(sourceIds)은 받지 않음.
+        보안 뉴스만 대상이며 /posts/popular 결과·isPopular 배지 집합과 섞이지 않음.
+        카드는 보안 뉴스 카드 그대로(thumbnailUrl 항상 null, isPopular 항상 false). 토큰이 있으면 isBookmarked·isRead·likedByMe 포함
+      security:
+        - {}
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [DAY, WEEK, MONTH]
+        - name: region
+          in: query
+          description: 없으면 국내·해외 전체
+          schema: { $ref: '#/components/schemas/NewsRegion' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    maxItems: 20
+                    items: { $ref: '#/components/schemas/PopularPost' }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+        '401': { $ref: '#/components/responses/TokenExpired' }
+
   /admin/stats:
     get:
       tags: [admin]
