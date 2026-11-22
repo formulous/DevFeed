@@ -4,13 +4,15 @@ import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { AD_MEDIA, AD_SLOTS, useMediaQuery } from '@/lib/ads';
 import { AppFooter } from './AppFooter';
 import { AppHeader } from './AppHeader';
-import { FieldTabs, heroTitle, isFieldTab, PageHero, SectionTabs, sectionOf } from './FeedTabs';
+import { WriteButton } from '@/features/community/WriteButton';
+import { CategoryTabs, FieldTabs, heroTitle, isCategoryTab, isFieldTab, PageHero, SectionTabs, sectionOf } from './FeedTabs';
 
 export function AppLayout() {
   const { pathname } = useLocation();
   const title = heroTitle(pathname);
   const wide = useMediaQuery(AD_MEDIA);
   const showAds = Boolean(title) && wide;
+  const section = sectionOf(pathname);
   return (
     <div className="flex min-h-[100dvh] flex-col">
       <AppHeader showSearchLink={!title} />
@@ -18,10 +20,14 @@ export function AppLayout() {
       <div className="flex w-full flex-1 justify-center gap-6 min-[1440px]:px-4">
         {showAds && <SideAd slot={AD_SLOTS.left} />}
         <main className="w-full min-w-0 max-w-[1200px] flex-1 px-4 py-6 lg:py-8">
-          {sectionOf(pathname) && (
+          {section && (
             <div className="-mt-2 mb-5 space-y-2.5 lg:-mt-3 lg:mb-6">
-              <SectionTabs />
+              <div className="flex items-center justify-between gap-3">
+                <SectionTabs />
+                {section.key === 'community' && <WriteButton />}
+              </div>
               {isFieldTab(pathname) && <FieldTabs />}
+              {isCategoryTab(pathname) && <CategoryTabs />}
             </div>
           )}
           <ErrorBoundary resetKey={pathname}>

@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw';
 import type { Comment, CommentStatus, GradeRef, Me } from '@/api/types';
 import { claimCommentPoint, seedAuthorGrade } from './profile';
 import { mockNewsPosts, mockPosts } from './fixtures';
+import { communityPublishedAt, isAcceptedComment, isClosedPost, isCommunityPost, releaseAccepted, reportedBy } from './communityStore';
 
 interface MockComment {
   id: number;
@@ -38,7 +39,8 @@ const NAMES = ['백엔드곰', '리액트러', '데이터쟁이', '인프라맨'
 
 function at(postId: number, minutesAfter: number) {
   const post = mockPosts.find((p) => p.id === postId) ?? mockNewsPosts.find((p) => p.id === postId);
-  return new Date(Date.parse(post?.publishedAt ?? '2026-01-01T00:00:00Z') + minutesAfter * 60_000).toISOString();
+  const base = post?.publishedAt ?? communityPublishedAt(postId) ?? '2026-01-01T00:00:00Z';
+  return new Date(Date.parse(base) + minutesAfter * 60_000).toISOString();
 }
 
 function seed(postId: number): MockComment[] {
@@ -84,7 +86,10 @@ function commentsOf(postId: number) {
   return list;
 }
 
-const postExists = (id: number) => mockPosts.some((p) => p.id === id) || mockNewsPosts.some((p) => p.id === id);
+const postExists = (id: number) =>
+  mockPosts.some((p) => p.id === id) || mockNewsPosts.some((p) => p.id === id) || isCommunityPost(id);
+
+const closed = (error: Ctx['error']) => error(409, 'COMMUNITY_POST_CLOSED', '숨겨졌거나 삭제된 글이에요');
 
 const baseLikes = (postId: number) => (postId === BUSY_POST_ID ? 1234 : postId % 5 === 0 ? 0 : (postId * 13) % 40);
 
@@ -124,6 +129,28 @@ export function withdrawReactions(userId: number) {
   for (const [postId, list] of store.comments) {
     for (const c of list.filter((x) => x.authorId === userId)) removeOrMark(postId, c);
   }
+}
+
+export function commentAuthorOf(id: number) {
+  return findComment(id)?.c.authorId ?? null;
+}
+
+export function hideCommentByReports(id: number) {
+  const found = findComment(id);
+  if (!found || found.c.status !== 'VISIBLE') return;
+  found.c.status = 'HIDDEN';
+  releaseAccepted(id);
+}
+
+export function showComment(id: number) {
+  const found = findComment(id);
+  if (found && found.c.status === 'HIDDEN') found.c.status = 'VISIBLE';
+}
+
+export function commentPreview(id: number) {
+  const found = findComment(id);
+  if (!found || found.c.status === 'DELETED') return null;
+  return { postId: found.postId, c: found.c };
 }
 
 const findComment = (id: number) => {
@@ -187,6 +214,7 @@ export function reactionHandlers({ isMember, me, error, myGrade }: Ctx) {
       createdAt: c.createdAt,
       editedAt: c.editedAt,
       mine: c.status !== 'DELETED' && c.authorId !== null && c.authorId === v.userId,
+      reportedByMe: reportedBy('COMMENT', c.id, v.userId),
       replyCount: c.parentId === null ? replies.length : 0,
     };
     if (!withReplies || c.parentId !== null) return base;
@@ -213,6 +241,7 @@ export function reactionHandlers({ isMember, me, error, myGrade }: Ctx) {
     if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요해요');
     const id = Number(params.id);
     if (!postExists(id)) return error(404, 'NOT_FOUND', '대상을 찾을 수 없어요');
+    if (liked && isClosedPost(id)) return closed(error);
     if (liked) store.likes.add(id);
     else store.likes.delete(id);
     return HttpResponse.json({ liked, likeCount: likeCount(id) });
@@ -255,6 +284,7 @@ export function reactionHandlers({ isMember, me, error, myGrade }: Ctx) {
       }
       const postId = Number(params.id);
       if (!postExists(postId)) return error(404, 'NOT_FOUND', '대상을 찾을 수 없어요');
+      if (isClosedPost(postId)) return closed(error);
       const list = commentsOf(postId);
       let parentId: number | null = null;
       if (body.parentId) {
@@ -299,6 +329,7 @@ export function reactionHandlers({ isMember, me, error, myGrade }: Ctx) {
       const found = findComment(Number(params.id));
       if (!found || found.c.status === 'DELETED') return error(404, 'NOT_FOUND', '대상을 찾을 수 없어요');
       if (found.c.authorId !== v.userId) return error(403, 'FORBIDDEN', '권한이 없어요');
+      if (isAcceptedComment(found.c.id)) return error(409, 'COMMENT_ACCEPTED', '채택된 댓글은 삭제할 수 없어요');
       const result = removeOrMark(found.postId, found.c);
       return HttpResponse.json({ ...result, commentCount: commentCount(found.postId) });
     }),
@@ -311,6 +342,7 @@ export function reactionHandlers({ isMember, me, error, myGrade }: Ctx) {
         const found = findComment(Number(params.id));
         if (!found || found.c.status === 'DELETED') return error(404, 'NOT_FOUND', '대상을 찾을 수 없어요');
         found.c.status = hidden ? 'HIDDEN' : 'VISIBLE';
+        if (hidden) releaseAccepted(found.c.id);
         return HttpResponse.json({ comment: toApi(found.c, v, found.list, false), commentCount: commentCount(found.postId) });
       }),
     ),

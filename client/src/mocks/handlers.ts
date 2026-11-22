@@ -7,6 +7,8 @@ import { passkeyHandlers, resetPasskeys, setPasskeyPassword } from './passkeys';
 import { myActivity, reactionFields, reactionHandlers, resetReactions, withdrawReactions } from './reactions';
 import { gradeRef, profileHandlers, profileScore, resetProfile, scoreRead } from './profile';
 import { fieldByApi } from '@/lib/fields';
+import { communityCardById, communityHandlers, myCommunityActivity, recordCommunityView, resetCommunity, withdrawCommunity } from './community';
+import { isClosedPost, isCommunityPost } from './communityStore';
 import { mockExtraSources, mockNewsPosts, mockNewsSources, mockPosts, mockSources, mockTags } from './fixtures';
 
 const MOCK_TOKEN = 'mock-access-token';
@@ -38,11 +40,13 @@ export function resetMockState() {
   resetReactions();
   resetPasskeys();
   resetProfile();
+  resetCommunity();
 }
 
 function activityCounts() {
   const activity = state.me ? myActivity(state.me.id) : { likes: 0, comments: 0, scoredComments: 0 };
-  return { ...activity, reads: state.reads.size, bookmarks: state.bookmarks.size };
+  const posts = state.me ? myCommunityActivity(state.me.id) : { posts: 0, scoredPosts: 0 };
+  return { ...activity, ...posts, reads: state.reads.size, bookmarks: state.bookmarks.size };
 }
 
 function startSession(me: Me, password: string, status = 200) {
@@ -105,7 +109,21 @@ function decorate(post: PostSummary, member: boolean): PostSummary {
 
 const error = (status: number, code: string, message: string) => HttpResponse.json({ code, message }, { status });
 
+const cardFor = (id: number, request: Request) => {
+  if (isCommunityPost(id)) return communityCardById(id, request);
+  const post = postById(id);
+  return post ? decorate(post, true) : null;
+};
+
 export const handlers = [
+  ...communityHandlers({
+    isMember,
+    me: () => state.me,
+    error,
+    myGrade: () => gradeRef(profileScore(activityCounts())),
+    isBookmarked: (id) => state.bookmarks.has(id),
+    isRead: (id) => state.reads.has(id),
+  }),
   ...reactionHandlers({ isMember, me: () => state.me, error, myGrade: () => gradeRef(profileScore(activityCounts())) }),
   ...profileHandlers({ isMember, me: () => state.me, error, counts: activityCounts }),
   ...passkeyHandlers({ isMember, me: () => state.me, startSession: (me, password) => startSession(me, password), error }),
@@ -244,6 +262,10 @@ export const handlers = [
   ),
 
   http.post('*/api/posts/:id/views', async ({ request, params }) => {
+    if (isCommunityPost(Number(params.id))) {
+      if (isClosedPost(Number(params.id))) return new HttpResponse(null, { status: 204 });
+      recordCommunityView(Number(params.id));
+    }
     if (isMember(request)) {
       state.reads.set(Number(params.id), new Date().toISOString());
       scoreRead(Number(params.id));
@@ -256,7 +278,8 @@ export const handlers = [
   http.put('*/api/me/bookmarks/:id', ({ request, params }) => {
     if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요해요');
     const id = Number(params.id);
-    if (!postById(id)) return error(404, 'NOT_FOUND', '글을 찾을 수 없어요');
+    if (!postById(id) && !isCommunityPost(id)) return error(404, 'NOT_FOUND', '글을 찾을 수 없어요');
+    if (isClosedPost(id)) return error(409, 'COMMUNITY_POST_CLOSED', '숨겨졌거나 삭제된 글이에요');
     if (!state.bookmarks.has(id) && state.bookmarks.size >= BOOKMARK_LIMIT) {
       return error(422, 'BOOKMARK_LIMIT_EXCEEDED', '북마크는 최대 5,000개');
     }
@@ -286,7 +309,7 @@ export const handlers = [
         role: body.email.startsWith('admin') ? 'ADMIN' : 'USER',
         hasInterestTags: false,
         onboardingCompleted: body.email.startsWith('admin'),
-        createdAt: new Date().toISOString(),
+        createdAt: body.email.startsWith('new') ? new Date().toISOString() : '2026-01-01T00:00:00.000Z',
       },
       body.password,
     );
@@ -331,7 +354,10 @@ export const handlers = [
     if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요해요');
     const { password } = (await request.json()) as { password: string };
     if (password !== state.password) return error(403, 'PASSWORD_MISMATCH', '비밀번호가 맞지 않아요');
-    if (state.me) withdrawReactions(state.me.id);
+    if (state.me) {
+      withdrawReactions(state.me.id);
+      withdrawCommunity(state.me.id);
+    }
     resetMockState();
     return new HttpResponse(null, { status: 204 });
   }),
@@ -362,13 +388,20 @@ export const handlers = [
     const url = new URL(request.url);
     const tagIds = idList(url.searchParams.get('tagIds'));
     const list = byDateDesc(state.bookmarks)
-      .map(([id, at]) => ({ ...decorate(postById(id)!, true), bookmarkedAt: at }))
+      .flatMap(([id, at]) => {
+        const card = cardFor(id, request);
+        return card ? [{ ...card, bookmarkedAt: at }] : [];
+      })
       .filter((p) => tagIds.length === 0 || p.tags.some((t) => tagIds.includes(t.id)));
-    return HttpResponse.json({ ...cursorPage(list, url), total: state.bookmarks.size });
+    const total = byDateDesc(state.bookmarks).filter(([id]) => cardFor(id, request)).length;
+    return HttpResponse.json({ ...cursorPage(list, url), total });
   }),
   http.get('*/api/me/history', ({ request }) => {
     if (!isMember(request)) return error(401, 'UNAUTHENTICATED', '로그인이 필요해요');
-    const list = byDateDesc(state.reads).map(([id, at]) => ({ ...decorate(postById(id)!, true), readAt: at }));
+    const list = byDateDesc(state.reads).flatMap(([id, at]) => {
+      const card = cardFor(id, request);
+      return card ? [{ ...card, readAt: at }] : [];
+    });
     return HttpResponse.json(cursorPage(list, new URL(request.url)));
   }),
   http.delete('*/api/me/history/:id', ({ request, params }) => {

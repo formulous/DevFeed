@@ -17,6 +17,9 @@ const SCREENS = [
   { id: 'S-04', path: '/search?q=%EC%A0%95%EB%A6%AC', auth: false, ready: 'article' },
   { id: 'S-14', path: '/security', auth: false, ready: 'article' },
   { id: 'S-15', path: '/security/popular', auth: false, ready: 'article' },
+  { id: 'S-16', path: '/community', auth: false, ready: 'article' },
+  { id: 'S-16P', path: '/community/popular', auth: false, ready: 'article' },
+  { id: 'S-17', path: '/community/posts/5001', auth: false, ready: '[data-testid="markdown"]' },
   { id: 'S-05', path: '/login', auth: false, ready: 'h1' },
   { id: 'S-06', path: '/signup', auth: false, ready: 'form' },
   { id: 'S-11', path: '/privacy', auth: false, ready: 'article' },
@@ -29,6 +32,8 @@ const SCREENS = [
   { id: 'A-02', path: '/admin/sources/1', auth: true, ready: 'h1' },
   { id: 'A-03', path: '/admin/sources/new', auth: true, ready: 'form' },
   { id: 'A-04', path: '/admin/tags', auth: true, ready: 'table' },
+  { id: 'S-18', path: '/community/new', auth: true, ready: 'form' },
+  { id: 'A-05', path: '/admin/reports', auth: true, ready: '[aria-label="신고 목록"]' },
 ];
 
 async function spaNavigate(page, path) {

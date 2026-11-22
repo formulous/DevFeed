@@ -9,6 +9,11 @@ const TITLES: [string, string][] = [
   ['/tech/popular', '인기 기술 글'],
   ['/security', '보안 뉴스'],
   ['/security/popular', '인기 보안 뉴스'],
+  ['/community', '커뮤니티'],
+  ['/community/popular', '인기 커뮤니티 글'],
+  ['/community/new', '글 쓰기'],
+  ['/community/posts/:id/edit', '글 고치기'],
+  ['/community/posts/:id', '커뮤니티 글'],
   ['/login', '로그인'],
   ['/signup', '회원가입'],
   ['/onboarding/passkey', '패스키 만들기'],
@@ -22,6 +27,7 @@ const TITLES: [string, string][] = [
   ['/admin/sources/:id/edit', '소스 수정'],
   ['/admin/sources/:id', '소스 상세'],
   ['/admin/tags', '태그 사전'],
+  ['/admin/reports', '신고 관리'],
 ];
 
 export function titleFor(pathname: string, search: string) {
@@ -33,7 +39,7 @@ export function titleFor(pathname: string, search: string) {
   return hit ? `${hit[1]} · ${APP}` : `페이지를 찾을 수 없어요 · ${APP}`;
 }
 
-const NOINDEX_PATTERNS = ['/login', '/signup', '/onboarding/*', '/me/*', '/admin', '/admin/*'];
+const NOINDEX_PATTERNS = ['/community/new', '/community/posts/:id/edit', '/login', '/signup', '/onboarding/*', '/me/*', '/admin', '/admin/*'];
 
 export function isNoindex(pathname: string) {
   return NOINDEX_PATTERNS.some((pattern) => matchPath(pattern, pathname));

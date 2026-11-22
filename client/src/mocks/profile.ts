@@ -47,6 +47,8 @@ export function claimCommentPoint() {
 }
 
 export interface ActivityCounts {
+  posts: number;
+  scoredPosts: number;
   likes: number;
   comments: number;
   scoredComments: number;
@@ -54,8 +56,8 @@ export interface ActivityCounts {
   bookmarks: number;
 }
 
-export function profileScore(c: Pick<ActivityCounts, 'likes' | 'scoredComments'>) {
-  return Math.max(0, ledger.base + ledger.readPoints + c.likes * 2 + c.scoredComments * 5);
+export function profileScore(c: Pick<ActivityCounts, 'likes' | 'scoredComments'> & Partial<Pick<ActivityCounts, 'scoredPosts'>>) {
+  return Math.max(0, ledger.base + ledger.readPoints + c.likes * 2 + c.scoredComments * 5 + (c.scoredPosts ?? 0) * 10);
 }
 
 export const gradeRef = (score: number): GradeRef => {
@@ -87,7 +89,7 @@ export function profileHandlers({ isMember, me, error, counts }: Ctx) {
         nickname: user.nickname,
         score,
         grade: { level: g.level, name: g.name, minScore: g.minScore, nextMinScore: nextGradeOf(score)?.minScore ?? null },
-        stats: { likes: c.likes, comments: c.comments, reads: c.reads, bookmarks: c.bookmarks },
+        stats: { posts: c.posts, likes: c.likes, comments: c.comments, reads: c.reads, bookmarks: c.bookmarks },
       };
       return HttpResponse.json(body);
     }),

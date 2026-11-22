@@ -5,16 +5,18 @@ import { PATHS } from '@/lib/routes';
 import { useAuth } from '@/auth/AuthProvider';
 import { cn } from '@/lib/cn';
 import { M7_API_READY } from '@/lib/features';
+import { CATEGORIES, parseCategory } from '@/lib/community';
 import { FIELDS, parseField } from '@/lib/fields';
 import { SearchBox } from './AppHeader';
 
-type SectionKey = 'tech' | 'security';
+type SectionKey = 'tech' | 'security' | 'community';
 
 interface SubTab {
   to: string;
   label: string;
   memberOnly?: boolean;
   field?: boolean;
+  category?: boolean;
 }
 
 interface Section {
@@ -45,6 +47,16 @@ const ALL_SECTIONS: Section[] = [
     tabs: [
       { to: PATHS.security, label: '최신' },
       { to: PATHS.securityPopular, label: '인기' },
+    ],
+  },
+  {
+    key: 'community',
+    to: PATHS.community,
+    label: '커뮤니티',
+    keep: ['category'],
+    tabs: [
+      { to: PATHS.community, label: '최신', category: true },
+      { to: PATHS.communityPopular, label: '인기', category: true },
     ],
   },
 ];
@@ -159,39 +171,81 @@ export function SectionTabs() {
   );
 }
 
-export function FieldTabs() {
-  const { pathname } = useLocation();
-  const [params, setParams] = useSearchParams();
-  const current = parseField(params.get('field'));
-  const ref = useRef<HTMLDivElement>(null);
-  useScrollActiveIntoView(ref, `${pathname}:${current?.key ?? ''}`);
-  if (!isFieldTab(pathname)) return null;
+export function isCategoryTab(pathname: string) {
+  return SECTIONS.some((s) => s.tabs.some((t) => t.category && t.to === pathname));
+}
 
+interface TextOption {
+  key: string | null;
+  label: string;
+  name: string;
+}
+
+function useParamSelect(param: string) {
+  const [params, setParams] = useSearchParams();
   const select = (key: string | null) =>
     setParams(
       (prev) => {
         const next = new URLSearchParams(prev);
-        if (key) next.set('field', key);
-        else next.delete('field');
+        if (key) next.set(param, key);
+        else next.delete(param);
         return next;
       },
       { replace: true },
     );
+  return [params, select] as const;
+}
 
+export function FieldTabs() {
+  const { pathname } = useLocation();
+  const [params, select] = useParamSelect('field');
+  const current = parseField(params.get('field'))?.key ?? null;
+  if (!isFieldTab(pathname)) return null;
   const options = [
     { key: null, label: '전체', name: '전체' },
     ...FIELDS.map((f) => ({ key: f.key as string | null, label: f.label, name: f.name })),
   ];
+  return <TextTabs label="분야" options={options} current={current} onSelect={select} dep={pathname} />;
+}
+
+export function CategoryTabs() {
+  const { pathname } = useLocation();
+  const [params, select] = useParamSelect('category');
+  const current = parseCategory(params.get('category'))?.key ?? null;
+  if (!isCategoryTab(pathname)) return null;
+  const options = [
+    { key: null, label: '전체', name: '전체' },
+    ...CATEGORIES.map((c) => ({ key: c.key as string | null, label: c.label, name: c.label })),
+  ];
+  return <TextTabs label="말머리" options={options} current={current} onSelect={select} dep={pathname} />;
+}
+
+function TextTabs({
+  label,
+  options,
+  current,
+  onSelect,
+  dep,
+}: {
+  label: string;
+  options: TextOption[];
+  current: string | null;
+  onSelect: (key: string | null) => void;
+  dep: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useScrollActiveIntoView(ref, `${dep}:${current ?? ''}`);
+  const select = onSelect;
 
   return (
     <div
       ref={ref}
       role="radiogroup"
-      aria-label="분야"
+      aria-label={label}
       className={cn('scrollbar-none -mx-4 flex items-center gap-2 overflow-x-auto px-4 py-1 lg:mx-0 lg:px-0', FADE)}
     >
       {options.map((o, i) => {
-        const on = (current?.key ?? null) === o.key;
+        const on = current === o.key;
         return (
           <Fragment key={o.label}>
             {i > 0 && (

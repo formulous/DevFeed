@@ -41,6 +41,11 @@
 | `/tech/popular` (`?period=&field=`) | S-03 PopularPage (기술 뉴스 > 인기) | - | AppLayout + ProfileRail |
 | `/security` (`?region=&sourceIds=`) | S-14 SecurityNewsPage (보안 뉴스 > 최신) | - | AppLayout |
 | `/security/popular` (`?period=&region=`) | S-15 SecurityPopularPage (보안 뉴스 > 인기, 031) | - | AppLayout + ProfileRail |
+| `/community` (`?category=`) | S-16 CommunityPage (커뮤니티 > 최신, 032) | - | AppLayout + ProfileRail |
+| `/community/popular` (`?period=&category=`) | S-16 CommunityPopularPage (커뮤니티 > 인기) | - | AppLayout + ProfileRail |
+| `/community/posts/:id` | S-17 CommunityPostPage (lazy) | - | AppLayout |
+| `/community/new` (`?category=`) | S-18 CommunityNewPage (lazy) | RequireAuth | AppLayout |
+| `/community/posts/:id/edit` | S-18 CommunityEditPage (lazy) | RequireAuth | AppLayout |
 | `/`·`/for-you`·`/popular` | 옛 주소: `/tech`·`/tech/for-you`·`/tech/popular`로 쿼리 유지 `replace` 이동 (031) | - | - |
 | `/company`·`/personal` | 예전 주소 호환: `/tech?sourceType=COMPANY|PERSONAL`로 `replace` 이동 (다른 쿼리 유지, 023) | - | - |
 | `/search?q=` | S-04 SearchPage | - | AppLayout + FilterLayout |
@@ -55,6 +60,7 @@
 | `/admin/sources/:id` | A-02 SourceDetailPage | RequireAdmin | AdminLayout (lazy) |
 | `/admin/sources/:id/edit` | A-03 SourceFormPage | RequireAdmin | AdminLayout (lazy) |
 | `/admin/tags` | A-04 TagDictionaryPage | RequireAdmin | AdminLayout (lazy) |
+| `/admin/reports` | A-05 ReportsPage (신고 관리, 032) | RequireAdmin | AdminLayout (lazy) |
 | `*` | NotFoundPage | - | AppLayout |
 
 - RequireAuth: 비로그인 시 `/login?redirect=<현재경로>`로 이동, 로그인 후 복귀 (S-05 "원래 보던 화면으로 복귀")
@@ -229,6 +235,20 @@ App
 - 1280×720 최신·검색 사이드바(카드+필터) 617px로 스크롤 없이 들어옴
 - mock: `mocks/profile.ts` (읽기 같은 글 1회·하루 30점, 좋아요 +2, 댓글 +5 하루 10개, 기본 점수 1,200)
 - 2026-11-22 server 배포·백필 후 `build:web` 배포. 실서버 확인(확인용 계정 가입→탈퇴): 원문 열기 +1·재읽기 0, 좋아요 +2·취소 회수, 댓글 +5·삭제 회수, 읽은 기록 삭제 후 점수 유지, 댓글 배지, 360px 헤더 메뉴, 1280×720 좌측 열 스크롤 없음
+
+## 커뮤니티 (F-090~F-094, M12, `docs/discussions/032`)
+- 1단 탭 3개(기술 뉴스·보안 뉴스·커뮤니티). 커뮤니티 내부 탭 `[최신 | 인기]` + 말머리 글자 탭(`?category=question|discussion|share`, 탭 이동 시 유지) + 오른쪽 `글쓰기`(비회원은 로그인 안내 모달). 좌측 열은 프로필 카드만 (목록 API에 태그 필터 없음)
+- 카드: `PostCard`가 `kind === 'COMMUNITY'`면 출처 대신 말머리·`해결됨`·작성자(아바타·닉네임·등급, 640px 미만은 등급 숨김)를 보이고 제목·💬는 상세(`/community/posts/:id`)로 이동. 북마크·읽은 기록 목록도 `kind`로 같은 분기
+- 상세(S-17): 본문 마크다운, 좋아요·북마크, 댓글 기본 펼침(`CommentSection flat`). 질문 작성자에게 최상위 남의 댓글 `채택`/`채택 취소`, 채택 댓글 맨 위 고정·삭제 버튼 없음. 작성자 수정·삭제, 관리자 삭제·숨김·해제, 회원 `신고`(글·모든 댓글, 신고 후 `신고함`). 숨김 글은 안내 띠, 삭제 자리(댓글 있음)는 "삭제된 글이에요" + 댓글. 404는 "글을 찾을 수 없어요". 열람 시 `POST /posts/{id}/views` 1회
+- 작성·수정(S-18): 말머리·제목(2~100)·본문(10~20,000, `textarea` 모노 글꼴)·태그(설정의 `TagPicker`, 최대 5). `[작성 | 미리보기]`는 상세와 같은 렌더러. Tab/Shift+Tab 들여쓰기(여러 줄 지원), Esc 후 Tab은 포커스 이동. 수정은 바뀐 필드만 PATCH
+  - 작성 제한: `GET /community/write-status`로 먼저 확인해 막히면 버튼 대신 사유·남은 시간(가입 24시간·하루 5개·60초). 429 `POST_WRITE_LIMITED`도 같은 안내로 바꾸고 쓰던 내용 유지. 시간이 지나면 다시 조회
+  - 임시 저장: `localStorage` `devfeed:community-draft:<회원 id>:<new|글 id>`에 1초 디바운스, 다시 열면 "임시 저장한 내용을 불러왔어요 [버리기]", 올리기 성공 시 삭제. 새로고침·탭 닫기는 `beforeunload` 경고. 앱 안 이동은 라우터(`BrowserRouter`)가 막을 수 없어 임시 저장으로 보존 (032 pm 수용)
+- 안전 렌더러(`components/markdown/`): `react-markdown` + `remark-gfm`, `rehype-raw` 없음 → 원시 HTML은 글자로만 보임. `allowedElements` 허용 목록, 링크는 `http(s)`만(`urlTransform`) + `target=_blank rel="nofollow ugc noopener noreferrer"`, 이미지 문법은 `[이미지: alt]` 글자, h1→h2·h5/h6→h4. 코드 블록은 `lowlight` + highlight.js 17개 언어(rehype 플러그인, `dangerouslySetInnerHTML` 없음), 복사 버튼. 렌더러는 `React.lazy` 별도 청크(gzip 약 80KB), 상세·작성 화면도 lazy라 첫 화면 번들 영향 없음
+- 신고(`components/report/ReportModal`): 사유 스팸·욕설·비방·개인정보 노출·기타(200자). `REPORT_DUPLICATED`·`REPORT_OWN_CONTENT`·`NOT_FOUND`는 코드별 문구
+- A-05 신고 관리: `[대기 | 숨김]` 탭(`state=PENDING|HIDDEN`), 대상·미리보기·사유별 수·기타 내용·상태(보임·자동 숨김·관리자 숨김), `숨김`/`문제없음`(숨김 탭은 `숨김 해제`)
+- 프로필 카드 5칸(글·좋아요·댓글·읽은 글·북마크), 등급 안내에 글 +10(하루 3개분)·받은 좋아요 +1(하루 50) 2줄. 숨김 댓글 문구는 "숨겨진 댓글이에요"(신고 숨김 포함). 탈퇴 확인 창·개인정보 안내에 커뮤니티 글 처리 추가
+- mock(`mocks/community.ts`, `communityStore.ts`): 시드 글 24개(질문 해결됨 5001, XSS 5004, 내 글 5007, 신고 2건 5010, 자동 숨김 5012), 작성 제한·점수 +10(하루 3개)·채택·신고 3명 자동 숨김·관리자 처리·409 `COMMUNITY_POST_CLOSED`·`COMMENT_ACCEPTED`. 로그인 mock은 `new`로 시작하는 이메일만 가입 직후 계정
+- 테스트 `tests/community.test.tsx` 23건 (XSS 6종 무해화, 하이라이트, 목록·말머리, 상세·채택·신고·자동 숨김, 작성·미리보기·제한 3종·429·임시 저장·Tab, 수정 PATCH 필드, A-05, 프로필 5칸, 북마크 분기)
 
 ## 좌우 광고 (F-060, `docs/discussions/025`)
 - `components/ads/SideAd.tsx`, `lib/ads.ts`. 게시자 `ca-pub-1750461537555326`, 좌 `3021654585`·우 `2195210969` (반응형 `auto`), `index.html`에 `google-adsense-account` 메타
@@ -433,4 +453,5 @@ npm run capture    # 반응형 점검·README용 스크린샷 (Playwright, 최�
 - [x] S-02 추천 (M5, 실서버 확인)
 - [x] S-08~S-10 회원 화면 (M4, 실서버 확인)
 - [x] A-01~A-04 관리자 화면 (M1)
+- [ ] S-16~S-18·A-05 커뮤니티 (032 mock 구현·테스트 완료, server 배포 후 실서버 대조·`build:web` 배포 예정)
 - [x] openapi v1 기준 타입·mock 정렬 (구현 범위 한정, 나머지는 화면 구현 시 추가)

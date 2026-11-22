@@ -11,7 +11,7 @@ import { refreshProfile } from './useProfile';
 export const POSTS_KEY = ['posts'] as const;
 
 type ListCache = { items: PostSummary[] };
-type PostsCache = InfiniteData<CursorPage<PostSummary>> | ListCache | undefined;
+type PostsCache = InfiniteData<CursorPage<PostSummary>> | ListCache | PostSummary | undefined;
 
 function patchItems<T extends ListCache>(list: T, postId: number, patch: Partial<PostSummary>): T {
   return { ...list, items: list.items.map((item) => (item.id === postId ? { ...item, ...patch } : item)) };
@@ -21,7 +21,8 @@ export function patchPost(client: QueryClient, postId: number, patch: Partial<Po
   client.setQueriesData<PostsCache>({ queryKey: POSTS_KEY }, (data) => {
     if (!data) return data;
     if ('pages' in data) return { ...data, pages: data.pages.map((page) => patchItems(page, postId, patch)) };
-    return patchItems(data, postId, patch);
+    if ('items' in data) return patchItems(data, postId, patch);
+    return data.id === postId ? { ...data, ...patch } : data;
   });
 }
 
@@ -40,10 +41,13 @@ export function useToggleBookmark() {
     },
     onError: (error, { postId, next }) => {
       patchPost(client, postId, { isBookmarked: !next });
+      const code = error instanceof ApiError ? error.code : '';
       toast(
-        error instanceof ApiError && error.code === 'BOOKMARK_LIMIT_EXCEEDED'
+        code === 'BOOKMARK_LIMIT_EXCEEDED'
           ? '북마크는 최대 5,000개까지 저장할 수 있어요'
-          : '북마크를 저장하지 못했어요',
+          : code === 'COMMUNITY_POST_CLOSED'
+            ? '숨겨졌거나 삭제된 글은 북마크할 수 없어요'
+            : '북마크를 저장하지 못했어요',
         'error',
       );
     },
@@ -98,9 +102,14 @@ export function useToggleLike() {
         result = await (sent ? putLike(postId) : deleteLike(postId));
       } while (entry.want !== sent);
       patchPost(client, postId, { likedByMe: result.liked, likeCount: result.likeCount });
-    } catch {
+    } catch (error) {
       patchPost(client, postId, before);
-      toast('좋아요를 반영하지 못했어요', 'error');
+      toast(
+        error instanceof ApiError && error.code === 'COMMUNITY_POST_CLOSED'
+          ? '숨겨졌거나 삭제된 글에는 좋아요를 누를 수 없어요'
+          : '좋아요를 반영하지 못했어요',
+        'error',
+      );
     } finally {
       likeSync.delete(postId);
       refreshProfile(client);

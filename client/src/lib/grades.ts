@@ -16,6 +16,8 @@ export const SCORE_RULES = [
   { activity: '글 읽기', point: '+1', limit: '같은 글은 처음 한 번만, 하루 최대 30점' },
   { activity: '좋아요', point: '+2', limit: '같은 글은 한 번만, 취소하면 회수돼요' },
   { activity: '댓글·답글', point: '+5', limit: '하루 최대 10개분, 삭제되거나 숨겨지면 회수돼요' },
+  { activity: '커뮤니티 글 쓰기', point: '+10', limit: '하루 처음 3개분, 삭제되거나 숨겨지면 회수돼요' },
+  { activity: '내 글이 받은 좋아요', point: '+1', limit: '좋아요 1개당, 하루 최대 50점, 내 글에 누른 건 0점' },
   { activity: '북마크', point: '0', limit: '점수에는 들어가지 않아요' },
 ];
 

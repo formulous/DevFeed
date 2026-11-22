@@ -17,10 +17,10 @@ function Stat({ label, value, to }: { label: string; value: number; to?: string 
   const body = (
     <>
       <span className="block text-sm font-semibold tabular-nums text-fg">{compactNumber(value)}</span>
-      <span className="block text-[11px] text-fg-muted">{label}</span>
+      <span className="block whitespace-nowrap text-[11px] text-fg-muted">{label}</span>
     </>
   );
-  const cls = 'block rounded-md px-1 py-0.5 text-center';
+  const cls = 'block rounded-md px-0.5 py-0.5 text-center';
   return (
     <li>
       {to ? (
@@ -82,7 +82,8 @@ function MemberCard({ profile }: { profile: Profile }) {
           </span>
         </div>
       </div>
-      <ul className="mt-2.5 grid grid-cols-4 gap-1" aria-label="활동 수치">
+      <ul className="mt-2.5 grid grid-cols-5 gap-0.5" aria-label="활동 수치">
+        <Stat label="글" value={stats.posts ?? 0} />
         <Stat label="좋아요" value={stats.likes} />
         <Stat label="댓글" value={stats.comments} />
         <Stat label="읽은 글" value={stats.reads} to="/me/history" />

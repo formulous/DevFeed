@@ -27,8 +27,22 @@ export interface TagRef {
   name: string;
 }
 
+export type PostKind = SourceKind | 'COMMUNITY';
+
+export type CommunityCategory = 'QUESTION' | 'DISCUSSION' | 'SHARE';
+
+export interface CommunityInfo {
+  category: CommunityCategory;
+  author: CommentAuthor | null;
+  editedAt: string | null;
+  solved: boolean;
+  viewCount: number;
+}
+
 export interface PostSummary {
   id: number;
+  kind?: PostKind;
+  community?: CommunityInfo;
   title: string;
   summary: string | null;
   url: string;
@@ -56,6 +70,7 @@ export interface Comment {
   createdAt: string;
   editedAt: string | null;
   mine: boolean;
+  reportedByMe?: boolean;
   replyCount: number;
   replies?: Comment[];
   repliesNextCursor?: string | null;
@@ -113,6 +128,8 @@ export interface ApiErrorBody {
   message: string;
   fieldErrors?: FieldError[];
   retryAfterSec?: number;
+  reason?: string;
+  availableAt?: string;
 }
 
 export interface Me {
@@ -286,5 +303,68 @@ export interface Profile {
   nickname: string;
   score: number;
   grade: ProfileGrade;
-  stats: { likes: number; comments: number; reads: number; bookmarks: number };
+  stats: { posts?: number; likes: number; comments: number; reads: number; bookmarks: number };
+}
+
+export type CommunityPostStatus = 'VISIBLE' | 'HIDDEN' | 'DELETED';
+
+export interface CommunityPost extends PostSummary {
+  kind: 'COMMUNITY';
+  community: CommunityInfo;
+  body: string | null;
+  status: CommunityPostStatus;
+  acceptedCommentId: number | null;
+  mine: boolean;
+  reportedByMe: boolean;
+}
+
+export interface CommunityPostInput {
+  category: CommunityCategory;
+  title: string;
+  body: string;
+  tagIds: number[];
+}
+
+export type PostWriteReason = 'NEW_ACCOUNT' | 'DAILY_LIMIT' | 'COOLDOWN';
+
+export interface PostWriteStatus {
+  allowed: boolean;
+  reason: PostWriteReason | null;
+  availableAt: string | null;
+  retryAfterSec: number | null;
+  remainingToday: number | null;
+}
+
+export interface AcceptedCommentState {
+  acceptedCommentId: number | null;
+  solved: boolean;
+}
+
+export type ReportTargetType = 'POST' | 'COMMENT';
+export type ReportReason = 'SPAM' | 'ABUSE' | 'PRIVACY' | 'OTHER';
+export type ReportState = 'PENDING' | 'HIDDEN' | 'CLEARED';
+
+export interface ReportInput {
+  targetType: ReportTargetType;
+  targetId: number;
+  reason: ReportReason;
+  detail?: string;
+}
+
+export interface ReportTarget {
+  targetType: ReportTargetType;
+  targetId: number;
+  postId: number;
+  state: ReportState;
+  reportCount: number;
+  reasons: Record<ReportReason, number>;
+  details?: string[];
+  lastReportedAt: string;
+  preview: {
+    title: string | null;
+    text: string;
+    author: { id: number; nickname: string } | null;
+    status: 'VISIBLE' | 'HIDDEN';
+    hiddenReason: 'ADMIN' | 'REPORTS' | null;
+  };
 }

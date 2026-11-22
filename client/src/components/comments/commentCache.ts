@@ -65,3 +65,7 @@ export function appendReplies(client: QueryClient, postId: number, parentId: num
     }),
   );
 }
+
+export function markReported(client: QueryClient, postId: number, id: number) {
+  mapPages(client, postId, (items) => mapAll(items, (c) => (c.id === id ? { ...c, reportedByMe: true } : c)));
+}

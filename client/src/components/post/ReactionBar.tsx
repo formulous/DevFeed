@@ -1,4 +1,5 @@
 import { FiHeart, FiMessageCircle } from 'react-icons/fi';
+import { Link } from 'react-router';
 import type { PostSummary } from '@/api/types';
 import { useToggleLike } from '@/hooks/usePostActions';
 import { cn } from '@/lib/cn';
@@ -12,11 +13,13 @@ export function ReactionBar({
   open,
   controls,
   onToggleComments,
+  commentsTo,
 }: {
   post: PostSummary;
   open: boolean;
   controls: string;
   onToggleComments: () => void;
+  commentsTo?: string;
 }) {
   const toggleLike = useToggleLike();
   const likes = post.likeCount ?? 0;
@@ -33,17 +36,24 @@ export function ReactionBar({
         <FiHeart size={14} fill={post.likedByMe ? 'currentColor' : 'none'} aria-hidden />
         <span>{compactNumber(likes)}</span>
       </button>
-      <button
-        type="button"
-        onClick={onToggleComments}
-        aria-expanded={open}
-        aria-controls={controls}
-        aria-label={`댓글 ${formatNumber(comments)}개`}
-        className={cn(BTN, open ? 'text-fg' : 'text-fg-muted hover:text-fg')}
-      >
-        <FiMessageCircle size={14} aria-hidden />
-        <span>{compactNumber(comments)}</span>
-      </button>
+      {commentsTo ? (
+        <Link to={commentsTo} aria-label={`댓글 ${formatNumber(comments)}개`} className={cn(BTN, 'text-fg-muted hover:text-fg')}>
+          <FiMessageCircle size={14} aria-hidden />
+          <span>{compactNumber(comments)}</span>
+        </Link>
+      ) : (
+        <button
+          type="button"
+          onClick={onToggleComments}
+          aria-expanded={open}
+          aria-controls={controls}
+          aria-label={`댓글 ${formatNumber(comments)}개`}
+          className={cn(BTN, open ? 'text-fg' : 'text-fg-muted hover:text-fg')}
+        >
+          <FiMessageCircle size={14} aria-hidden />
+          <span>{compactNumber(comments)}</span>
+        </button>
+      )}
     </span>
   );
 }

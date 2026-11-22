@@ -13,7 +13,8 @@ import { Avatar } from '@/components/profile/Avatar';
 import { GradeBadge } from '@/components/profile/GradeBadge';
 import { cn } from '@/lib/cn';
 import { relativeTime } from '@/lib/time';
-import { addComment, appendReplies, commentsKey, markDeleted, removeComment, replaceComment } from './commentCache';
+import { ReportModal, type ReportTargetRef } from '@/components/report/ReportModal';
+import { addComment, appendReplies, commentsKey, markDeleted, markReported, removeComment, replaceComment } from './commentCache';
 import { CommentForm } from './CommentForm';
 
 function failMessage(error: unknown, fallback: string) {
@@ -21,6 +22,8 @@ function failMessage(error: unknown, fallback: string) {
     if (error.code === 'COMMENT_RATE_LIMITED') return '잠시 후 다시 남겨 주세요';
     if (error.code === 'NOT_FOUND') return '이미 삭제된 글이나 댓글이에요';
     if (error.code === 'COMMENT_HIDDEN') return '관리자가 숨긴 댓글은 고칠 수 없어요';
+    if (error.code === 'COMMENT_ACCEPTED') return '채택된 댓글은 삭제할 수 없어요';
+    if (error.code === 'COMMUNITY_POST_CLOSED') return '숨겨졌거나 삭제된 글에는 댓글을 남길 수 없어요';
     return error.message || fallback;
   }
   return fallback;
@@ -77,18 +80,29 @@ function useCommentActions(post: PostSummary) {
 
 type Actions = ReturnType<typeof useCommentActions>;
 
+export interface AcceptControl {
+  acceptedId: number | null;
+  canAccept: boolean;
+  pending: boolean;
+  onToggle: (comment: Comment) => void;
+}
+
 interface ItemProps {
   comment: Comment;
   actions: Actions;
   isAdmin: boolean;
   isMember: boolean;
+  accept?: AcceptControl;
   onReply?: () => void;
   onDelete: (c: Comment) => void;
+  onReport: (c: Comment) => void;
 }
 
-function CommentItem({ comment, actions, isAdmin, isMember, onReply, onDelete }: ItemProps) {
+function CommentItem({ comment, actions, isAdmin, isMember, accept, onReply, onDelete, onReport }: ItemProps) {
   const [editing, setEditing] = useState(false);
   const visible = comment.status === 'VISIBLE';
+  const accepted = accept?.acceptedId === comment.id;
+  const acceptable = !!accept?.canAccept && visible && comment.parentId === null && !comment.mine;
   const showMeta = visible || (isAdmin && comment.status === 'HIDDEN');
   const action = 'text-xs text-fg-muted hover:text-fg';
 
@@ -105,7 +119,23 @@ function CommentItem({ comment, actions, isAdmin, isMember, onReply, onDelete }:
         {showMeta && <span aria-hidden>·</span>}
         {showMeta && <time dateTime={comment.createdAt}>{relativeTime(comment.createdAt)}</time>}
         {showMeta && comment.editedAt && <span className="text-fg-muted">(수정됨)</span>}
+        {accepted && (
+          <span className="inline-flex items-center rounded-full bg-success-soft px-1.5 py-px text-[11px] font-semibold leading-4 text-success">
+            채택
+          </span>
+        )}
         <span className="ml-auto flex gap-2.5">
+          {acceptable && (
+            <button
+              type="button"
+              className={cn(action, accepted && 'text-success')}
+              disabled={accept?.pending}
+              aria-pressed={accepted}
+              onClick={() => accept?.onToggle(comment)}
+            >
+              {accepted ? '채택 취소' : '채택'}
+            </button>
+          )}
           {comment.mine && !editing && comment.status !== 'DELETED' && (
             <>
               {visible && (
@@ -113,10 +143,22 @@ function CommentItem({ comment, actions, isAdmin, isMember, onReply, onDelete }:
                   수정
                 </button>
               )}
-              <button type="button" className={action} onClick={() => onDelete(comment)}>
-                삭제
-              </button>
+              {!accepted && (
+                <button type="button" className={action} onClick={() => onDelete(comment)}>
+                  삭제
+                </button>
+              )}
             </>
+          )}
+          {isMember && visible && !comment.mine && (
+            <button
+              type="button"
+              className={action}
+              disabled={comment.reportedByMe}
+              onClick={() => onReport(comment)}
+            >
+              {comment.reportedByMe ? '신고함' : '신고'}
+            </button>
           )}
           {isAdmin && comment.status !== 'DELETED' && (
             <button type="button" className={action} onClick={() => actions.hide(comment, visible)}>
@@ -145,7 +187,7 @@ function CommentItem({ comment, actions, isAdmin, isMember, onReply, onDelete }:
         <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-fg">{comment.content}</p>
       ) : (
         <p className="mt-0.5 text-sm text-fg-muted">
-          {comment.status === 'HIDDEN' ? '관리자가 숨긴 댓글이에요' : '삭제된 댓글이에요'}
+          {comment.status === 'HIDDEN' ? '숨겨진 댓글이에요' : '삭제된 댓글이에요'}
           {isAdmin && comment.status === 'HIDDEN' && comment.content && (
             <span className="mt-1 block whitespace-pre-wrap break-words text-xs line-through">{comment.content}</span>
           )}
@@ -205,11 +247,21 @@ function Thread({ comment, ...rest }: Omit<ItemProps, 'onReply'> & { comment: Co
   );
 }
 
-export function CommentSection({ post, id }: { post: PostSummary; id: string }) {
+interface CommentSectionProps {
+  post: PostSummary;
+  id: string;
+  accept?: AcceptControl;
+  closed?: boolean;
+  flat?: boolean;
+}
+
+export function CommentSection({ post, id, accept, closed = false, flat = false }: CommentSectionProps) {
   const { status, me } = useAuth();
   const location = useLocation();
+  const client = useQueryClient();
   const actions = useCommentActions(post);
   const [deleting, setDeleting] = useState<Comment | null>(null);
+  const [reporting, setReporting] = useState<ReportTargetRef | null>(null);
   const list = useInfiniteQuery({
     queryKey: commentsKey(post.id),
     queryFn: ({ pageParam, signal }) => fetchComments(post.id, pageParam, signal),
@@ -219,14 +271,28 @@ export function CommentSection({ post, id }: { post: PostSummary; id: string }) 
   });
   const comments = useMemo(() => {
     const seen = new Set<number>();
-    return (list.data?.pages.flatMap((p) => p.items) ?? []).filter((c) => !seen.has(c.id) && seen.add(c.id));
-  }, [list.data]);
+    const all = (list.data?.pages.flatMap((p) => p.items) ?? []).filter((c) => !seen.has(c.id) && seen.add(c.id));
+    const acceptedId = accept?.acceptedId ?? null;
+    const top = all.find((c) => c.id === acceptedId);
+    return top ? [top, ...all.filter((c) => c !== top)] : all;
+  }, [list.data, accept?.acceptedId]);
   const isMember = status === 'member';
   const redirect = encodeURIComponent(location.pathname + location.search);
-  const common = { actions, isAdmin: me?.role === 'ADMIN', isMember, onDelete: setDeleting };
+  const common = {
+    actions,
+    isAdmin: me?.role === 'ADMIN',
+    isMember,
+    accept,
+    onDelete: setDeleting,
+    onReport: (c: Comment) => setReporting({ type: 'COMMENT', id: c.id }),
+  };
 
   return (
-    <section id={id} aria-label="댓글" className="mx-3 mb-4 rounded-[var(--radius-md)] border border-line bg-surface px-4 py-2 sm:mx-4">
+    <section
+      id={id}
+      aria-label="댓글"
+      className={flat ? 'scroll-mt-28' : 'mx-3 mb-4 rounded-[var(--radius-md)] border border-line bg-surface px-4 py-2 sm:mx-4'}
+    >
       {list.isPending ? (
         <p className="py-3 text-sm text-fg-muted">댓글을 불러오는 중이에요</p>
       ) : list.isError ? (
@@ -256,7 +322,9 @@ export function CommentSection({ post, id }: { post: PostSummary; id: string }) 
         </button>
       )}
       <div className="border-t border-line py-3">
-        {isMember ? (
+        {closed ? (
+          <p className="text-sm text-fg-muted">이 글에는 댓글을 남길 수 없어요</p>
+        ) : isMember ? (
           <CommentForm
             label="댓글 입력"
             placeholder="댓글을 남겨 주세요 (최대 1,000자)"
@@ -272,6 +340,11 @@ export function CommentSection({ post, id }: { post: PostSummary; id: string }) 
           </p>
         ) : null}
       </div>
+      <ReportModal
+        target={reporting}
+        onClose={() => setReporting(null)}
+        onReported={(t) => markReported(client, post.id, t.id)}
+      />
       <ConfirmModal
         open={deleting !== null}
         title="댓글 삭제"

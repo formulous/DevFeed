@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { Link } from 'react-router';
 import { CommentSection } from '@/components/comments/CommentSection';
 import { ReactionBar } from '@/components/post/ReactionBar';
 import { FiStar } from 'react-icons/fi';
@@ -7,6 +8,10 @@ import { PostBadges, type BadgeMode } from '@/components/post/PostBadges';
 import { Highlight } from '@/components/common/Highlight';
 import { cn } from '@/lib/cn';
 import { relativeTime } from '@/lib/time';
+import { communityPostPath } from '@/lib/routes';
+import { Avatar } from '@/components/profile/Avatar';
+import { GradeBadge } from '@/components/profile/GradeBadge';
+import { CategoryBadge, SolvedBadge } from './CommunityBadges';
 
 interface PostCardProps {
   post: PostSummary;
@@ -50,6 +55,9 @@ export function PostCard({
   const [open, setOpen] = useState(false);
   const showReactions = reactions && post.likeCount !== undefined;
   const commentsId = `comments-${post.id}`;
+  const info = post.kind === 'COMMUNITY' ? post.community : undefined;
+  const detailPath = info ? communityPostPath(post.id) : null;
+  const titleCls = "after:absolute after:inset-0 after:content-[''] hover:text-brand";
   return (
     <div>
       <article
@@ -57,13 +65,31 @@ export function PostCard({
       >
         {kicker}
         <div className="flex items-center gap-2 text-xs text-fg-secondary">
-          {post.source.logoUrl && <ExternalImage src={post.source.logoUrl} alt="" className="h-5 w-5 shrink-0 rounded" />}
-          <span className="truncate font-medium">{post.source.name}</span>
+          {info ? (
+            <>
+              <CategoryBadge category={info.category} />
+              {info.solved && <SolvedBadge />}
+              {info.author && (
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <Avatar nickname={info.author.nickname} size={20} />
+                  <span className="truncate font-medium">{info.author.nickname}</span>
+                  <span className="hidden sm:inline-flex">
+                    <GradeBadge grade={info.author.grade} small />
+                  </span>
+                </span>
+              )}
+            </>
+          ) : (
+            <>
+              {post.source.logoUrl && <ExternalImage src={post.source.logoUrl} alt="" className="h-5 w-5 shrink-0 rounded" />}
+              <span className="truncate font-medium">{post.source.name}</span>
+            </>
+          )}
           <span aria-hidden>·</span>
           <time dateTime={post.publishedAt} className="shrink-0">
             {relativeTime(post.publishedAt)}
           </time>
-          <PostBadges post={post} mode={badges} />
+          {!info && <PostBadges post={post} mode={badges} />}
           <button
             type="button"
             onClick={() => onToggleBookmark(post)}
@@ -81,16 +107,22 @@ export function PostCard({
         <div className="mt-2 flex gap-4">
           <div className="min-w-0 flex-1">
             <h3 className="line-clamp-2 text-base font-semibold leading-snug tracking-[-0.01em] text-fg">
-              <a
-                href={post.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => onOpen(post)}
-                onAuxClick={(e) => e.button === 1 && onOpen(post)}
-                className="after:absolute after:inset-0 after:content-[''] hover:text-brand"
-              >
-                <Highlight text={post.title} query={query} />
-              </a>
+              {detailPath ? (
+                <Link to={detailPath} className={titleCls}>
+                  <Highlight text={post.title} query={query} />
+                </Link>
+              ) : (
+                <a
+                  href={post.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => onOpen(post)}
+                  onAuxClick={(e) => e.button === 1 && onOpen(post)}
+                  className={titleCls}
+                >
+                  <Highlight text={post.title} query={query} />
+                </a>
+              )}
             </h3>
             {post.summary && (
               <p
@@ -122,7 +154,13 @@ export function PostCard({
             <span className="-my-1 ml-auto flex shrink-0 items-center gap-3">
               {meta && <span>{meta}</span>}
               {showReactions && (
-                <ReactionBar post={post} open={open} controls={commentsId} onToggleComments={() => setOpen((v) => !v)} />
+                <ReactionBar
+                  post={post}
+                  open={open}
+                  controls={commentsId}
+                  onToggleComments={() => setOpen((v) => !v)}
+                  commentsTo={detailPath ? `${detailPath}#comments` : undefined}
+                />
               )}
             </span>
           </div>

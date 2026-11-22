@@ -62,7 +62,7 @@ describe('F-080·F-081 반응 줄 (026)', () => {
     const region = await openComments(user);
     expect(await region.findByText(/리밸런싱 시간 줄이는 설정/)).toBeInTheDocument();
     expect(region.getByText('삭제된 댓글이에요')).toBeInTheDocument();
-    expect(region.getByText('관리자가 숨긴 댓글이에요')).toBeInTheDocument();
+    expect(region.getByText('숨겨진 댓글이에요')).toBeInTheDocument();
     expect(region.queryByText('광고성 댓글')).toBeNull();
     expect(region.getByText('<script>alert(1)</script> 이건 글자 그대로 보여야 해요')).toBeInTheDocument();
     expect(document.querySelector('section script')).toBeNull();
@@ -191,10 +191,10 @@ describe('F-080·F-081 반응 줄 (026)', () => {
     expect(await region.findByText('광고성 댓글')).toBeInTheDocument();
     const first = within(region.getByText(/리밸런싱 시간 줄이는 설정/).closest('div')!);
     await user.click(first.getByRole('button', { name: '숨김' }));
-    await waitFor(() => expect(region.getAllByText('관리자가 숨긴 댓글이에요')).toHaveLength(2));
+    await waitFor(() => expect(region.getAllByText('숨겨진 댓글이에요')).toHaveLength(2));
     expect(countButton()).toHaveAccessibleName(`댓글 ${start - 1}개`);
     await user.click(region.getAllByRole('button', { name: '숨김 해제' })[0]);
-    await waitFor(() => expect(region.getAllByText('관리자가 숨긴 댓글이에요')).toHaveLength(1));
+    await waitFor(() => expect(region.getAllByText('숨겨진 댓글이에요')).toHaveLength(1));
     expect(countButton()).toHaveAccessibleName(`댓글 ${start}개`);
   });
 
@@ -226,7 +226,7 @@ describe('F-080·F-081 반응 줄 (026)', () => {
     const user = userEvent.setup();
     renderWithApp(<App />, '/');
     const region = await openComments(user);
-    const item = within((await region.findByText('관리자가 숨긴 댓글이에요')).closest('li')!);
+    const item = within((await region.findByText('숨겨진 댓글이에요')).closest('li')!);
     expect(item.getByRole('button', { name: '삭제' })).toBeInTheDocument();
     expect(item.queryByRole('button', { name: '수정' })).toBeNull();
     expect(item.queryByRole('button', { name: '답글 달기' })).toBeNull();

@@ -4,6 +4,7 @@ import { NotFoundPage } from '@/features/common/NotFoundPage';
 import { AdminDashboardPage } from './AdminDashboardPage';
 import { SourceDetailPage } from './SourceDetailPage';
 import { SourceFormPage } from './SourceFormPage';
+import { ReportsPage } from './ReportsPage';
 import { TagDictionaryPage } from './TagDictionaryPage';
 
 function AdminLayout() {
@@ -15,6 +16,7 @@ function AdminLayout() {
         <NavLink to="/admin" end className={link}>수집 현황</NavLink>
         <NavLink to="/admin/sources/new" className={link}>소스 추가</NavLink>
         <NavLink to="/admin/tags" className={link}>태그 사전</NavLink>
+        <NavLink to="/admin/reports" className={link}>신고 관리</NavLink>
       </nav>
       <Outlet />
     </div>
@@ -30,6 +32,7 @@ export default function AdminRoutes() {
         <Route path="sources/:id" element={<SourceDetailPage />} />
         <Route path="sources/:id/edit" element={<SourceFormPage />} />
         <Route path="tags" element={<TagDictionaryPage />} />
+        <Route path="reports" element={<ReportsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

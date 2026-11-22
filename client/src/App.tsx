@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, type ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router';
 import type { SourceType } from '@/api/types';
 import { GuestOnly, RequireAdmin, RequireAuth } from '@/auth/guards';
@@ -23,8 +23,18 @@ import { PopularPage } from '@/features/popular/PopularPage';
 import { ForYouPage } from '@/features/recommend/ForYouPage';
 import { SearchPage } from '@/features/search/SearchPage';
 import { PrivacyPage } from '@/features/info/PrivacyPage';
+import { CommunityPage } from '@/features/community/CommunityPage';
+import { CommunityPopularPage } from '@/features/community/CommunityPopularPage';
+
 
 const AdminRoutes = lazy(() => import('@/features/admin/AdminRoutes'));
+const CommunityPostPage = lazy(() => import('@/features/community/CommunityPostPage').then((m) => ({ default: m.CommunityPostPage })));
+const CommunityNewPage = lazy(() => import('@/features/community/CommunityEditorPage').then((m) => ({ default: m.CommunityNewPage })));
+const CommunityEditPage = lazy(() => import('@/features/community/CommunityEditorPage').then((m) => ({ default: m.CommunityEditPage })));
+
+function Lazy({ children }: { children: ReactNode }) {
+  return <Suspense fallback={<FullPageSpinner />}>{children}</Suspense>;
+}
 
 function LegacySourceTypeRedirect({ type }: { type: SourceType }) {
   const { search } = useLocation();
@@ -54,6 +64,11 @@ export function App() {
           <Route path="personal" element={<LegacySourceTypeRedirect type="PERSONAL" />} />
           <Route path="security" element={M7_API_READY ? <SecurityNewsPage /> : <Navigate to={PATHS.tech} replace />} />
           <Route path="security/popular" element={M7_API_READY ? <SecurityPopularPage /> : <Navigate to={PATHS.tech} replace />} />
+          <Route path="community" element={<CommunityPage />} />
+          <Route path="community/popular" element={<CommunityPopularPage />} />
+          <Route path="community/new" element={<RequireAuth><Lazy><CommunityNewPage /></Lazy></RequireAuth>} />
+          <Route path="community/posts/:id" element={<Lazy><CommunityPostPage /></Lazy>} />
+          <Route path="community/posts/:id/edit" element={<RequireAuth><Lazy><CommunityEditPage /></Lazy></RequireAuth>} />
           <Route path="search" element={<SearchPage />} />
           <Route path="privacy" element={<PrivacyPage />} />
           <Route path="me/bookmarks" element={<RequireAuth><BookmarksPage /></RequireAuth>} />
