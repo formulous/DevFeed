@@ -90,6 +90,18 @@ SELECT target_type, target_id, reason, COUNT(*) AS n FROM reports
 WHERE (target_type, target_id) IN (('POST', 1), ('COMMENT', 2)) GROUP BY target_type, target_id, reason;
 UPDATE report_targets SET state = 'CLEARED', resolved_at = UTC_TIMESTAMP(3), resolved_by = @admin WHERE target_type = @type AND target_id = @tid;
 
+-- F-024 scoped search (038): community, VISIBLE by join; no cache
+SELECT s.post_id, MATCH(s.title_tokens) AGAINST(@bq IN BOOLEAN MODE) * 2 + MATCH(s.title_tokens, s.body_tokens) AGAINST(@bq IN BOOLEAN MODE) AS score
+FROM community_search s JOIN community_posts cp ON cp.post_id = s.post_id AND cp.status = 'VISIBLE'
+WHERE MATCH(s.title_tokens, s.body_tokens) AGAINST(@bq IN BOOLEAN MODE) AND cp.category = 'QUESTION'
+ORDER BY score DESC, s.post_id DESC LIMIT 20;
+
+-- F-024 scoped search (038): security news, region -> source ids via posts covering index
+SELECT s.post_id, MATCH(s.title_tokens) AGAINST(@bq IN BOOLEAN MODE) * 2 + MATCH(s.title_tokens, s.body_tokens) AGAINST(@bq IN BOOLEAN MODE) AS score
+FROM security_news_search s JOIN posts p FORCE INDEX (idx_posts_search_filter) ON p.id = s.post_id
+WHERE MATCH(s.title_tokens, s.body_tokens) AGAINST(@bq IN BOOLEAN MODE) AND p.source_id IN (75, 76, 77)
+ORDER BY score DESC, s.post_id DESC LIMIT 20;
+
 -- 032 consistency check: every column must be 0
 SELECT
   (SELECT COUNT(*) FROM posts p LEFT JOIN community_posts cp ON cp.post_id = p.id WHERE p.kind = 'COMMUNITY' AND cp.post_id IS NULL) AS community_without_extension,
@@ -108,15 +120,3 @@ SELECT
     WHERE c.id IS NULL AND cp.post_id IS NULL) AS orphan_report_target,
   (SELECT COUNT(*) FROM community_search s JOIN community_posts cp ON cp.post_id = s.post_id WHERE cp.status = 'DELETED') AS deleted_post_still_indexed,
   (SELECT COUNT(*) FROM security_news_search s JOIN posts p ON p.id = s.post_id WHERE p.kind <> 'SECURITY_NEWS') AS news_index_wrong_kind;
-
--- F-024 scoped search (038): community, VISIBLE by join; no cache
-SELECT s.post_id, MATCH(s.title_tokens) AGAINST(@bq IN BOOLEAN MODE) * 2 + MATCH(s.title_tokens, s.body_tokens) AGAINST(@bq IN BOOLEAN MODE) AS score
-FROM community_search s JOIN community_posts cp ON cp.post_id = s.post_id AND cp.status = 'VISIBLE'
-WHERE MATCH(s.title_tokens, s.body_tokens) AGAINST(@bq IN BOOLEAN MODE) AND cp.category = 'QUESTION'
-ORDER BY score DESC, s.post_id DESC LIMIT 20;
-
--- F-024 scoped search (038): security news, region -> source ids via posts covering index
-SELECT s.post_id, MATCH(s.title_tokens) AGAINST(@bq IN BOOLEAN MODE) * 2 + MATCH(s.title_tokens, s.body_tokens) AGAINST(@bq IN BOOLEAN MODE) AS score
-FROM security_news_search s JOIN posts p FORCE INDEX (idx_posts_search_filter) ON p.id = s.post_id
-WHERE MATCH(s.title_tokens, s.body_tokens) AGAINST(@bq IN BOOLEAN MODE) AND p.source_id IN (75, 76, 77)
-ORDER BY score DESC, s.post_id DESC LIMIT 20;
