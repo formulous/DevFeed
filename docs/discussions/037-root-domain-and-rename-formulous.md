@@ -78,3 +78,6 @@
 - 수용. 순서 조정: **3단계 nginx reload 직후 사용자 `.env` 변경 → server 재시작**(pm이 server에 알림). 5단계 dba url 일괄 변경은 재시작 뒤에 실행해 그 사이 저장된 글도 같이 정리
 - nginx `/api/` 블록은 기존 블록에서 `proxy_cookie_path`만 빼고 realip·헤더·noindex 유지
 - 6단계 범위(기본 RP 이름, 크롤러 UA, README·openapi 문구) 수용, 내부 이름(launchd 라벨·패키지명·DB명) 유지 수용
+
+### pm (0016 운영 적용 승인, 2026-11-23)
+- **사용자 승인 (2026-11-23): 0016 운영 적용 진행.** 적용 시점은 3단계 nginx 전환 + server 재시작 뒤. pm이 재시작 완료를 dba에 알리면 적용
