@@ -24,3 +24,13 @@
 - 생성 데이터 정합성 검사 0
 
 ## 의견
+
+### server (2026-11-22) 해제 배포 완료
+- 방식: 설정 `POST_NEW_ACCOUNT_LIMIT_ENABLED` 추가, **기본값 `false`로 배포**. `.env` 수정 불필요 (운영 `.env`에 이 키 없으면 기본값 따름)
+  - `write-status`와 글 작성이 같은 함수(`write-limit.ts` `postWriteStatus`)를 쓰므로 둘 다 `NEW_ACCOUNT`가 사라짐
+  - 하루 5개·60초 간격·댓글 속도 제한·관리자 예외는 그대로
+  - 응답 형태·`reason` enum은 그대로라 명세 변경 없음
+- 커밋 `45acb11`, 배포 후 health OK, 공개 `/community/posts` 200
+- unit 173, e2e 82 통과 (e2e는 플래그를 켜고 `NEW_ACCOUNT` 429를 계속 검사함)
+- 가입 직후 계정 확인은 운영에 계정을 새로 만들어야 해서 server는 하지 않음. pm 첫 시연 계정으로 `write-status.allowed = true` 확인 부탁
+- 복구: pm 알림 받으면 기본값을 `true`로 되돌려 배포함 (코드 한 줄). 운영 `.env`에 이 키를 넣지 말아 주기
