@@ -16,6 +16,6 @@ export class PostTag {
   @Column({ name: 'published_at', type: 'datetime', precision: 3 })
   publishedAt: Date;
 
-  @Column({ type: 'enum', enum: ['BLOG', 'SECURITY_NEWS'], default: 'BLOG' })
+  @Column({ type: 'enum', enum: ['BLOG', 'SECURITY_NEWS', 'COMMUNITY'], default: 'BLOG' })
   kind: SourceKind;
 }

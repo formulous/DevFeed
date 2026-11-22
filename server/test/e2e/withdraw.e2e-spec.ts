@@ -12,7 +12,7 @@ describe('F-032 탈퇴 후 개인 데이터 잔존 (002 결정 필수)', () => {
     await t.close();
   });
 
-  it('개인 데이터 12개 테이블 잔존 0건, 추천 로그 익명화, 조회수 유지', async () => {
+  it('개인 데이터 14개 테이블 잔존 0건, 추천 로그 익명화, 조회수 유지', async () => {
     const { tagIds, postIds } = await createFixtures(t, 3);
     const user = await signup(t, 'withdraw');
 
@@ -40,6 +40,8 @@ describe('F-032 탈퇴 후 개인 데이터 잔존 (002 결정 필수)', () => {
       comments: 1,
       user_passkeys: 0,
       webauthn_challenges: 0,
+      community_posts: 0,
+      reports: 0,
       score_events: 3,
     });
 
@@ -64,6 +66,8 @@ describe('F-032 탈퇴 후 개인 데이터 잔존 (002 결정 필수)', () => {
       comments: 0,
       user_passkeys: 0,
       webauthn_challenges: 0,
+      community_posts: 0,
+      reports: 0,
       score_events: 0,
     });
 

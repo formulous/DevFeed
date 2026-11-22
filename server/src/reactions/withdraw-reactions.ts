@@ -21,7 +21,7 @@ export async function removeReactions(manager: EntityManager, userId: number): P
   }
   await manager.query('DELETE FROM comments WHERE user_id = ? AND parent_id IS NOT NULL', [userId]);
   await manager.query(
-    `UPDATE comments SET status = 'DELETED', body = NULL, user_id = NULL, hidden_at = NULL, hidden_by = NULL
+    `UPDATE comments SET status = 'DELETED', body = NULL, user_id = NULL, hidden_at = NULL, hidden_by = NULL, hidden_reason = NULL
       WHERE user_id = ? AND reply_count > 0`,
     [userId],
   );

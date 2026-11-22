@@ -142,7 +142,7 @@ export class CommentsService {
         let parentRemoved = false;
         if (target.parent_id === null) {
           const placeholder = (await manager.query(
-            `UPDATE comments SET status = 'DELETED', body = NULL, user_id = NULL, hidden_at = NULL, hidden_by = NULL
+            `UPDATE comments SET status = 'DELETED', body = NULL, user_id = NULL, hidden_at = NULL, hidden_by = NULL, hidden_reason = NULL
               WHERE id = ? AND reply_count > 0`,
             [commentId],
           )) as Affected;
@@ -180,8 +180,8 @@ export class CommentsService {
         if (!target || target.status === 'DELETED' || Number(target.user_id) !== authorId) throw commentNotFound();
         const changed = (await manager.query(
           hidden
-            ? "UPDATE comments SET status = 'HIDDEN', hidden_at = UTC_TIMESTAMP(3), hidden_by = ? WHERE id = ? AND status = 'VISIBLE'"
-            : "UPDATE comments SET status = 'VISIBLE', hidden_at = NULL, hidden_by = NULL WHERE id = ? AND status = 'HIDDEN'",
+            ? "UPDATE comments SET status = 'HIDDEN', hidden_at = UTC_TIMESTAMP(3), hidden_by = ?, hidden_reason = 'ADMIN' WHERE id = ? AND status = 'VISIBLE'"
+            : "UPDATE comments SET status = 'VISIBLE', hidden_at = NULL, hidden_by = NULL, hidden_reason = NULL WHERE id = ? AND status = 'HIDDEN'",
           hidden ? [admin.id, commentId] : [commentId],
         )) as Affected;
         if (changed.affectedRows === 1) {

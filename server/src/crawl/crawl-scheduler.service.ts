@@ -27,7 +27,7 @@ export class CrawlSchedulerService {
       const now = new Date();
       const rows = (await this.dataSource.query(
         `SELECT id FROM sources
-          WHERE status IN ('ACTIVE', 'ERROR') AND next_crawl_at <= ?
+          WHERE status IN ('ACTIVE', 'ERROR') AND kind <> 'COMMUNITY' AND next_crawl_at <= ?
           ORDER BY next_crawl_at LIMIT ?`,
         [now, BATCH_LIMIT],
       )) as { id: number | string }[];

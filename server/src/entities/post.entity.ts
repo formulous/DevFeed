@@ -13,7 +13,7 @@ export class Post {
   @Column({ name: 'source_type', type: 'enum', enum: ['COMPANY', 'PERSONAL'] })
   sourceType: SourceType;
 
-  @Column({ type: 'enum', enum: ['BLOG', 'SECURITY_NEWS'], default: 'BLOG' })
+  @Column({ type: 'enum', enum: ['BLOG', 'SECURITY_NEWS', 'COMMUNITY'], default: 'BLOG' })
   kind: SourceKind;
 
   @Column({ type: 'varchar', length: 1024, nullable: true })

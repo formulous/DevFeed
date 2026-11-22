@@ -35,6 +35,9 @@ export class Comment {
   @Column({ name: 'hidden_by', type: 'bigint', unsigned: true, nullable: true, transformer: bigintNumber })
   hiddenBy: number | null;
 
+  @Column({ name: 'hidden_reason', type: 'enum', enum: ['ADMIN', 'REPORTS'], nullable: true })
+  hiddenReason: 'ADMIN' | 'REPORTS' | null;
+
   @Column({ name: 'created_at', type: 'datetime', precision: 3, insert: false, update: false })
   createdAt: Date;
 

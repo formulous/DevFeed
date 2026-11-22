@@ -111,7 +111,7 @@ export class AdminSourcesService {
   ) {}
 
   async list(status?: SourceStatus, kind?: SourceKind) {
-    const where: string[] = [];
+    const where: string[] = ["s.kind <> 'COMMUNITY'"];
     const params: unknown[] = [addDays(new Date(), -7)];
     if (status) {
       where.push('s.status = ?');
@@ -122,7 +122,7 @@ export class AdminSourcesService {
       params.push(kind);
     }
     const rows = (await this.dataSource.query(
-      `SELECT ${SOURCE_COLUMNS} FROM sources s ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY s.name, s.id`,
+      `SELECT ${SOURCE_COLUMNS} FROM sources s WHERE ${where.join(' AND ')} ORDER BY s.name, s.id`,
       params,
     )) as SourceRow[];
     return { items: rows.map(toListItem) };
@@ -133,7 +133,7 @@ export class AdminSourcesService {
   }
 
   private async findRow(id: number): Promise<SourceRow> {
-    const [row] = (await this.dataSource.query(`SELECT ${SOURCE_COLUMNS} FROM sources s WHERE s.id = ?`, [
+    const [row] = (await this.dataSource.query(`SELECT ${SOURCE_COLUMNS} FROM sources s WHERE s.id = ? AND s.kind <> 'COMMUNITY'`, [
       addDays(new Date(), -7),
       id,
     ])) as SourceRow[];
