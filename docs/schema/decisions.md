@@ -307,6 +307,9 @@
   - 자동 숨김은 기존 숨김 상태 값 재사용 + `hidden_reason = 'REPORTS'`(`hidden_by` NULL). `comments`에도 `hidden_reason` 추가, 기존 숨김은 `ADMIN`으로 채움
 - 원장: `POST_WRITE`(ref = post_id, 회수 있음), `LIKE_RECEIVED`(작성자 기준, 좋아요 1건 = `(post_id, actor_id)`) → PK에 `actor_id`(기본 0) 추가. 대리 키를 `post_likes`에 넣는 안은 기각 (좋아요 PK 멱등 구조를 바꾸게 됨)
   - 하루 한도: 글 처음 3개(회수 포함, 029 댓글과 같음), 받은 좋아요 50점(초과분 행 없음, pm 결정), 작성 5개·60초 간격은 POST_WRITE 행으로 셈 (삭제한 글도 셈 → 삭제 후 재작성으로 한도 우회 불가)
+- 신고 수 갱신 주의 (server 검토): 단일 테이블 UPDATE는 왼쪽부터 대입하므로 `state` 식에서는 이미 +1된 `report_count`를 봄 → 조건은 `report_count >= 3`. 처음 초안(`+ 1 >= 3`)은 2건에 숨김되는 버그였음. 시나리오에 "2명 신고는 숨김 아님" 추가
+- 댓글 행 삭제 시 그 댓글의 `report_targets`(→ `reports` CASCADE)도 같은 트랜잭션에서 삭제 (server). 정합성 검사에 대상 없는 신고 대상 항목 추가
+- 배포 순서: `ck_comments_hidden`이 `hidden_reason`을 요구하므로 `0015` 적용 직후 server 배포 (그 사이 관리자 댓글 숨김만 CHECK 오류, 사용 빈도 낮음)
 - 잠금 순서 확장: 회원 행(행위자·대상 작성자 둘이면 **id 오름차순**) → 글 → 확장 → 부모 댓글 → 댓글 → 신고 대상 → 원장
 - 측정 (`devfeed_perf` 커뮤니티 2만 건 1년 분포, `db/perf/measure_community.py`, DB p95): 최신·말머리·2,000개 뒤 커서 0.01ms, 카드 20건 0.05ms, 상세 0.00ms, 인기 MONTH 0.99ms(3,228행)·말머리 0.35ms, 프로필 글 수 0.01ms
 - 마이그레이션 비용: 10만+ 행 DB에서 up 5초 (`score_events` 255만 행 PK 재구성이 대부분). 운영은 즉시

@@ -264,3 +264,11 @@ dba 초안 작성에 참고. 최종 검토는 초안이 나온 뒤에 함
 
 - 0015 자체는 수정 없이 승인 의견. 1·3은 참고 쿼리·정합성 검사 쪽 변경
 - 다음: dba 답 받으면 `openapi.yaml` 명세 작성 → client·pm 검토
+
+### dba (2차) — server 검토 반영
+1. 신고 2건 숨김 버그 맞음, 고침: `state = IF(state = 'PENDING' AND report_count >= 3, ...)` (대입 후 값 기준, 주석으로 이유 명시). 재시험: 2명 → `VISIBLE`·`PENDING`, 3명 → `HIDDEN`. 자동 숨김 때 POST_WRITE 회수·점수 감소 단계도 참고 쿼리에 추가 (다중 테이블 UPDATE 한 문장), 시험 후 점수·커뮤니티 정합성 모두 0
+2. 배포 순서 동의: 운영 `0015` 적용 직후 server 배포. 적용 시점은 사용자 승인 후 server에 먼저 알리고 진행함
+3. 댓글 삭제 시 `report_targets` 삭제 동의 → `community.sql`에 단계 추가, 정합성 검사 8번째 항목 `orphan_report_target` 추가
+4. `WEB_BASE_URL` 확인. DB는 server가 만든 url을 저장만 함 (base가 바뀌어도 기존 행은 그대로, 링크는 server가 id로 만들면 영향 없음)
+5·6. 확인. 내부 소스 `ACTIVE` 변경 거부 좋음 (DB CHECK는 `INACTIVE` 강제까지는 안 둠: 상태는 server 관리 값)
+- `0015` 자체 변경 없음 → 운영 적용 사용자 승인 대기

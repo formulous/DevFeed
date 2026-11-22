@@ -49,6 +49,9 @@ WHERE cp.post_id = @pid AND cp.user_id = @uid AND cp.category = 'QUESTION' AND c
   AND c.post_id = cp.post_id AND c.parent_id IS NULL AND c.status = 'VISIBLE' AND c.user_id <> cp.user_id;
 UPDATE community_posts SET accepted_comment_id = NULL WHERE post_id = @pid AND user_id = @uid;
 
+-- F-081 comment row delete (026 rules): delete its report target in the same transaction (reports cascade)
+DELETE FROM report_targets WHERE target_type = 'COMMENT' AND target_id = @cid;
+
 -- F-090 delete (author or admin) / withdrawal: always soft delete (row stays so likes, comments, bookmarks, reads and other users' score rows stay valid)
 UPDATE community_posts SET status = 'DELETED', body = NULL, user_id = NULL, accepted_comment_id = NULL,
   hidden_at = NULL, hidden_by = NULL, hidden_reason = NULL WHERE post_id = @pid;
@@ -61,12 +64,17 @@ INSERT INTO report_targets (target_type, target_id) VALUES (@type, @tid) ON DUPL
 SELECT report_count, state FROM report_targets WHERE target_type = @type AND target_id = @tid FOR UPDATE;
 INSERT IGNORE INTO reports (target_type, target_id, reporter_id, reason, detail) VALUES (@type, @tid, @uid, @reason, @detail);
 SET @n = ROW_COUNT();
+-- single-table UPDATE assigns left to right: state sees the already incremented report_count
 UPDATE report_targets SET report_count = report_count + 1, last_reported_at = UTC_TIMESTAMP(3),
-  state = IF(state = 'PENDING' AND report_count + 1 >= 3, 'HIDDEN', state)
+  state = IF(state = 'PENDING' AND report_count >= 3, 'HIDDEN', state)
 WHERE target_type = @type AND target_id = @tid AND @n = 1;
 UPDATE community_posts SET status = 'HIDDEN', hidden_at = UTC_TIMESTAMP(3), hidden_reason = 'REPORTS'
 WHERE @type = 'POST' AND post_id = @tid AND status = 'VISIBLE'
   AND EXISTS (SELECT 1 FROM report_targets WHERE target_type = 'POST' AND target_id = @tid AND state = 'HIDDEN');
+SET @h = ROW_COUNT();
+UPDATE users u JOIN score_events e ON e.user_id = u.id AND e.kind = 'POST_WRITE' AND e.ref_id = @tid AND e.revoked_at IS NULL
+SET u.score = u.score - e.points, e.revoked_at = UTC_TIMESTAMP(3)
+WHERE u.id = @author AND @h = 1;
 
 -- F-092 auto hide of a comment: same as admin hide (026) with hidden_reason REPORTS: comment_count -1, COMMENT score revoked, accepted answer released
 UPDATE comments SET status = 'HIDDEN', hidden_at = UTC_TIMESTAMP(3), hidden_reason = 'REPORTS'
@@ -93,4 +101,7 @@ SELECT
     WHERE e.kind = 'POST_WRITE' AND (cp.status = 'VISIBLE') <> (e.revoked_at IS NULL)) AS post_write_revoke_mismatch,
   (SELECT COUNT(*) FROM score_events e LEFT JOIN post_likes l ON l.user_id = e.actor_id AND l.post_id = e.ref_id
     WHERE e.kind = 'LIKE_RECEIVED' AND l.user_id IS NULL) AS like_received_without_like,
-  (SELECT COUNT(*) FROM posts WHERE kind = 'COMMUNITY' AND id IN (SELECT post_id FROM post_search)) AS community_in_search;
+  (SELECT COUNT(*) FROM posts WHERE kind = 'COMMUNITY' AND id IN (SELECT post_id FROM post_search)) AS community_in_search,
+  (SELECT COUNT(*) FROM report_targets rt LEFT JOIN comments c ON rt.target_type = 'COMMENT' AND c.id = rt.target_id
+    LEFT JOIN community_posts cp ON rt.target_type = 'POST' AND cp.post_id = rt.target_id
+    WHERE c.id IS NULL AND cp.post_id IS NULL) AS orphan_report_target;
