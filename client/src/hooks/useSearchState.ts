@@ -4,6 +4,11 @@ import { MAX_SOURCE_FILTER, MAX_TAG_FILTER } from '@/api/posts';
 import { SEARCH_MAX_PAGE, type SearchPeriod, type SearchQuery, type SearchSort } from '@/api/search';
 import { SEARCH_MAX, SEARCH_MIN } from '@/components/layout/AppHeader';
 import type { FilterBindings, SegmentOption } from '@/components/filters/types';
+import type { CommunityCategory, NewsRegion } from '@/api/types';
+import { parseCategory } from '@/lib/community';
+import { DEFAULT_SCOPE, parseScope, type SearchScopeKey } from '@/lib/searchScope';
+
+const REGIONS: NewsRegion[] = ['DOMESTIC', 'OVERSEAS'];
 
 const PERIODS: SearchPeriod[] = ['1W', '1M', '1Y', 'ALL'];
 const SORTS: SearchSort[] = ['RELEVANCE', 'LATEST'];
@@ -21,10 +26,15 @@ export function parseSearch(params: URLSearchParams): SearchQuery {
   const period = params.get('period') as SearchPeriod;
   const sort = params.get('sort') as SearchSort;
   const page = Number(params.get('page'));
+  const scope = parseScope(params.get('scope'));
+  const region = params.get('region') as NewsRegion;
   return {
     q: (params.get('q') ?? '').trim().slice(0, SEARCH_MAX),
-    tagIds: parseIds(params.get('tagIds'), MAX_TAG_FILTER),
-    sourceIds: parseIds(params.get('sourceIds'), MAX_SOURCE_FILTER),
+    scope,
+    tagIds: scope === 'tech' ? parseIds(params.get('tagIds'), MAX_TAG_FILTER) : [],
+    sourceIds: scope === 'tech' ? parseIds(params.get('sourceIds'), MAX_SOURCE_FILTER) : [],
+    region: scope === 'security' && REGIONS.includes(region) ? region : null,
+    category: scope === 'community' ? (parseCategory(params.get('category'))?.api ?? null) : null,
     period: PERIODS.includes(period) ? period : 'ALL',
     sort: SORTS.includes(sort) ? sort : 'RELEVANCE',
     page: Number.isInteger(page) && page >= 1 ? Math.min(page, SEARCH_MAX_PAGE) : 1,
@@ -34,6 +44,9 @@ export function parseSearch(params: URLSearchParams): SearchQuery {
 export function toSearchParams(s: SearchQuery) {
   const next = new URLSearchParams();
   next.set('q', s.q);
+  if (s.scope !== DEFAULT_SCOPE) next.set('scope', s.scope);
+  if (s.region) next.set('region', s.region);
+  if (s.category) next.set('category', s.category.toLowerCase());
   if (s.tagIds.length) next.set('tagIds', s.tagIds.join(','));
   if (s.sourceIds.length) next.set('sourceIds', s.sourceIds.join(','));
   if (s.period !== 'ALL') next.set('period', s.period);
@@ -72,8 +85,12 @@ export function useSearchState() {
     setSources: (sourceIds: number[]) => update({ sourceIds }),
     setPeriod: (period: SearchPeriod) => update({ period }),
     setSort: (sort: SearchSort) => update({ sort }),
+    setRegion: (region: NewsRegion | null) => update({ region }),
+    setCategory: (category: CommunityCategory | null) => update({ category }),
+    scopeHref: (scope: SearchScopeKey) =>
+      `/search?${toSearchParams({ ...state, scope, tagIds: [], sourceIds: [], region: null, category: null, page: 1 }).toString()}`,
     setPage: (page: number) => update({ page }, true),
-    resetFilters: () => update({ tagIds: [], sourceIds: [], period: 'ALL' }),
+    resetFilters: () => update({ tagIds: [], sourceIds: [], region: null, category: null, period: 'ALL' }),
   };
 }
 

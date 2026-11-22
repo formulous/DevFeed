@@ -9,6 +9,8 @@ import { GradeBadge } from '@/components/profile/GradeBadge';
 import { useProfile } from '@/hooks/useProfile';
 import { ThemeToggle } from './ThemeToggle';
 import { Wordmark } from '@/components/auth/LogoMark';
+import { useSearchScope } from '@/hooks/useSearchScope';
+import { scopeInfo, searchPath } from '@/lib/searchScope';
 
 export const SEARCH_MIN = 2;
 export const SEARCH_MAX = 50;
@@ -20,6 +22,7 @@ export function SearchBox({ className }: { className?: string }) {
   const urlQuery = params.get('q') ?? '';
   const [value, setValue] = useState(urlQuery);
   const navigate = useNavigate();
+  const scope = useSearchScope();
 
   useEffect(() => setValue(urlQuery), [urlQuery]);
   const trimmed = value.trim();
@@ -27,7 +30,7 @@ export function SearchBox({ className }: { className?: string }) {
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (valid) navigate(`/search?q=${encodeURIComponent(trimmed)}`);
+    if (valid) navigate(searchPath(trimmed, scope));
   };
 
   return (
@@ -45,7 +48,7 @@ export function SearchBox({ className }: { className?: string }) {
         value={value}
         maxLength={SEARCH_MAX}
         onChange={(e) => setValue(e.target.value)}
-        placeholder="기술 글 검색…"
+        placeholder={scopeInfo(scope).placeholder}
         aria-label="검색어"
         className="h-10 w-full rounded-full border border-line bg-input pl-9 pr-4 text-sm text-fg placeholder:text-fg-muted transition-colors focus:border-line-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-focus"
       />
@@ -115,8 +118,13 @@ function useHeaderHeightVar() {
   return ref;
 }
 
+function scopeSearchHref(scope: ReturnType<typeof useSearchScope>) {
+  return scope === 'tech' ? '/search' : `/search?scope=${scope}`;
+}
+
 export function AppHeader({ showSearchLink = false }: { showSearchLink?: boolean }) {
   const ref = useHeaderHeightVar();
+  const scope = useSearchScope();
   return (
     <header ref={ref} className="sticky top-0 z-30 border-b border-line bg-[color:color-mix(in_srgb,var(--color-bg-app)_85%,transparent)] backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-[1200px] items-center gap-2 px-4">
@@ -125,8 +133,8 @@ export function AppHeader({ showSearchLink = false }: { showSearchLink?: boolean
         </Link>
         {showSearchLink && (
           <Link
-            to="/search"
-            aria-label="검색으로 이동"
+            to={scopeSearchHref(scope)}
+            aria-label={`${scopeInfo(scope).label} 검색으로 이동`}
             className={cn('flex h-8 w-8 items-center justify-center rounded-full text-fg-secondary hover:bg-hover hover:text-fg', FOCUS)}
           >
             <FiSearch size={16} aria-hidden />

@@ -7,7 +7,7 @@ import { passkeyHandlers, resetPasskeys, setPasskeyPassword } from './passkeys';
 import { myActivity, reactionFields, reactionHandlers, resetReactions, withdrawReactions } from './reactions';
 import { gradeRef, profileHandlers, profileScore, resetProfile, scoreRead } from './profile';
 import { fieldByApi } from '@/lib/fields';
-import { communityCardById, communityHandlers, myCommunityActivity, recordCommunityView, resetCommunity, withdrawCommunity } from './community';
+import { communityCardById, communityHandlers, communitySearchDocs, myCommunityActivity, recordCommunityView, resetCommunity, withdrawCommunity } from './community';
 import { isClosedPost, isCommunityPost } from './communityStore';
 import { mockExtraSources, mockNewsPosts, mockNewsSources, mockPosts, mockSources, mockTags } from './fixtures';
 
@@ -180,30 +180,57 @@ export const handlers = [
         { status: 400 },
       );
     }
+    const scope = url.searchParams.get('scope') ?? 'TECH';
+    const ALLOWED: Record<string, string[]> = { TECH: ['tagIds', 'sourceIds'], SECURITY: ['region'], COMMUNITY: ['category'] };
+    if (!ALLOWED[scope]) return error(400, 'VALIDATION_FAILED', '검색 범위 값이 올바르지 않아요');
+    const scoped = ['tagIds', 'sourceIds', 'region', 'category'];
+    if (scoped.some((k) => url.searchParams.has(k) && !ALLOWED[scope].includes(k))) {
+      return error(400, 'VALIDATION_FAILED', '이 검색 범위에서 쓸 수 없는 필터예요');
+    }
+    const region = url.searchParams.get('region');
+    if (region && region !== 'DOMESTIC' && region !== 'OVERSEAS') return error(400, 'VALIDATION_FAILED', '지역 값이 올바르지 않아요');
+    const category = url.searchParams.get('category');
+    if (category && !['QUESTION', 'DISCUSSION', 'SHARE'].includes(category)) return error(400, 'VALIDATION_FAILED', '말머리 값이 올바르지 않아요');
     const terms = q.toLowerCase().split(/\s+/);
     const tagIds = idList(url.searchParams.get('tagIds'));
     const sourceIds = idList(url.searchParams.get('sourceIds'));
     const days = { '1W': 7, '1M': 30, '1Y': 365 }[url.searchParams.get('period') ?? ''];
-    const latest = Date.parse(mockPosts[0].publishedAt);
     const page = Number(url.searchParams.get('page') ?? 1);
     const size = Number(url.searchParams.get('size') ?? 20);
     const member = isMember(request);
-    const scored = mockPosts
-      .map((p) => {
-        const title = p.title.toLowerCase();
-        const body = [p.summary ?? '', p.source.name, ...p.tags.map((t) => t.name)].join(' ').toLowerCase();
+    const regionOf = new Map(mockNewsSources.map((n) => [n.id, n.region]));
+    type Doc = { card: PostSummary; title: string; text: string; publishedAt: string };
+    const docs: Doc[] =
+      scope === 'COMMUNITY'
+        ? communitySearchDocs(request).filter((d) => !category || d.category === category)
+        : scope === 'SECURITY'
+          ? mockNewsPosts
+              .filter((p) => !region || regionOf.get(p.source.id) === region)
+              .map((p) => ({ card: decorate(p, member), title: p.title, text: [p.summary ?? '', p.source.name].join(' '), publishedAt: p.publishedAt }))
+          : mockPosts
+              .filter(
+                (p) =>
+                  (tagIds.length === 0 || p.tags.some((t) => tagIds.includes(t.id))) &&
+                  (sourceIds.length === 0 || sourceIds.includes(p.source.id)),
+              )
+              .map((p) => ({
+                card: decorate(p, member),
+                title: p.title,
+                text: [p.summary ?? '', p.source.name, ...p.tags.map((t) => t.name)].join(' '),
+                publishedAt: p.publishedAt,
+              }));
+    const latest = Math.max(...docs.map((d) => Date.parse(d.publishedAt)), Date.parse(mockPosts[0].publishedAt));
+    const scored = docs
+      .map((d) => {
+        const title = d.title.toLowerCase();
+        const body = d.text.toLowerCase();
         const hit = terms.every((t) => title.includes(t) || body.includes(t));
-        return { p, hit, score: terms.filter((t) => title.includes(t)).length * 2 + terms.filter((t) => body.includes(t)).length };
+        return { d, hit, score: terms.filter((t) => title.includes(t)).length * 2 + terms.filter((t) => body.includes(t)).length };
       })
-      .filter(
-        ({ p, hit }) =>
-          hit &&
-          (tagIds.length === 0 || p.tags.some((t) => tagIds.includes(t.id))) &&
-          (sourceIds.length === 0 || sourceIds.includes(p.source.id)) &&
-          (!days || latest - Date.parse(p.publishedAt) <= days * 86_400_000),
-      );
-    if (url.searchParams.get('sort') !== 'LATEST') scored.sort((a, b) => b.score - a.score);
-    const items = scored.slice((page - 1) * size, page * size).map(({ p }) => decorate(p, member));
+      .filter(({ d, hit }) => hit && (!days || latest - Date.parse(d.publishedAt) <= days * 86_400_000));
+    if (url.searchParams.get('sort') === 'LATEST') scored.sort((a, b) => b.d.publishedAt.localeCompare(a.d.publishedAt));
+    else scored.sort((a, b) => b.score - a.score);
+    const items = scored.slice((page - 1) * size, page * size).map(({ d }) => d.card);
     return HttpResponse.json({
       items,
       total: Math.min(scored.length, 1000),

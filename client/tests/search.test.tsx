@@ -14,11 +14,11 @@ const results = () => within(screen.getByRole('region', { name: '검색 결과' 
 describe('search URL state', () => {
   it('잘못된 값은 기본값으로, 페이지는 1~50으로 제한함', () => {
     const s = parseSearch(new URLSearchParams('q=%20kafka%20&period=2W&sort=X&page=99&tagIds=1,a,1'));
-    expect(s).toEqual({ q: 'kafka', tagIds: [1], sourceIds: [], period: 'ALL', sort: 'RELEVANCE', page: 50 });
+    expect(s).toEqual({ q: 'kafka', scope: 'tech', tagIds: [1], sourceIds: [], region: null, category: null, period: 'ALL', sort: 'RELEVANCE', page: 50 });
   });
 
   it('기본값은 URL에서 뺌', () => {
-    const p = toSearchParams({ q: 'redis', tagIds: [], sourceIds: [2], period: 'ALL', sort: 'LATEST', page: 1 });
+    const p = toSearchParams({ q: 'redis', scope: 'tech', tagIds: [], sourceIds: [2], region: null, category: null, period: 'ALL', sort: 'LATEST', page: 1 });
     expect(p.toString()).toBe('q=redis&sourceIds=2&sort=LATEST');
   });
 
@@ -96,7 +96,7 @@ describe('S-04 검색 결과', () => {
   it('결과가 없으면 안내와 인기 태그를, 필터가 있으면 초기화 버튼도 보여줌', async () => {
     const user = userEvent.setup();
     renderWithApp(<App />, '/search?q=zzzz&period=1W');
-    expect(await screen.findByText('검색 결과가 없어요')).toBeInTheDocument();
+    expect(await screen.findByText('기술 뉴스에서 찾지 못했어요')).toBeInTheDocument();
     expect(screen.getByRole('list', { name: '인기 태그' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '필터 초기화' }));
     await waitFor(() => expect(currentLocation).toBe('/search?q=zzzz'));

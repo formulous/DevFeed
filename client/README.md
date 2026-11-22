@@ -50,7 +50,7 @@
 | `/community/posts/:id/edit` | S-18 CommunityEditPage (lazy) | RequireAuth | AppLayout |
 | `/`·`/for-you`·`/popular` | 옛 주소: `/tech`·`/tech/for-you`·`/tech/popular`로 쿼리 유지 `replace` 이동 (031) | - | - |
 | `/company`·`/personal` | 예전 주소 호환: `/tech?sourceType=COMPANY|PERSONAL`로 `replace` 이동 (다른 쿼리 유지, 023) | - | - |
-| `/search?q=` | S-04 SearchPage | - | AppLayout + FilterLayout |
+| `/search?q=&scope=tech|security|community` | S-04 SearchPage (범위별, 038. `scope` 생략 = tech) | - | AppLayout + FilterLayout(기술) / ProfileRail(보안·자유 게시판) |
 | `/login` | S-05 LoginPage | GuestOnly | AuthLayout |
 | `/signup` | S-06 SignupPage | GuestOnly | AuthLayout |
 | `/onboarding/tags` | S-07 OnboardingTagsPage | RequireAuth | AuthLayout |
@@ -193,6 +193,13 @@ App
 - 하이라이트: 검색어를 공백으로 나눈 토큰을 텍스트 노드 `<mark>`로 표시 (`lib/highlight.ts`)
 - 결과 없음: 철자 안내 + 인기 태그 10개 칩(누르면 태그명으로 검색), 필터가 있으면 [필터 초기화]
 - 정렬은 네이티브 `<select>` 사용. onyx `Select`는 `aria-label` 미전달·키보드 조작 불가라 접근성 기준을 못 맞춤
+
+## 페이지별 검색 (038, M13)
+- 범위: `lib/searchScope.ts` `SEARCH_SCOPES` (tech·security·community, 안내 문구·설명·1단 탭 경로). 화면 주소는 소문자 `scope`, API는 `TECH|SECURITY|COMMUNITY` (tech면 생략)
+- 검색창: `useSearchScope`가 지금 경로(`/tech…`·`/security…`·`/community…`, 검색 화면은 `scope`)로 범위를 정하고 안내 문구를 바꿈. 범위가 없는 화면은 마지막 범위(`sessionStorage` `devfeed:search-scope`), 없으면 기술 뉴스. 헤더 검색 아이콘도 같은 범위로 감
+- 결과 화면: 맨 위 범위 글자 탭 `기술 뉴스 · 보안 뉴스 · 자유 게시판` (검색어·정렬·기간 유지, 범위 필터·페이지 초기화), 1단 탭은 범위에 맞춰 선택 표시
+- 범위별 필터: 기술 = 태그·소스(왼쪽 필터 그대로), 보안 = 지역, 자유 게시판 = 말머리 (+ 기간). `parseSearch`가 범위 밖 필터를 버려서 API에 보내지 않음 (API는 범위 밖 필터 400)
+- 카드는 `kind`별 기존 카드, 하이라이트는 제목·summary. 결과 없음은 "<범위>에서 찾지 못했어요" + 다른 두 범위 검색 링크
 
 ## 관리자 화면 동작 (M1)
 - A-01: 요약 3칸, 상태 필터 `?status=` URL 반영, md 미만은 표 대신 카드 목록

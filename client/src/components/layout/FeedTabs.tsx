@@ -7,6 +7,7 @@ import { cn } from '@/lib/cn';
 import { M7_API_READY } from '@/lib/features';
 import { CATEGORIES, parseCategory } from '@/lib/community';
 import { FIELDS, parseField } from '@/lib/fields';
+import { parseScope } from '@/lib/searchScope';
 import { SearchBox } from './AppHeader';
 
 type SectionKey = 'tech' | 'security' | 'community';
@@ -97,8 +98,10 @@ export function isFieldTab(pathname: string) {
 export function FeedTabs() {
   const { pathname } = useLocation();
   const ref = useRef<HTMLElement>(null);
+  const [params] = useSearchParams();
   useScrollActiveIntoView(ref, pathname);
-  const current = sectionOf(pathname);
+  const searchScope = pathname === '/search' ? parseScope(params.get('scope')) : null;
+  const current = searchScope ? SECTIONS.find((s) => s.key === searchScope) : sectionOf(pathname);
 
   return (
     <nav

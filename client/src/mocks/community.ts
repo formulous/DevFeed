@@ -167,7 +167,7 @@ export function writeStatus(user: Me, now = Date.now()) {
   };
 }
 
-function stripMarkdown(body: string) {
+function plainText(body: string) {
   return body
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/<[^>]*>/g, ' ')
@@ -175,8 +175,24 @@ function stripMarkdown(body: string) {
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/[#>*_`|~-]/g, ' ')
     .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 200);
+    .trim();
+}
+
+function stripMarkdown(body: string) {
+  return plainText(body).slice(0, 200);
+}
+
+export function communitySearchDocs(request: Request) {
+  const v = viewer(request);
+  return [...community.posts.values()]
+    .filter((p) => p.status === 'VISIBLE')
+    .map((p) => ({
+      card: communityCard(p, v.userId !== null, v.userId),
+      title: p.title,
+      text: [plainText(p.body).slice(0, 2000), ...p.tags.map((t) => t.name)].join(' '),
+      category: p.category,
+      publishedAt: p.createdAt,
+    }));
 }
 
 interface Ctx {
