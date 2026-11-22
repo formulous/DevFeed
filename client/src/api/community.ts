@@ -5,6 +5,7 @@ import type {
   CommunityPost,
   CommunityPostInput,
   CursorPage,
+  CommunityRankSort,
   PopularPeriod,
   PopularPost,
   PostSummary,
@@ -30,8 +31,16 @@ export function fetchCommunityPosts(category: CommunityCategory | null, cursor?:
   });
 }
 
-export function fetchCommunityPopular(period: PopularPeriod, category: CommunityCategory | null, signal?: AbortSignal) {
-  return request<{ items: PopularPost[] }>('/community/popular', { signal, query: { period, category } });
+export function fetchCommunityPopular(
+  period: PopularPeriod,
+  category: CommunityCategory | null,
+  sort: CommunityRankSort,
+  signal?: AbortSignal,
+) {
+  return request<{ items: PopularPost[] }>('/community/popular', {
+    signal,
+    query: { period, category, sort: sort === 'SCORE' ? undefined : sort },
+  });
 }
 
 export const fetchWriteStatus = (signal?: AbortSignal) =>

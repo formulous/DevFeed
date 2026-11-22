@@ -28,10 +28,10 @@ describe('F-015 상단 탭 (031: 기술 뉴스·보안 뉴스 + 내부 탭)', ()
     expect(sub().getByRole('link', { name: '인기' })).toHaveAttribute('aria-current', 'page');
   });
 
-  it('기술 뉴스 내부 탭은 최신·추천·인기, 보안 뉴스는 최신·인기', async () => {
+  it('기술 뉴스 내부 탭은 최신·추천·인기·댓글, 보안 뉴스는 최신·인기', async () => {
     const first = renderWithApp(<App />, '/tech');
     await screen.findAllByRole('article');
-    expect([...screen.getByTestId('section-tabs').querySelectorAll('a, button')].map((l) => l.textContent)).toEqual(['최신', '추천', '인기']);
+    expect([...screen.getByTestId('section-tabs').querySelectorAll('a, button')].map((l) => l.textContent)).toEqual(['최신', '추천', '인기', '댓글']);
     first.unmount();
     renderWithApp(<App />, '/security');
     expect(sub().getAllByRole('link').map((l) => l.textContent)).toEqual(['최신', '인기']);

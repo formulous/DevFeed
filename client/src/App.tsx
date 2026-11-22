@@ -60,12 +60,15 @@ export function App() {
           <Route path="tech" element={<HomePage />} />
           <Route path="tech/for-you" element={<RequireAuth><ForYouPage /></RequireAuth>} />
           <Route path="tech/popular" element={<PopularPage />} />
+          <Route path="tech/comments" element={<PopularPage key="comments" sort="COMMENTS" />} />
           <Route path="company" element={<LegacySourceTypeRedirect type="COMPANY" />} />
           <Route path="personal" element={<LegacySourceTypeRedirect type="PERSONAL" />} />
           <Route path="security" element={M7_API_READY ? <SecurityNewsPage /> : <Navigate to={PATHS.tech} replace />} />
           <Route path="security/popular" element={M7_API_READY ? <SecurityPopularPage /> : <Navigate to={PATHS.tech} replace />} />
           <Route path="community" element={<CommunityPage />} />
           <Route path="community/popular" element={<CommunityPopularPage />} />
+          <Route path="community/comments" element={<CommunityPopularPage key="comments" sort="COMMENTS" />} />
+          <Route path="community/likes" element={<CommunityPopularPage key="likes" sort="LIKES" />} />
           <Route path="community/new" element={<RequireAuth><Lazy><CommunityNewPage /></Lazy></RequireAuth>} />
           <Route path="community/posts/:id" element={<Lazy><CommunityPostPage /></Lazy>} />
           <Route path="community/posts/:id/edit" element={<RequireAuth><Lazy><CommunityEditPage /></Lazy></RequireAuth>} />

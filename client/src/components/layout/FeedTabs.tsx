@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
-import { FiCheck, FiChevronDown } from 'react-icons/fi';
+import { FiCheck } from 'react-icons/fi';
 import { Link, useLocation, useSearchParams } from 'react-router';
 import { useLoginPrompt } from '@/auth/LoginPromptProvider';
 import { PATHS } from '@/lib/routes';
@@ -19,6 +19,7 @@ interface SubTab {
   memberOnly?: boolean;
   field?: boolean;
   category?: boolean;
+  ranked?: boolean;
 }
 
 interface Section {
@@ -37,7 +38,9 @@ const ALL_SECTIONS: Section[] = [
     keep: ['category'],
     tabs: [
       { to: PATHS.community, label: '최신', category: true },
-      { to: PATHS.communityPopular, label: '인기', category: true },
+      { to: PATHS.communityPopular, label: '인기', category: true, ranked: true },
+      { to: PATHS.communityComments, label: '댓글', category: true, ranked: true },
+      { to: PATHS.communityLikes, label: '좋아요', category: true, ranked: true },
     ],
   },
   {
@@ -48,7 +51,8 @@ const ALL_SECTIONS: Section[] = [
     tabs: [
       { to: PATHS.tech, label: '최신', field: true },
       { to: PATHS.techForYou, label: '추천', memberOnly: true },
-      { to: PATHS.techPopular, label: '인기', field: true },
+      { to: PATHS.techPopular, label: '인기', field: true, ranked: true },
+      { to: PATHS.techComments, label: '댓글', field: true, ranked: true },
     ],
   },
   {
@@ -58,7 +62,7 @@ const ALL_SECTIONS: Section[] = [
     keep: ['region', 'sourceIds'],
     tabs: [
       { to: PATHS.security, label: '최신' },
-      { to: PATHS.securityPopular, label: '인기' },
+      { to: PATHS.securityPopular, label: '인기', ranked: true },
     ],
   },
 ];
@@ -141,11 +145,10 @@ function useSectionItems(section: Section, suffix = '') {
   const { pathname } = useLocation();
   const [params] = useSearchParams();
   const { status } = useAuth();
-  const query = carry(params, section.keep);
   return section.tabs.map<MenuItem>((tab) => ({
     key: tab.to,
     label: `${tab.label}${suffix}`,
-    to: `${tab.to}${query}`,
+    to: tabHref(tab, section, params),
     active: tab.to === pathname,
     locked: !!tab.memberOnly && status === 'guest',
   }));
@@ -343,66 +346,44 @@ function HoverTab({ section, active, className }: { section: Section; active: bo
   );
 }
 
-export function SortSelect() {
+export function SortTabs() {
   const { pathname } = useLocation();
   const section = sectionOf(pathname);
   if (!section) return null;
-  return <SortMenu section={section} />;
+  return <SortTabList section={section} />;
 }
 
-function SortMenu({ section }: { section: Section }) {
+function SortTabList({ section }: { section: Section }) {
   const items = useSectionItems(section, '순');
-  const [open, setOpen] = useState(false);
-  const id = useId();
-  const wrap = useRef<HTMLDivElement>(null);
-  const button = useRef<HTMLButtonElement>(null);
-  const { pathname } = useLocation();
-  const current = items.find((i) => i.active) ?? items[0];
-  useEffect(() => setOpen(false), [pathname]);
-
+  const { openLoginPrompt } = useLoginPrompt();
   return (
-    <div
-      ref={wrap}
-      className="relative shrink-0"
-      data-testid="sort-select"
-      onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOpen(false);
-      }}
-    >
-      <button
-        ref={button}
-        type="button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={open ? id : undefined}
-        aria-label={`정렬: ${current.label}`}
-        onClick={() => setOpen((v) => !v)}
-        onKeyDown={(e) => {
-          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-            e.preventDefault();
-            setOpen(true);
-            requestAnimationFrame(() => firstItem(wrap.current));
-          }
-        }}
-        className="flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full border border-line bg-surface px-3.5 text-[13px] font-medium text-fg hover:border-line-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring"
-      >
-        {current.label}
-        <FiChevronDown size={14} aria-hidden className={cn('transition-transform', open && 'rotate-180')} />
-      </button>
-      {open && (
-        <MenuList
-          id={id}
-          label="정렬"
-          items={items}
-          align="right"
-          onDone={() => setOpen(false)}
-          onEscape={() => {
-            setOpen(false);
-            button.current?.focus();
-          }}
-        />
-      )}
-    </div>
+    <nav aria-label="정렬" data-testid="sort-tabs" className="flex shrink-0 items-center gap-2">
+      {items.map((item, i) => {
+        const cls = cn(
+          'shrink-0 whitespace-nowrap py-0.5 text-[13px] transition-colors duration-150',
+          FOCUS,
+          item.active ? 'font-semibold text-fg' : 'text-fg-secondary hover:text-fg',
+        );
+        return (
+          <Fragment key={item.key}>
+            {i > 0 && (
+              <span aria-hidden className="shrink-0 select-none text-[13px] text-fg-muted">
+                ·
+              </span>
+            )}
+            {item.locked ? (
+              <button type="button" className={cls} onClick={() => openLoginPrompt('추천 글을 보려면 로그인이 필요해요')}>
+                {item.label}
+              </button>
+            ) : (
+              <Link to={item.to} aria-current={item.active ? 'page' : undefined} className={cls}>
+                {item.label}
+              </Link>
+            )}
+          </Fragment>
+        );
+      })}
+    </nav>
   );
 }
 
@@ -416,6 +397,10 @@ function carry(params: URLSearchParams, keep: string[]) {
   return qs ? `?${qs}` : '';
 }
 
+function tabHref(tab: SubTab, section: Section, params: URLSearchParams) {
+  return `${tab.to}${carry(params, tab.ranked ? [...section.keep, 'period'] : section.keep)}`;
+}
+
 const SUB_ITEM =
   'flex h-7 items-center whitespace-nowrap rounded-md px-3.5 text-[13px] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring';
 
@@ -424,12 +409,18 @@ export function SectionTabs() {
   const [params] = useSearchParams();
   const { status } = useAuth();
   const { openLoginPrompt } = useLoginPrompt();
+  const ref = useRef<HTMLElement>(null);
   const section = sectionOf(pathname);
+  useScrollActiveIntoView(ref, pathname);
   if (!section) return null;
-  const query = carry(params, section.keep);
 
   return (
-    <nav aria-label={`${section.label} 보기`} data-testid="section-tabs">
+    <nav
+      ref={ref}
+      aria-label={`${section.label} 보기`}
+      data-testid="section-tabs"
+      className={cn('scrollbar-none -ml-4 min-w-0 overflow-x-auto pl-4 lg:ml-0 lg:pl-0', FADE)}
+    >
       <div className="inline-flex rounded-lg bg-subtle p-0.5">
         {section.tabs.map((tab) => {
           const active = tab.to === pathname;
@@ -439,7 +430,7 @@ export function SectionTabs() {
               <button
                 key={tab.to}
                 type="button"
-                className={cls}
+                className={cn(cls, 'shrink-0')}
                 onClick={() => openLoginPrompt('추천 글을 보려면 로그인이 필요해요')}
               >
                 {tab.label}
@@ -447,7 +438,7 @@ export function SectionTabs() {
             );
           }
           return (
-            <Link key={tab.to} to={`${tab.to}${query}`} aria-current={active ? 'page' : undefined} className={cls}>
+            <Link key={tab.to} to={tabHref(tab, section, params)} aria-current={active ? 'page' : undefined} className={cn(cls, 'shrink-0')}>
               {tab.label}
             </Link>
           );

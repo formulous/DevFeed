@@ -100,6 +100,10 @@ export interface PopularPost extends PostSummary {
 
 export type PopularPeriod = 'DAY' | 'WEEK' | 'MONTH';
 
+export type TechRankSort = 'VIEWS' | 'COMMENTS';
+
+export type CommunityRankSort = 'SCORE' | 'COMMENTS' | 'LIKES';
+
 export interface TagItem extends TagRef {
   slug: string;
   category: string | null;

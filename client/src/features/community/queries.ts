@@ -1,7 +1,7 @@
 import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query';
 import { ApiError } from '@/api/http';
 import { fetchCommunityPopular, fetchCommunityPost, fetchCommunityPosts, fetchWriteStatus } from '@/api/community';
-import type { CommunityCategory, PopularPeriod } from '@/api/types';
+import type { CommunityCategory, CommunityRankSort, PopularPeriod } from '@/api/types';
 import { POSTS_KEY } from '@/hooks/usePostActions';
 
 export const COMMUNITY_KEY = ['community'] as const;
@@ -14,10 +14,15 @@ export const communityListQuery = (category: CommunityCategory | null, authKey: 
     getNextPageParam: (last) => last.nextCursor ?? undefined,
   });
 
-export const communityPopularQuery = (period: PopularPeriod, category: CommunityCategory | null, authKey: string) =>
+export const communityPopularQuery = (
+  period: PopularPeriod,
+  category: CommunityCategory | null,
+  authKey: string,
+  sort: CommunityRankSort = 'SCORE',
+) =>
   queryOptions({
-    queryKey: [...POSTS_KEY, 'community-popular', authKey, period, category],
-    queryFn: ({ signal }) => fetchCommunityPopular(period, category, signal),
+    queryKey: [...POSTS_KEY, 'community-popular', authKey, period, category, sort],
+    queryFn: ({ signal }) => fetchCommunityPopular(period, category, sort, signal),
     staleTime: 5 * 60_000,
   });
 

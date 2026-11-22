@@ -421,12 +421,23 @@ export function communityHandlers(ctx: Ctx) {
       if (!hours) return error(400, 'VALIDATION_FAILED', '기간 값이 올바르지 않아요');
       const cat = categoryParam(url);
       if (cat.bad) return error(400, 'VALIDATION_FAILED', '말머리 값이 올바르지 않아요');
+      const sort = url.searchParams.get('sort') ?? 'SCORE';
+      if (!['SCORE', 'COMMENTS', 'LIKES'].includes(sort)) return error(400, 'VALIDATION_FAILED', '정렬 값이 올바르지 않아요');
       const v = viewer(request);
       const now = Date.now();
       const items = visible()
         .filter((p) => now - Date.parse(p.createdAt) <= hours * 3_600_000 && (!cat.value || p.category === cat.value))
         .map((p) => ({ ...communityCard(p, v.userId !== null, v.userId), viewCount: p.viewCount }))
-        .map((p) => ({ p, score: (p.likeCount ?? 0) * 2 + (p.commentCount ?? 0) + p.viewCount * 0.1 }))
+        .map((p) => ({
+          p,
+          score:
+            sort === 'COMMENTS'
+              ? (p.commentCount ?? 0)
+              : sort === 'LIKES'
+                ? (p.likeCount ?? 0)
+                : (p.likeCount ?? 0) * 2 + (p.commentCount ?? 0) + p.viewCount * 0.1,
+        }))
+        .filter(({ score }) => sort === 'SCORE' || score >= 1)
         .sort((a, b) => b.score - a.score || b.p.publishedAt.localeCompare(a.p.publishedAt))
         .slice(0, 20)
         .map(({ p }) => p);

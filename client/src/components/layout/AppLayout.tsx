@@ -5,7 +5,7 @@ import { AD_MEDIA, AD_SLOTS, HOVER_MENU_MEDIA, useMediaQuery } from '@/lib/ads';
 import { AppFooter } from './AppFooter';
 import { AppHeader } from './AppHeader';
 import { WriteButton } from '@/features/community/WriteButton';
-import { CategoryTabs, FieldTabs, heroTitle, isCategoryTab, isFieldTab, PageHero, SectionTabs, sectionOf, SortSelect } from './FeedTabs';
+import { CategoryTabs, FieldTabs, heroTitle, isCategoryTab, isFieldTab, PageHero, SectionTabs, sectionOf, SortTabs } from './FeedTabs';
 
 export function AppLayout() {
   const { pathname } = useLocation();
@@ -27,8 +27,8 @@ export function AppLayout() {
                 {isFieldTab(pathname) && <FieldTabs />}
                 {isCategoryTab(pathname) && <CategoryTabs />}
               </div>
+              <SortTabs />
               {section.key === 'community' && <WriteButton />}
-              <SortSelect />
             </div>
           )}
           {section && !hoverable && (

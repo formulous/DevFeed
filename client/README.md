@@ -39,10 +39,12 @@
 | `/tech` (`?field=`) | S-01 HomePage (기술 뉴스 > 최신) | - | AppLayout + FilterLayout |
 | `/tech/for-you` | S-02 ForYouPage (기술 뉴스 > 추천) | RequireAuth | AppLayout + ProfileRail |
 | `/tech/popular` (`?period=&field=`) | S-03 PopularPage (기술 뉴스 > 인기) | - | AppLayout + ProfileRail |
+| `/tech/comments` (`?period=&field=`) | PopularPage `sort=COMMENTS` (기술 뉴스 > 댓글순, 035) | - | AppLayout + ProfileRail |
 | `/security` (`?region=&sourceIds=`) | S-14 SecurityNewsPage (보안 뉴스 > 최신) | - | AppLayout |
 | `/security/popular` (`?period=&region=`) | S-15 SecurityPopularPage (보안 뉴스 > 인기, 031) | - | AppLayout + ProfileRail |
 | `/community` (`?category=`) | S-16 CommunityPage (커뮤니티 > 최신, 032) | - | AppLayout + ProfileRail |
 | `/community/popular` (`?period=&category=`) | S-16 CommunityPopularPage (커뮤니티 > 인기) | - | AppLayout + ProfileRail |
+| `/community/comments`·`/community/likes` (`?period=&category=`) | CommunityPopularPage `sort=COMMENTS|LIKES` (댓글순·좋아요순, 035) | - | AppLayout + ProfileRail |
 | `/community/posts/:id` | S-17 CommunityPostPage (lazy) | - | AppLayout |
 | `/community/new` (`?category=`) | S-18 CommunityNewPage (lazy) | RequireAuth | AppLayout |
 | `/community/posts/:id/edit` | S-18 CommunityEditPage (lazy) | RequireAuth | AppLayout |
@@ -242,6 +244,12 @@ App
 - 데스크톱은 하위 탭 토글 그룹 대신 목록 위 줄 오른쪽 `정렬` 선택(`최신순·추천순·인기순`, 자유 게시판·보안 뉴스는 `최신순·인기순`). 같은 줄 왼쪽에 분야·말머리 글자 탭, 자유 게시판은 `글쓰기`가 정렬 왼쪽. 바꾸면 하위 탭 주소로 이동(유지 규칙 031·032 그대로)
 - 모바일·터치(위 조건 아님): 지금 토글 그룹(`SectionTabs`) 그대로
 - 테스트: `tests/setup.ts`가 `HOVER_MENU_MEDIA`를 기본 false로 두고, `tests/hoverMenu.test.tsx`에서 켜서 확인
+
+## 정렬 글자 탭·댓글순·좋아요순 (`docs/discussions/035`)
+- 033의 `[최신순 ▾]` 선택 메뉴를 없애고 목록 위 줄 오른쪽에 정렬 글자 탭(`SortTabs`, `data-testid="sort-tabs"`, 분야 탭과 같은 크기). 자유 게시판 `글쓰기`는 정렬 탭 오른쪽
+- 항목: 자유 게시판 `최신·인기·댓글·좋아요`, 기술 뉴스 `최신·추천·인기·댓글`, 보안 뉴스 `최신·인기`. hover 메뉴·모바일 토글도 같은 항목 (`FeedTabs.tsx` `ALL_SECTIONS`). 모바일 토글은 넘치면 가로 스크롤
+- 기간: `ranked` 탭(인기·댓글·좋아요) 사이 이동 때만 `period`를 넘김 (`tabHref`), 최신·추천으로 가면 버림
+- API: 기존 인기 API에 `sort` (`/posts/popular?sort=VIEWS|COMMENTS`, `/community/popular?sort=SCORE|COMMENTS|LIKES`, 기본값이면 생략). 순위 카드 메타는 `RankedPosts` `metric`으로 댓글·좋아요 수 강조
 
 ## 자유 게시판 (커뮤니티, F-090~F-094, M12, `docs/discussions/032`)
 - 1단 탭 3개(033 이후 자유 게시판·기술 뉴스·보안 뉴스). 커뮤니티 내부 탭 `[최신 | 인기]` + 말머리 글자 탭(`?category=question|discussion|share`, 탭 이동 시 유지) + 오른쪽 `글쓰기`(비회원은 로그인 안내 모달). 좌측 열은 프로필 카드만 (목록 API에 태그 필터 없음)

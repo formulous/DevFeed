@@ -159,11 +159,14 @@ export const handlers = [
     if (!hours) return error(400, 'VALIDATION_FAILED', '기간 값이 올바르지 않아요');
     const latest = Date.parse(mockPosts[0].publishedAt);
     const member = isMember(request);
+    const sort = url.searchParams.get('sort') ?? 'VIEWS';
+    if (sort !== 'VIEWS' && sort !== 'COMMENTS') return error(400, 'VALIDATION_FAILED', '정렬 값이 올바르지 않아요');
+    const metric = (p: { viewCount: number; commentCount?: number }) => (sort === 'COMMENTS' ? (p.commentCount ?? 0) : p.viewCount);
     const items = mockPosts
       .filter((p) => latest - Date.parse(p.publishedAt) <= hours * 3_600_000 && inField(p))
       .map((p) => ({ ...decorate(p, member), viewCount: mockViewCount(p.id) }))
-      .filter((p) => p.viewCount >= 1)
-      .sort((a, b) => b.viewCount - a.viewCount)
+      .filter((p) => metric(p) >= 1)
+      .sort((a, b) => metric(b) - metric(a) || b.publishedAt.localeCompare(a.publishedAt))
       .slice(0, 20);
     return HttpResponse.json({ items });
   }),

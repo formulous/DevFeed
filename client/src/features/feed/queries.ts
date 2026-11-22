@@ -1,6 +1,6 @@
 import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query';
 import { fetchFeed, fetchPopular, fetchSources, fetchTags, type FeedQuery } from '@/api/posts';
-import type { PopularPeriod } from '@/api/types';
+import type { PopularPeriod, TechRankSort } from '@/api/types';
 import type { ApiField } from '@/lib/fields';
 import { POSTS_KEY } from '@/hooks/usePostActions';
 
@@ -12,10 +12,10 @@ export const feedQuery = (filters: FeedQuery, authKey: string) =>
     getNextPageParam: (last) => last.nextCursor ?? undefined,
   });
 
-export const popularQuery = (period: PopularPeriod, field: ApiField | null, authKey: string) =>
+export const popularQuery = (period: PopularPeriod, field: ApiField | null, authKey: string, sort: TechRankSort = 'VIEWS') =>
   queryOptions({
-    queryKey: [...POSTS_KEY, 'popular', authKey, period, field],
-    queryFn: ({ signal }) => fetchPopular(period, field, signal),
+    queryKey: [...POSTS_KEY, 'popular', authKey, period, field, sort],
+    queryFn: ({ signal }) => fetchPopular(period, field, sort, signal),
     staleTime: 5 * 60_000,
   });
 
