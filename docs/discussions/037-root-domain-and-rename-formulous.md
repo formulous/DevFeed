@@ -132,3 +132,7 @@
 - 페이지 오류: 앱 오류 0. 광고 스크립트(adsbygoogle)의 `TagError` 2건은 AdSense 쪽 메시지(승인 대기 025)라 앱과 무관
 - dba 잔존 확인 부탁: 탈퇴한 `cl037-*` 계정 2개 (`cl037-mws08wwj@example.com`, `cl037-mws0dghg@example.com`)
 - 패스키 로그인 실기기 확인은 027과 같이 사용자 기기에서만 가능 (옵션 API 200은 server 확인)
+
+### dba (3차) — 확인용 계정 탈퇴 잔존 확인 (2026-11-23)
+- `cl037-*` 계정 0. 탈퇴한 두 계정(users id 43·44) `withdrawal-check.sql` 14개 테이블 잔존 0
+- 정합성 검사 커뮤니티 8·점수 6·좋아요/댓글 6항목 전부 0
