@@ -214,6 +214,26 @@ paths:
         '400': { $ref: '#/components/responses/ValidationFailed' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
 
+  /me/profile:
+    get:
+      tags: [me]
+      summary: 프로필 카드 (F-082·F-083, 029)
+      description: |
+        닉네임·누적 점수·등급·활동 수치 4개. 수치는 요청 시점 실제 행 수(지연 없음).
+        좋아요·댓글·조회 직후 client가 다시 불러 반영함
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          headers:
+            Cache-Control:
+              schema: { type: string, example: no-store }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Profile' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
   /me/withdraw:
     post:
       tags: [me]
@@ -1654,6 +1674,50 @@ components:
           maxItems: 10
           items: { $ref: '#/components/schemas/Passkey' }
 
+    Grade:
+      type: object
+      description: |
+        활동 등급 (F-083). 누적 점수 기준 Lv.1 Hello World 0, Lv.2 Junior Dev 100, Lv.3 Senior Dev 500, Lv.4 Tech Lead 2000, Lv.5 Architect 5000
+      required: [level, name]
+      properties:
+        level: { type: integer, minimum: 1, maximum: 5, example: 3 }
+        name: { type: string, example: Senior Dev }
+
+    ProfileGrade:
+      allOf:
+        - $ref: '#/components/schemas/Grade'
+        - type: object
+          required: [minScore, nextMinScore]
+          properties:
+            minScore: { type: integer, minimum: 0, example: 500, description: 현재 등급 기준 점수 }
+            nextMinScore:
+              type: integer
+              nullable: true
+              example: 2000
+              description: 다음 등급 기준 점수. 최고 등급이면 null
+
+    Profile:
+      type: object
+      required: [nickname, score, grade, stats]
+      properties:
+        nickname: { type: string }
+        score:
+          type: integer
+          minimum: 0
+          example: 1240
+          description: |
+            누적 점수. 읽기 +1(같은 글 처음 1회, KST 하루 30점), 좋아요 +2(취소 시 회수), 댓글·답글 +5(KST 하루 처음 10개, 본인 삭제·관리자 숨김 시 회수, 숨김 해제 시 복구), 북마크 0.
+            읽은 기록을 지워도 읽기 점수는 남음
+        grade: { $ref: '#/components/schemas/ProfileGrade' }
+        stats:
+          type: object
+          required: [likes, comments, reads, bookmarks]
+          properties:
+            likes: { type: integer, minimum: 0, description: 지금 좋아요 중인 글 수 }
+            comments: { type: integer, minimum: 0, description: 보이는 댓글 + 답글 수 (삭제·숨김 제외) }
+            reads: { type: integer, minimum: 0, description: 읽은 기록 현재 개수 }
+            bookmarks: { type: integer, minimum: 0, description: 북마크 현재 개수 }
+
     Me:
       type: object
       required: [id, email, nickname, role, hasInterestTags, onboardingCompleted, createdAt]
@@ -1842,11 +1906,12 @@ components:
         author:
           type: object
           nullable: true
-          required: [id, nickname]
+          required: [id, nickname, grade]
           properties:
             id: { $ref: '#/components/schemas/Id' }
             nickname: { type: string }
-          description: DELETED는 null, HIDDEN은 관리자 요청에만 포함·그 외 null
+            grade: { $ref: '#/components/schemas/Grade' }
+          description: DELETED는 null, HIDDEN은 관리자 요청에만 포함·그 외 null. grade는 조회 시점 작성자 점수 기준 (029)
         createdAt: { type: string, format: date-time }
         editedAt:
           type: string

@@ -159,3 +159,18 @@
   - 제안: READ 행은 읽은 기록과 같이 **1년 지나면 회원당 `ARCHIVE` 1행으로 접음** (점수 그대로). 대가: 1년 넘은 글을 다시 읽으면 +1 다시 받을 수 있음 (하루 30점 한도 안)
   - 대안: 접지 않고 영구 보관 (규모 커지면 버퍼 풀 증설 검토)
 - 운영 `devfeed` `0014` 적용은 사용자 확인 후 (nullable 아님이지만 기본값 0 컬럼 1개·새 테이블 1개라 현재 서버 영향 없음)
+
+### server (2차) — 0014 수용·명세 반영
+- dba 0014·`score.sql` 그대로 수용 (PK 원장, 댓글 11번째부터 0점 행, 증감은 원장 쓰기 영향 행 수로만 판단)
+- 명세 (`openapi.yaml`)
+  - `GET /me/profile` → `Profile { nickname, score, grade: { level, name, minScore, nextMinScore|null }, stats: { likes, comments, reads, bookmarks } }`, `Cache-Control: no-store`
+  - `Comment.author.grade: { level, name }` 필수 추가 (author가 null인 경우는 그대로 null)
+  - 좋아요·댓글·조회 응답 형태 변경 없음
+- 구현 시 잠금 순서 (`score.sql` 첫 줄과 같음)
+  - 좋아요: 회원 → 글 → 원장
+  - 관리자 숨김·해제: 댓글을 먼저 잠금 없이 읽어 **작성자 회원 행**을 잠근 뒤 글 → 댓글 → 원장 (요청자가 아니라 작성자 점수가 바뀜)
+  - 본인 삭제: 회원(본인 = 작성자) → 글 → 부모 → 댓글 → 원장
+  - 조회(F-012): 회원만, 회원 행 잠금 → 하루 합계 → `INSERT IGNORE`
+- 원장 용량(ARCHIVE 접기) pm 결정은 server 영향 작음: 채택하면 기존 일일 정리 작업(읽은 기록 1년 만료)에 접기 단계를 붙임
+- 참고: 서버에는 글 삭제 경로가 없어 정합성 검사의 "원장만 남은 좋아요·댓글"은 생기지 않음. e2e 정리(글 삭제)는 회원을 먼저 지워 원장이 같이 사라짐
+- 다음: client·pm 대조 후 구현. 배포 직후 dba 백필 → 정합성 검사 0 확인
