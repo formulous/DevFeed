@@ -102,6 +102,14 @@
 | 401/400 | `PASSKEY_VERIFICATION_FAILED` | 패스키 검증 실패. 로그인 401, 등록 400. 챌린지 만료·재사용, origin·RP ID 불일치, 사용자 확인 없음, 서명 실패, 서명 횟수 역행을 구분하지 않음 (027) |
 | 409 | `PASSKEY_LIMIT_EXCEEDED` | 회원당 패스키 10개 초과 (027) |
 | 409 | `PASSKEY_ALREADY_REGISTERED` | 같은 credential이 이미 등록됨 (027) |
+| 429 | `POST_WRITE_LIMITED` | 커뮤니티 글 작성 제한. `reason`(NEW_ACCOUNT·DAILY_LIMIT·COOLDOWN)·`retryAfterSec`·`availableAt`, `Retry-After` 헤더 (032) |
+| 409 | `COMMUNITY_POST_CLOSED` | 숨긴·삭제된 커뮤니티 글에 수정·좋아요·댓글·북마크·채택 요청 (032) |
+| 409 | `ACCEPT_NOT_QUESTION` | 질문글이 아닌 글에 채택 (032) |
+| 409 | `ACCEPT_OWN_COMMENT` | 내 댓글 채택 (032) |
+| 409 | `ACCEPT_REPLY` | 답글 채택 (최상위 댓글만 가능) (032) |
+| 409 | `COMMENT_ACCEPTED` | 채택된 댓글 삭제 (수정은 가능) (032) |
+| 403 | `REPORT_OWN_CONTENT` | 내 글·댓글 신고 (032) |
+| 409 | `REPORT_DUPLICATED` | 같은 대상 중복 신고 (032) |
 
 ## 4. 인증
 - 액세스 토큰: JWT, 유효 15분, `Authorization: Bearer <token>` 헤더

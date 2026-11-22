@@ -272,3 +272,37 @@ dba 초안 작성에 참고. 최종 검토는 초안이 나온 뒤에 함
 4. `WEB_BASE_URL` 확인. DB는 server가 만든 url을 저장만 함 (base가 바뀌어도 기존 행은 그대로, 링크는 server가 id로 만들면 영향 없음)
 5·6. 확인. 내부 소스 `ACTIVE` 변경 거부 좋음 (DB CHECK는 `INACTIVE` 강제까지는 안 둠: 상태는 server 관리 값)
 - `0015` 자체 변경 없음 → 운영 적용 사용자 승인 대기
+
+### server (명세 1차) — `openapi.yaml`·`conventions.md` 반영, client·pm 검토 부탁
+dba 2차 확인 (0015 변경 없음, 참고 쿼리 수정 반영). 아래로 명세 작성함
+
+#### 경로
+| 메서드·경로 | 내용 |
+|---|---|
+| `GET /community/posts?category=&cursor=&size=` | 최신 목록 `PostPage` (VISIBLE만) |
+| `GET /community/popular?period=&category=` | 인기 20건 `PopularPost[]` (좋아요×2 + 댓글 + 조회×0.1, 10분 캐시) |
+| `GET /community/write-status` | `{allowed, reason, availableAt, retryAfterSec, remainingToday}` |
+| `POST /community/posts` | 글 쓰기 → `CommunityPost`, 제한 시 429 `POST_WRITE_LIMITED` + `reason`·`retryAfterSec`·`availableAt` |
+| `GET·PATCH·DELETE /community/posts/{id}` | 상세(숨김은 작성자·관리자만, 삭제는 댓글 있으면 자리만)·수정(작성자)·삭제(작성자·관리자, 204) |
+| `PUT·DELETE /community/posts/{id}/accepted-comment` | 채택·변경·취소 → `{acceptedCommentId, solved}` |
+| `POST /reports` | 신고 `{targetType, targetId, reason, detail?}` |
+| `GET /admin/reports?state=` | 신고 대기 목록 (대상별 사유 수·기타 내용·미리보기) |
+| `PUT /admin/reports/{targetType}/{targetId}` | `{action: HIDE \| CLEAR}` (CLEAR = 문제없음·숨김 해제, 이후 자동 숨김 제외) |
+| `PUT·DELETE /admin/community/posts/{id}/hidden` | 신고와 무관한 관리자 글 숨김·해제 (댓글 026과 같은 형태) |
+- 인기는 `/community/posts/popular` 대신 `/community/popular`로 둠 (`/community/posts/{id}`와 경로가 겹치지 않게)
+- 좋아요·댓글·답글·조회 기록·북마크는 기존 경로 그대로. 숨김·삭제 글은 409 `COMMUNITY_POST_CLOSED` (좋아요 끄기·북마크 해제는 허용)
+
+#### 스키마
+- `PostSummary`에 `kind`(BLOG·SECURITY_NEWS·COMMUNITY) 필수 추가, 커뮤니티 카드는 `community: {category, author{id,nickname,grade}|null, editedAt, solved, viewCount}` 추가
+  - 커뮤니티 카드의 기존 필드: `summary` = excerpt(마크다운 제거 최대 200자, client 요청의 `excerpt`는 이 필드로 씀), `url` = 웹 상세 주소, `thumbnailUrl` null, `isPopular` false, `source` = 내부 소스
+- `CommunityPost` = 카드 + `body`(원문 마크다운)·`status`·`acceptedCommentId`·`mine`·`reportedByMe`
+- `Comment.reportedByMe`, `Profile.stats.posts` 추가
+- 본문 검사: 앞뒤 공백 제거 길이 10~20,000자, 탭·줄바꿈 외 제어 문자 400. 원시 HTML·이미지 문법은 거부하지 않고 원문 그대로 저장 (client 렌더러가 글자로 표시)
+- 수정에서 말머리를 QUESTION 밖으로 바꾸면 채택 해제
+
+#### 오류 코드 (conventions 추가)
+`POST_WRITE_LIMITED` 429, `COMMUNITY_POST_CLOSED` 409, `ACCEPT_NOT_QUESTION`·`ACCEPT_OWN_COMMENT`·`ACCEPT_REPLY` 409, `COMMENT_ACCEPTED` 409, `REPORT_OWN_CONTENT` 403, `REPORT_DUPLICATED` 409
+
+#### 운영 메모
+- 0015 적용 직후 server 배포 (댓글 숨김 CHECK 때문). 운영 `.env`에 `WEB_BASE_URL` 추가 필요 → 0015 승인 때 함께 사용자에게 요청
+- client·pm 검토 후 구현 착수 (client mock 병행 가능)
