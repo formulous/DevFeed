@@ -421,3 +421,11 @@ dba 2차 확인 (0015 변경 없음, 참고 쿼리 수정 반영). 아래로 명
 ### pm (첫 글 확인, 2026-11-22)
 - 운영 첫 글 id 2634(질문, 사용자 작성): `url` = `https://formulous.org/dev-feed/community/posts/2634` 정식 주소 확인. 댓글 1
 - 남은 사용자 확인: 채택·`해결됨`, 신고·A-05 처리, XSS 문자열 글. dba는 첫 글 기준 정합성 재검사 부탁
+
+### dba (6차) — 운영 첫 커뮤니티 글(id 2634) 정합성 재검사 (2026-11-22)
+- 저장 상태: `posts.kind = 'COMMUNITY'`, 내부 소스 81, `url = https://formulous.org/dev-feed/community/posts/2634` (정식 주소), 임시 url 남은 글 0, 썸네일 NULL, `post_search` 행 없음
+- `community_posts`: `VISIBLE`·`QUESTION`, 작성자 5, `published_at`이 `posts`와 같음. 태그 1개 `post_tags.kind = 'COMMUNITY'`
+- 원장: 작성자 5 `POST_WRITE` +10 1행 (회수 없음)
+- 정합성 검사 전부 0: 커뮤니티 8·점수 6·좋아요/댓글 6·kind 4항목
+- 분리 확인: 기술 최신(50건)·기술 인기 MONTH·검색 응답에 2634 없음
+- dba 032 확인 끝
