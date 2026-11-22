@@ -26,7 +26,7 @@ export function CommunityPage() {
 
   return (
     <ProfileRail>
-      <section aria-label="커뮤니티 최신 글">
+      <section aria-label="자유 게시판 최신 글">
         {list.isPending ? (
           <div>
             {Array.from({ length: 5 }, (_, i) => (

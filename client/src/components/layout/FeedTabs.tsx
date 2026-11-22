@@ -1,4 +1,5 @@
-import { Fragment, useEffect, useRef, type RefObject } from 'react';
+import { Fragment, useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
+import { FiCheck, FiChevronDown } from 'react-icons/fi';
 import { Link, useLocation, useSearchParams } from 'react-router';
 import { useLoginPrompt } from '@/auth/LoginPromptProvider';
 import { PATHS } from '@/lib/routes';
@@ -7,6 +8,7 @@ import { cn } from '@/lib/cn';
 import { M7_API_READY } from '@/lib/features';
 import { CATEGORIES, parseCategory } from '@/lib/community';
 import { FIELDS, parseField } from '@/lib/fields';
+import { HOVER_MENU_MEDIA, useMediaQuery } from '@/lib/ads';
 import { SearchBox } from './AppHeader';
 
 type SectionKey = 'tech' | 'security' | 'community';
@@ -29,6 +31,16 @@ interface Section {
 
 const ALL_SECTIONS: Section[] = [
   {
+    key: 'community',
+    to: PATHS.community,
+    label: '자유 게시판',
+    keep: ['category'],
+    tabs: [
+      { to: PATHS.community, label: '최신', category: true },
+      { to: PATHS.communityPopular, label: '인기', category: true },
+    ],
+  },
+  {
     key: 'tech',
     to: PATHS.tech,
     label: '기술 뉴스',
@@ -47,16 +59,6 @@ const ALL_SECTIONS: Section[] = [
     tabs: [
       { to: PATHS.security, label: '최신' },
       { to: PATHS.securityPopular, label: '인기' },
-    ],
-  },
-  {
-    key: 'community',
-    to: PATHS.community,
-    label: '커뮤니티',
-    keep: ['category'],
-    tabs: [
-      { to: PATHS.community, label: '최신', category: true },
-      { to: PATHS.communityPopular, label: '인기', category: true },
     ],
   },
 ];
@@ -95,28 +97,312 @@ export function FeedTabs() {
   const ref = useRef<HTMLElement>(null);
   useScrollActiveIntoView(ref, pathname);
   const current = sectionOf(pathname);
+  const hoverable = useMediaQuery(HOVER_MENU_MEDIA);
 
   return (
     <nav
       ref={ref}
       aria-label="피드"
-      className={cn('scrollbar-none -mx-4 flex items-center gap-5 overflow-x-auto px-4 py-1 lg:mx-0 lg:px-0', FADE)}
+      className={cn(
+        'scrollbar-none -mx-4 flex items-center gap-5 overflow-x-auto px-4 py-1 lg:mx-0 lg:px-0',
+        hoverable && 'lg:overflow-visible',
+        FADE,
+      )}
     >
-      {SECTIONS.map((section) => (
-        <Link
-          key={section.key}
-          to={section.to}
-          aria-current={current?.key === section.key ? 'page' : undefined}
-          className={cn(
-            'shrink-0 whitespace-nowrap py-1 text-[15px] transition-colors duration-150',
-            FOCUS,
-            current?.key === section.key ? 'font-semibold text-fg' : 'font-medium text-fg-secondary hover:text-fg',
-          )}
-        >
-          {section.label}
-        </Link>
-      ))}
+      {SECTIONS.map((section) => {
+        const active = current?.key === section.key;
+        const cls = cn(
+          'shrink-0 whitespace-nowrap py-1 text-[15px] transition-colors duration-150',
+          FOCUS,
+          active ? 'font-semibold text-fg' : 'font-medium text-fg-secondary hover:text-fg',
+        );
+        if (!hoverable) {
+          return (
+            <Link key={section.key} to={section.to} aria-current={active ? 'page' : undefined} className={cls}>
+              {section.label}
+            </Link>
+          );
+        }
+        return <HoverTab key={section.key} section={section} active={active} className={cls} />;
+      })}
     </nav>
+  );
+}
+
+interface MenuItem {
+  key: string;
+  label: string;
+  to: string;
+  active: boolean;
+  locked: boolean;
+}
+
+function useSectionItems(section: Section, suffix = '') {
+  const { pathname } = useLocation();
+  const [params] = useSearchParams();
+  const { status } = useAuth();
+  const query = carry(params, section.keep);
+  return section.tabs.map<MenuItem>((tab) => ({
+    key: tab.to,
+    label: `${tab.label}${suffix}`,
+    to: `${tab.to}${query}`,
+    active: tab.to === pathname,
+    locked: !!tab.memberOnly && status === 'guest',
+  }));
+}
+
+const MENU_ITEM =
+  'flex w-full items-center justify-between gap-4 whitespace-nowrap px-3 py-1.5 text-left text-sm text-fg-secondary hover:bg-hover hover:text-fg focus-visible:bg-hover focus-visible:text-fg focus-visible:outline-none';
+
+function MenuList({
+  id,
+  label,
+  items,
+  align = 'left',
+  onDone,
+  onEscape,
+}: {
+  id: string;
+  label: string;
+  items: MenuItem[];
+  align?: 'left' | 'right';
+  onDone: () => void;
+  onEscape: () => void;
+}) {
+  const { openLoginPrompt } = useLoginPrompt();
+  const focusAt = (list: HTMLElement, i: number) => {
+    const all = [...list.querySelectorAll<HTMLElement>('[role="menuitem"]')];
+    all[(i + all.length) % all.length]?.focus();
+  };
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const list = e.currentTarget;
+    const all = [...list.querySelectorAll<HTMLElement>('[role="menuitem"]')];
+    const at = all.indexOf(document.activeElement as HTMLElement);
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      focusAt(list, at + 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      focusAt(list, at - 1);
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      focusAt(list, 0);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      focusAt(list, all.length - 1);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      onEscape();
+    }
+  };
+  return (
+    <div
+      id={id}
+      role="menu"
+      aria-label={label}
+      onKeyDown={onKeyDown}
+      className={cn(
+        'absolute top-full z-40 min-w-[128px] pt-1.5',
+        align === 'right' ? 'right-0' : '-left-3',
+      )}
+    >
+      <div className="rounded-[var(--radius-md)] border border-line bg-surface py-1 shadow-pop">
+        {items.map((item) => {
+          const body = (
+            <>
+              <span className={item.active ? 'font-semibold text-fg' : undefined}>{item.label}</span>
+              {item.active && <FiCheck size={14} aria-hidden className="text-fg" />}
+            </>
+          );
+          if (item.locked) {
+            return (
+              <button
+                key={item.key}
+                type="button"
+                role="menuitem"
+                tabIndex={-1}
+                className={MENU_ITEM}
+                onClick={() => {
+                  onDone();
+                  openLoginPrompt('추천 글을 보려면 로그인이 필요해요');
+                }}
+              >
+                {body}
+              </button>
+            );
+          }
+          return (
+            <Link
+              key={item.key}
+              to={item.to}
+              role="menuitem"
+              tabIndex={-1}
+              aria-current={item.active ? 'page' : undefined}
+              className={MENU_ITEM}
+              onClick={onDone}
+            >
+              {body}
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+const CLOSE_DELAY = 150;
+
+function useDelayedOpen() {
+  const [open, setOpen] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clear = useCallback(() => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+  }, []);
+  useEffect(() => clear, [clear]);
+  const show = useCallback(() => {
+    clear();
+    setOpen(true);
+  }, [clear]);
+  const hideSoon = useCallback(() => {
+    clear();
+    timer.current = setTimeout(() => setOpen(false), CLOSE_DELAY);
+  }, [clear]);
+  const hide = useCallback(() => {
+    clear();
+    setOpen(false);
+  }, [clear]);
+  return { open, show, hideSoon, hide };
+}
+
+function firstItem(container: HTMLElement | null) {
+  container?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+}
+
+function HoverTab({ section, active, className }: { section: Section; active: boolean; className: string }) {
+  const items = useSectionItems(section);
+  const menu = useDelayedOpen();
+  const id = useId();
+  const wrap = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLAnchorElement>(null);
+  const quiet = useRef(false);
+  const { pathname } = useLocation();
+  const hide = menu.hide;
+  useEffect(() => hide(), [pathname, hide]);
+
+  return (
+    <div
+      ref={wrap}
+      className="relative shrink-0"
+      data-testid={`section-menu-${section.key}`}
+      onMouseEnter={menu.show}
+      onMouseLeave={menu.hideSoon}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) menu.hide();
+      }}
+    >
+      <Link
+        ref={trigger}
+        to={section.to}
+        aria-current={active ? 'page' : undefined}
+        aria-haspopup="menu"
+        aria-expanded={menu.open}
+        aria-controls={menu.open ? id : undefined}
+        className={cn(className, 'block')}
+        onFocus={() => {
+          if (quiet.current) quiet.current = false;
+          else menu.show();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            menu.show();
+            requestAnimationFrame(() => firstItem(wrap.current));
+          } else if (e.key === 'Escape') {
+            menu.hide();
+          }
+        }}
+      >
+        {section.label}
+      </Link>
+      {menu.open && (
+        <MenuList
+          id={id}
+          label={`${section.label} 보기`}
+          items={items}
+          onDone={menu.hide}
+          onEscape={() => {
+            menu.hide();
+            quiet.current = true;
+            trigger.current?.focus();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+export function SortSelect() {
+  const { pathname } = useLocation();
+  const section = sectionOf(pathname);
+  if (!section) return null;
+  return <SortMenu section={section} />;
+}
+
+function SortMenu({ section }: { section: Section }) {
+  const items = useSectionItems(section, '순');
+  const [open, setOpen] = useState(false);
+  const id = useId();
+  const wrap = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  const { pathname } = useLocation();
+  const current = items.find((i) => i.active) ?? items[0];
+  useEffect(() => setOpen(false), [pathname]);
+
+  return (
+    <div
+      ref={wrap}
+      className="relative shrink-0"
+      data-testid="sort-select"
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOpen(false);
+      }}
+    >
+      <button
+        ref={button}
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={open ? id : undefined}
+        aria-label={`정렬: ${current.label}`}
+        onClick={() => setOpen((v) => !v)}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            setOpen(true);
+            requestAnimationFrame(() => firstItem(wrap.current));
+          }
+        }}
+        className="flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full border border-line bg-surface px-3.5 text-[13px] font-medium text-fg hover:border-line-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring"
+      >
+        {current.label}
+        <FiChevronDown size={14} aria-hidden className={cn('transition-transform', open && 'rotate-180')} />
+      </button>
+      {open && (
+        <MenuList
+          id={id}
+          label="정렬"
+          items={items}
+          align="right"
+          onDone={() => setOpen(false)}
+          onEscape={() => {
+            setOpen(false);
+            button.current?.focus();
+          }}
+        />
+      )}
+    </div>
   );
 }
 

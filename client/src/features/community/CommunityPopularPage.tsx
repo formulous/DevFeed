@@ -48,7 +48,7 @@ export function CommunityPopularPage() {
           <EmptyState title="이 기간에 올라온 글이 없어요" description="기간을 늘리거나 첫 글을 남겨 보세요" action={<WriteButton />} />
         ) : (
           <RankedPosts
-            label="커뮤니티 인기 글 순위"
+            label="자유 게시판 인기 글 순위"
             items={popular.data.items}
             summaryLines={2}
             onOpen={openPost}

@@ -47,12 +47,12 @@ describe('F-090 마크다운 안전 렌더러', () => {
 });
 
 describe('S-16 커뮤니티 목록', () => {
-  it('1단 탭 커뮤니티 · 내부 탭 최신·인기 · 말머리 필터, 카드는 상세로 감', async () => {
+  it('1단 탭 자유 게시판 · 내부 탭 최신·인기 · 말머리 필터, 카드는 상세로 감', async () => {
     const user = userEvent.setup();
     renderWithApp(<App />, '/community');
     const first = await screen.findAllByRole('article');
     expect(first.length).toBeGreaterThan(5);
-    expect(screen.getByRole('heading', { level: 1, name: '커뮤니티' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: '자유 게시판' })).toBeInTheDocument();
     expect(within(screen.getByTestId('section-tabs')).getAllByRole('link').map((l) => l.textContent)).toEqual(['최신', '인기']);
     const group = screen.getByRole('radiogroup', { name: '말머리' });
     expect(within(group).getAllByRole('radio').map((r) => r.textContent)).toEqual(['전체', '질문', '토론', '공유']);
@@ -70,7 +70,7 @@ describe('S-16 커뮤니티 목록', () => {
     });
     await user.click(within(screen.getByTestId('section-tabs')).getByRole('link', { name: '인기' }));
     expect(currentLocation).toBe('/community/popular?category=share');
-    expect(await screen.findByRole('list', { name: '커뮤니티 인기 글 순위' })).toBeInTheDocument();
+    expect(await screen.findByRole('list', { name: '자유 게시판 인기 글 순위' })).toBeInTheDocument();
   });
 
   it('비회원이 글쓰기를 누르면 로그인 안내만 뜸', async () => {

@@ -2,6 +2,7 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll, vi } from 'vitest';
 import { setAccessToken } from '@/api/http';
+import { HOVER_MENU_MEDIA } from '@/lib/ads';
 import { resetMockState } from '@/mocks/handlers';
 import { server } from '@/mocks/node';
 
@@ -22,6 +23,13 @@ export function triggerIntersect() {
 }
 vi.stubGlobal('IntersectionObserver', IntersectionObserverStub);
 
+const realMatchMedia = window.matchMedia.bind(window);
+const flags = globalThis as { __hoverMenu?: boolean };
+window.matchMedia = ((query: string) =>
+  query === HOVER_MENU_MEDIA
+    ? ({ matches: !!flags.__hoverMenu, media: query, addEventListener: () => undefined, removeEventListener: () => undefined } as unknown as MediaQueryList)
+    : realMatchMedia(query)) as typeof window.matchMedia;
+
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
   cleanup();
@@ -29,5 +37,6 @@ afterEach(() => {
   server.resetHandlers();
   resetMockState();
   setAccessToken(null);
+  flags.__hoverMenu = false;
 });
 afterAll(() => server.close());

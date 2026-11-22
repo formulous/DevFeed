@@ -41,7 +41,7 @@ function BackLink() {
   return (
     <Link to={PATHS.community} className="inline-flex items-center gap-1 text-sm text-fg-secondary hover:text-fg">
       <FiArrowLeft size={14} aria-hidden />
-      커뮤니티
+      자유 게시판
     </Link>
   );
 }
@@ -277,7 +277,7 @@ export function CommunityPostPage() {
         description="삭제됐거나 볼 수 없는 글이에요"
         action={
           <Link to={PATHS.community} className="text-sm font-medium text-brand">
-            커뮤니티로
+            자유 게시판으로
           </Link>
         }
       />

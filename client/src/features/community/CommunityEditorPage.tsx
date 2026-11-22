@@ -468,7 +468,7 @@ export function CommunityEditPage() {
         description="삭제됐거나 숨겨졌거나 내가 쓴 글이 아니에요"
         action={
           <Link to={PATHS.community} className="text-sm font-medium text-brand">
-            커뮤니티로
+            자유 게시판으로
           </Link>
         }
       />

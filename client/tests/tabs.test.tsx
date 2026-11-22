@@ -16,11 +16,11 @@ const tagNamesOf = (categories: string[]) =>
 const sub = () => within(screen.getByTestId('section-tabs'));
 
 describe('F-015 상단 탭 (031: 기술 뉴스·보안 뉴스 + 내부 탭)', () => {
-  it('1단 탭은 기술 뉴스·보안 뉴스·커뮤니티 3개, 내부 탭 화면에서도 해당 1단 탭이 선택됨', async () => {
+  it('1단 탭은 자유 게시판·기술 뉴스·보안 뉴스 3개, 내부 탭 화면에서도 해당 1단 탭이 선택됨', async () => {
     renderWithApp(<App />, '/tech/popular');
     await screen.findByRole('list', { name: '인기 글 순위' });
-    expect(nav().getAllByRole('link').map((l) => l.textContent)).toEqual(['기술 뉴스', '보안 뉴스', '커뮤니티']);
-    expect(nav().getByRole('link', { name: '커뮤니티' })).toHaveAttribute('href', '/community');
+    expect(nav().getAllByRole('link').map((l) => l.textContent)).toEqual(['자유 게시판', '기술 뉴스', '보안 뉴스']);
+    expect(nav().getByRole('link', { name: '자유 게시판' })).toHaveAttribute('href', '/community');
     expect(nav().getByRole('link', { name: '기술 뉴스' })).toHaveAttribute('aria-current', 'page');
     expect(nav().getByRole('link', { name: '기술 뉴스' })).toHaveAttribute('href', '/tech');
     expect(nav().getByRole('link', { name: '보안 뉴스' })).toHaveAttribute('href', '/security');

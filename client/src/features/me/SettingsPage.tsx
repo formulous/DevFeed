@@ -184,7 +184,7 @@ function WithdrawModal({ open, onClose }: { open: boolean; onClose: () => void }
         <ul className="my-3 list-disc pl-5 text-sm text-fg-secondary">
           <li>계정 정보 (이메일, 닉네임)</li>
           <li>북마크, 읽은 기록, 관심 태그</li>
-          <li>커뮤니티 글 (댓글이 달린 글은 "삭제된 글이에요"로 남아요)</li>
+          <li>자유 게시판 글 (댓글이 달린 글은 "삭제된 글이에요"로 남아요)</li>
         </ul>
         <p className="mb-4 text-xs text-fg-muted">글 조회수 같은 집계 수치는 개인을 알 수 없는 형태로 남아요.</p>
         <TextInput
