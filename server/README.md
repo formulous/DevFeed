@@ -1,4 +1,4 @@
-# DevFeed server
+# formulous server
 
 NestJS 12 + TypeORM(MariaDB, mysql2) API 서버. 명세는 `../docs/api/openapi.yaml`, 공통 규칙은 `../docs/api/conventions.md`
 
@@ -57,7 +57,7 @@ NestJS 12 + TypeORM(MariaDB, mysql2) API 서버. 명세는 `../docs/api/openapi.
   - 한계: 한도 카운터는 서버 메모리라 재시작하면 초기화됨 (단일 인스턴스 전제)
   - 배포 경로 확인 (015): 외부 경로와 로컬 호출을 번갈아 보내 `X-RateLimit-Remaining`이 따로 줄어드는지 확인. 같이 줄면 프록시가 실제 IP를 넘기지 못하는 것임 (Cloudflare Tunnel은 nginx에 127.0.0.1로 접속하므로 `set_real_ip_from 127.0.0.1` 필요)
     ```bash
-    curl -sI https://formulous.org/dev-feed/api/tags?size=1 | grep -i ratelimit-remaining
+    curl -sI https://formulous.org/api/tags?size=1 | grep -i ratelimit-remaining
     curl -sI http://127.0.0.1:3000/api/tags?size=1 | grep -i ratelimit-remaining
     ```
 
@@ -88,8 +88,8 @@ src/
   - `CRAWL_SCHEDULER_ENABLED`: `false`면 주기 수집 중지 (즉시 수집 API는 동작)
   - `SEARCH_CACHE_ENABLED`: 검색 결과 1분 캐시 (성능 측정 시 `false`)
   - `RATE_LIMIT_ENABLED`: IP 기준 속도 제한 (기본 `true`, e2e는 기본 `false`)
-  - `WEBAUTHN_RP_ID`·`WEBAUTHN_RP_NAME`·`WEBAUTHN_ORIGINS`(쉼표 구분 origin): 패스키 RP 설정. 기본값은 로컬 개발용 `localhost`·`DevFeed`·`http://localhost:5175`, 운영은 `formulous.org`·`DevFeed`·`https://formulous.org`
-  - `WEB_BASE_URL`: 커뮤니티 글 정식 주소(`posts.url`)의 웹 기준 주소. 기본 `http://localhost:5175`, 운영 `https://formulous.org/dev-feed`
+  - `WEBAUTHN_RP_ID`·`WEBAUTHN_RP_NAME`·`WEBAUTHN_ORIGINS`(쉼표 구분 origin): 패스키 RP 설정. 기본값은 로컬 개발용 `localhost`·`formulous`·`http://localhost:5175`, 운영은 `formulous.org`·`formulous`·`https://formulous.org`
+  - `WEB_BASE_URL`: 커뮤니티 글 정식 주소(`posts.url`)의 웹 기준 주소. 기본 `http://localhost:5175`, 운영 `https://formulous.org` (037 루트 이전 전에는 `/dev-feed`)
   - `POST_NEW_ACCOUNT_LIMIT_ENABLED`: 커뮤니티 글쓰기 가입 24시간 제한 (기본 `true`). 034 시연 데이터 생성 때 잠시 기본 `false`로 해제했다가 복구함. 하루 5개·60초 간격은 항상 적용
 - DB 스키마는 `../db/migrations`(dba)로만 반영함. 서버는 DDL을 실행하지 않음
 

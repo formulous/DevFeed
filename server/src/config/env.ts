@@ -85,7 +85,7 @@ export function loadEnv(env: NodeJS.ProcessEnv = process.env): AppEnv {
     rateLimitEnabled: bool(env, 'RATE_LIMIT_ENABLED', true),
     webauthn: {
       rpId: env.WEBAUTHN_RP_ID || 'localhost',
-      rpName: env.WEBAUTHN_RP_NAME || 'DevFeed',
+      rpName: env.WEBAUTHN_RP_NAME || 'formulous',
       origins: origins(env, 'WEBAUTHN_ORIGINS', ['http://localhost:5175']),
     },
     webBaseUrl: baseUrl(env, 'WEB_BASE_URL', 'http://localhost:5175'),

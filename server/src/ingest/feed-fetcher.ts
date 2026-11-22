@@ -3,7 +3,7 @@ import { retryDelayMs } from './backoff';
 export const FETCH_TIMEOUT_MS = 10_000;
 export const MAX_RETRIES = 3;
 export const MAX_FEED_BYTES = 20 * 1024 * 1024;
-const USER_AGENT = 'DevFeedBot/0.1';
+const USER_AGENT = 'formulousBot/0.1';
 
 export interface FetchFeedOptions {
   etag?: string | null;

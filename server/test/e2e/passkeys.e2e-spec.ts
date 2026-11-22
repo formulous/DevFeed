@@ -6,11 +6,13 @@ import { VirtualAuthenticator, WebauthnRp } from './support/webauthn';
 describe('F-034 패스키 (027)', () => {
   let t: TestApp;
   let rp: WebauthnRp;
+  let rpName = '';
 
   beforeAll(async () => {
     t = await startApp();
     const env = t.app.get<AppEnv>(APP_ENV);
     rp = { rpId: env.webauthn.rpId, origin: env.webauthn.origins[0] };
+    rpName = env.webauthn.rpName;
   });
 
   afterAll(async () => {
@@ -38,7 +40,7 @@ describe('F-034 패스키 (027)', () => {
     const options = await api(t, 'POST', '/me/passkeys/registration/options', { token: user.token });
     expect(options.status).toBe(200);
     expect(options.body).toMatchObject({
-      rp: { id: rp.rpId, name: 'DevFeed' },
+      rp: { id: rp.rpId, name: rpName },
       user: { name: user.email },
       attestation: 'none',
       excludeCredentials: [],

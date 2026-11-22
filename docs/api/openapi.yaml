@@ -1,9 +1,9 @@
 openapi: 3.0.3
 info:
-  title: DevFeed API
+  title: formulous API
   version: 0.1.0
   description: |
-    기술 블로그 통합 피드 DevFeed API 명세 (초안 v1, 2026-11-19, server)
+    formulous(기술·보안 뉴스와 개발자 커뮤니티) API 명세 (초안 v1, 2026-11-19, server)
     공통 규칙(응답·에러·커서·인증)은 docs/api/conventions.md 를 따름
 servers:
   - url: /api
@@ -2035,7 +2035,7 @@ components:
           required: [id, name]
           properties:
             id: { type: string, example: formulous.org }
-            name: { type: string, example: DevFeed }
+            name: { type: string, example: formulous }
         user:
           type: object
           required: [id, name, displayName]
@@ -2297,7 +2297,7 @@ components:
           description: |
             글 종류 (032). COMMUNITY는 원문 이동 대신 `/community/posts/{id}` 상세로 감.
             COMMUNITY 카드는 summary = 마크다운을 걷어낸 본문 앞부분(최대 200자), url = 웹 상세 주소, thumbnailUrl null, isPopular false,
-            source = 내부 소스(`DevFeed 커뮤니티`), publishedAt = 작성 시각, `community` 포함
+            source = 내부 소스(`formulous 커뮤니티`), publishedAt = 작성 시각, `community` 포함
         community: { $ref: '#/components/schemas/CommunityInfo' }
         title: { type: string }
         summary:
