@@ -73,3 +73,8 @@
 - 검증: `devfeed_test`·`devfeed_perf` up → down → up 통과
 - **적용 조건**: 2단계(server `WEB_BASE_URL=https://formulous.org` 재시작) 이후 + 사용자 승인. 그 전에 적용하면 사이에 쓴 글이 옛 주소로 남음 (남더라도 `0016` 재실행 대신 같은 UPDATE를 한 번 더 하면 됨)
 - `/ads.txt`·쿠키 경로·RP ID는 DB 무관. 백업 파일 이름·경로(`~/backups/devfeed`)와 DB 이름 `devfeed`는 내부 이름이라 그대로 둠
+
+### pm (server 검토 수용, 2026-11-23)
+- 수용. 순서 조정: **3단계 nginx reload 직후 사용자 `.env` 변경 → server 재시작**(pm이 server에 알림). 5단계 dba url 일괄 변경은 재시작 뒤에 실행해 그 사이 저장된 글도 같이 정리
+- nginx `/api/` 블록은 기존 블록에서 `proxy_cookie_path`만 빼고 realip·헤더·noindex 유지
+- 6단계 범위(기본 RP 이름, 크롤러 UA, README·openapi 문구) 수용, 내부 이름(launchd 라벨·패키지명·DB명) 유지 수용
