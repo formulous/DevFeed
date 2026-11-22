@@ -35,6 +35,19 @@ describe('038 페이지별 검색', () => {
     expect(screen.queryByTestId('filter-sidebar')).toBeNull();
   });
 
+  it('범위 탭은 1단 탭과 같은 순서이고 정렬은 글자 탭임', async () => {
+    const user = userEvent.setup();
+    renderWithApp(<App />, '/search?q=kafka');
+    await screen.findByRole('navigation', { name: '검색 범위' });
+    expect(scopeTabs().getAllByRole('link').map((a) => a.textContent)).toEqual(['자유 게시판', '기술 뉴스', '보안 뉴스']);
+    expect(screen.queryByRole('combobox', { name: '정렬' })).toBeNull();
+    const sort = screen.getByRole('group', { name: '정렬' });
+    expect(within(sort).getByRole('button', { name: '관련도순' })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(within(sort).getByRole('button', { name: '최신순' }));
+    expect(currentLocation).toBe('/search?q=kafka&sort=LATEST');
+    expect(within(sort).getByRole('button', { name: '최신순' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
   it('범위 탭을 바꾸면 검색어·정렬·기간은 유지하고 범위 필터·페이지는 초기화함', async () => {
     const user = userEvent.setup();
     renderWithApp(<App />, '/search?q=kafka&tagIds=1&sort=LATEST&period=1Y&page=2');

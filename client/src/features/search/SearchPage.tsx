@@ -181,18 +181,31 @@ function SearchResults({ s }: { s: SearchState }) {
             </span>
           )}
         </h2>
-        <select
-          aria-label="정렬"
-          value={state.sort}
-          onChange={(e) => setSort(e.target.value as SearchSort)}
-          className="h-8 rounded-lg border border-line bg-input px-2 text-xs font-bold text-fg focus:outline-none focus:ring-2 focus:ring-brand-focus"
-        >
-          {SORT_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+        <div role="group" aria-label="정렬" data-testid="search-sort" className="flex shrink-0 items-center gap-2">
+          {SORT_OPTIONS.map((o, i) => {
+            const on = state.sort === o.value;
+            return (
+              <Fragment key={o.value}>
+                {i > 0 && (
+                  <span aria-hidden className="select-none text-[13px] text-fg-muted">
+                    ·
+                  </span>
+                )}
+                <button
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => setSort(o.value)}
+                  className={cn(
+                    'whitespace-nowrap rounded-sm py-0.5 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring',
+                    on ? 'font-semibold text-fg' : 'text-fg-secondary hover:text-fg',
+                  )}
+                >
+                  {o.label}
+                </button>
+              </Fragment>
+            );
+          })}
+        </div>
       </div>
 
       {search.isPending ? (

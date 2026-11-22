@@ -13,9 +13,9 @@ export interface SearchScopeInfo {
 }
 
 export const SEARCH_SCOPES: SearchScopeInfo[] = [
+  { key: 'community', api: 'COMMUNITY', label: '자유 게시판', placeholder: '자유 게시판 검색…', hint: '제목, 본문, 태그에서 찾아요', prefix: PATHS.community },
   { key: 'tech', api: 'TECH', label: '기술 뉴스', placeholder: '기술 뉴스 검색…', hint: '제목, 요약, 태그, 소스 이름에서 찾아요', prefix: PATHS.tech },
   { key: 'security', api: 'SECURITY', label: '보안 뉴스', placeholder: '보안 뉴스 검색…', hint: '제목, 요약, 출처 이름에서 찾아요', prefix: PATHS.security },
-  { key: 'community', api: 'COMMUNITY', label: '자유 게시판', placeholder: '자유 게시판 검색…', hint: '제목, 본문, 태그에서 찾아요', prefix: PATHS.community },
 ];
 
 export const DEFAULT_SCOPE: SearchScopeKey = 'tech';
@@ -27,7 +27,7 @@ export function parseScope(value: string | null): SearchScopeKey {
 }
 
 export function scopeInfo(key: SearchScopeKey) {
-  return SEARCH_SCOPES.find((s) => s.key === key) ?? SEARCH_SCOPES[0];
+  return SEARCH_SCOPES.find((s) => s.key === key) ?? SEARCH_SCOPES.find((s) => s.key === DEFAULT_SCOPE)!;
 }
 
 export function scopeOfPath(pathname: string): SearchScopeKey | null {

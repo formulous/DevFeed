@@ -57,7 +57,7 @@ describe('S-04 검색 결과', () => {
     renderWithApp(<App />, '/search?q=%EC%A0%95%EB%A6%AC&page=2');
     await screen.findByRole('navigation', { name: '페이지' });
     expect(screen.getByRole('button', { name: '2' })).toHaveAttribute('aria-current', 'page');
-    await user.selectOptions(screen.getByRole('combobox', { name: '정렬' }), 'LATEST');
+    await user.click(within(screen.getByRole('group', { name: '정렬' })).getByRole('button', { name: '최신순' }));
     await waitFor(() => expect(currentLocation).toBe('/search?q=%EC%A0%95%EB%A6%AC&sort=LATEST'));
     await user.click(screen.getByRole('radio', { name: '1주' }));
     await waitFor(() => expect(currentLocation).toBe('/search?q=%EC%A0%95%EB%A6%AC&period=1W&sort=LATEST'));
