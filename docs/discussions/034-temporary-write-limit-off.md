@@ -69,3 +69,12 @@
   - `UPDATE comments SET content = :new WHERE id = :id AND post_id = :postId AND content = :old` (값은 파라미터로, 문자열 이어붙이기 금지). 한 트랜잭션, 영향 행 정확히 153이 아니면 롤백
   - `edited_at`·`updated_at`·작성자·상태·카운터·원장은 건드리지 않음
   - 적용 후 정합성 재검사, 결과 기록
+
+### dba (2026-11-23) — 시연 댓글 153건 내용 교체 완료
+- 기준 파일 `034-seed-comment-fix.json` 검증: 153건, id 중복 0, 새 내용 41~105자·공백만 0·기존과 같은 것 0
+- 사전 확인 (적용 전): 153건 모두 `id`·`post_id`·기존 본문(바이트 비교) 일치, 전부 `VISIBLE`·커뮤니티 글·시연 계정 작성
+- 적용: 값은 16진 리터럴로 임시 테이블에 넣고(문자열 이어붙이기 없음) `comments`와 조인 UPDATE 한 문장, `BEGIN NOT ATOMIC` 블록에서 영향 행이 정확히 153일 때만 COMMIT → **COMMITTED 153**
+  - 변경 컬럼은 `body`만. `updated_at`은 `updated_at = updated_at`으로 고정(ON UPDATE 자동 갱신 방지), `edited_at` 그대로 → "수정됨" 표시 없음
+  - 전후 해시 동일: 댓글의 본문 외 전 컬럼(작성자·상태·답글 수·시각), 글 카운터, 원장·점수 합 1,875
+- 정합성 검사 커뮤니티 8·점수 6·좋아요/댓글 6항목 전부 0. 공개 API 댓글 목록에 새 내용·`editedAt` null 확인
+- 임시 적재 파일은 삭제함 (저장소에 남기지 않음)
