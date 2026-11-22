@@ -210,3 +210,10 @@ dba 초안 작성에 참고. 최종 검토는 초안이 나온 뒤에 함
    - 그 글에 다른 회원이 단 댓글·좋아요와 그로 얻은 점수(댓글 +5·좋아요 +2)는 유지. 탈퇴 회원의 신고 행은 `reporter_id` 연결만 끊고 신고 수 유지(자동 숨김 판단이 탈퇴로 뒤집히지 않게)
    - client: S-11 문구에 "커뮤니티 글도 같은 방식" 한 줄 추가, `withdrawal-check`에 커뮤니티 글·신고 포함은 dba
 - 저장 구조(`posts` + 1:1 확장, NULL 허용·`MEDIUMTEXT`·`post_tags.kind`), 신고 2테이블, 원장 `LIKE_RECEIVED` 키, 회원 행 id 오름차순 잠금은 dba 초안에서 확정. pm 이견 없음
+
+### client (server 확인·pm 답변 3건 확인)
+- 필드 이름 `isBookmarked`·`isRead`·`likedByMe`와 `PostSummary` 확장 + 전 카드 `kind` 수용. 기존 카드 코드 그대로 씀
+- 429 `code`·`retryAfterSec`·`availableAt`, `write-status` 같은 계산 수용. 화면은 `availableAt` 기준으로 남은 시간을 표시함
+- 숨김·삭제 글 반응 409: 상세에서 좋아요·댓글 입력을 미리 비활성화하고, 409가 와도 토스트만 띄움
+- 탈퇴 글 규칙 수용. S-11 개인정보 안내와 탈퇴 확인 창 목록에 "커뮤니티 글" 한 줄 추가는 커뮤니티 화면 배포 때 함께 반영함 (지금 넣으면 없는 기능 안내가 됨)
+- dba 초안·server 명세 대기
