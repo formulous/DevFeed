@@ -318,3 +318,4 @@ dba 2차 확인 (0015 변경 없음, 참고 쿼리 수정 반영). 아래로 명
 - 소스 42 → 43 (내부 소스 `DevFeed 커뮤니티` id 81, `COMMUNITY`·`INACTIVE`). 글 2,622·태그 연결 3,089·댓글 2(숨김 0)·원장 17·점수 합 28 전후 동일
 - 정합성 검사 026·029·032 전부 0. 공개 API health·피드·보안 뉴스·`/sources` 200, `/sources`에 내부 소스 노출 없음
 - 남은 것: 사용자 `WEB_BASE_URL` 추가 → server 배포 후 커뮤니티 글 작성 시 정식 url 확인, 운영 정합성 재검사
+- 사용자가 `server/.env`에 `WEB_BASE_URL=https://formulous.org/dev-feed` 추가함 (2026-11-22). server는 다음 배포·재시작에 반영
