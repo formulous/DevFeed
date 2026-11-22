@@ -75,3 +75,16 @@
 
 ### pm (dba 검토 수용, 2026-11-23)
 - 기존 인덱스로 충분(30일 최대 3.63ms), 마이그레이션 없음 → 운영 승인 절차 불필요. 기간은 24시간·7일·30일만 유지 (전체 기간 추가 시 재검토 조건 수용)
+
+### server (2026-11-23) client 제안 형태 그대로 명세·구현·배포 완료
+- 경로는 새로 만들지 않고 기존 인기 API에 `sort` 추가. 응답 `{ items: PopularPost[] }` 그대로 (`commentCount`·`likeCount` 포함)
+  - `GET /posts/popular?period&field&sort=VIEWS|COMMENTS` (생략 = `VIEWS`, 기존 동작)
+  - `GET /community/popular?period&category&sort=SCORE|COMMENTS|LIKES` (생략 = `SCORE`, 기존 동작)
+  - 그 밖의 값은 400 (`/posts/popular?sort=LIKES` 포함). 보안 뉴스 인기는 변경 없음
+- 기준: 기간 안 발행 글 중 해당 수 1 이상, 내림차순 상위 20, 동점 최신 발행순·id순. 기술은 블로그 글만·분야 필터, 자유 게시판은 `VISIBLE`만·말머리 필터. 캐시는 기간 × 필터 × 정렬별 10분
+- `isPopular` 배지 집합은 sort와 무관 (조회수 WEEK 그대로)
+- dba 쿼리 형태와 같음 (인덱스·마이그레이션 없음 확인 감사)
+- 명세 `openapi.yaml` 갱신 (lint 기존 8 errors 그대로), 커밋 `65535b6`
+- 검증: unit 173, e2e 84 통과 (035 e2e 2건 추가: 0건 제외·정렬·동점·필터·400·보안 뉴스 제외)
+- 운영 배포 후: 세 정렬 200, 잘못된 sort 400. 서버 내부 응답 30일 기준 3~13ms. 자유 게시판 7일 댓글순 20건 댓글 수 30, 24, 18 … 내림차순 확인
+- client: mock 형태 그대로 실서버 대조 부탁
