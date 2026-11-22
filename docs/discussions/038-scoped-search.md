@@ -57,3 +57,24 @@
   - 공통: `q` 2~50자, `sort`, `period`, `page`·`size` 그대로. 캐시 키에 범위·필터 포함
   - 자유 게시판 하이라이트 대상은 `title`·`summary`(excerpt) — 화면에서 처리 (F-022)
 - client 주소의 `scope=tech|security|community`(소문자)는 화면 주소이고 API는 대문자 enum으로 맞추길 제안 (기존 `region`·`category`와 같음)
+
+### client (검토·API 형태 제안, 2026-11-23)
+- 화면 결정 모두 수용. 아래 형태로 mock 먼저 진행함
+- API 형태 제안 (기존 `/search`에 범위 추가, server·dba 재량)
+  - `GET /search?q&scope=TECH|SECURITY|COMMUNITY&period&sort&page&size` (`scope` 생략 = `TECH`, 지금 동작 그대로)
+  - 범위별 필터: `TECH` = `tagIds`·`sourceIds`(지금), `SECURITY` = `region`, `COMMUNITY` = `category`. 다른 범위 필터가 오면 **무시** 제안 (공유 주소에 섞여도 400이 아니게). client는 범위를 바꿀 때 해당 범위 필터만 남김
+  - 응답 `SearchPage` 그대로. 카드는 `PostSummary.kind`로 기존 카드(보안 뉴스 카드·자유 게시판 카드)를 그대로 씀 → `community` 정보(말머리·작성자·해결됨)와 `summary`(자유 게시판은 excerpt 200자) 포함 부탁
+  - 자유 게시판 캐시: 숨김·삭제·수정이 검색에 바로 반영돼야 하므로 `COMMUNITY`는 1분 캐시 제외 또는 해당 글 변경 시 무효화 부탁. 1분 늦게 반영 허용이면 알려 주면 화면 안내 문구 없이 그대로 감
+- 하이라이트: 지금처럼 client가 검색어로 제목·summary 표시. 본문 뒤쪽에서만 걸린 글은 excerpt에 표시할 곳이 없어 하이라이트 없이 나옴 (허용으로 봄. 필요하면 다음에 `snippet` 필드 검토)
+- 화면
+  - 검색창: 현재 1단 탭에 맞춰 "기술 뉴스 검색…"·"보안 뉴스 검색…"·"자유 게시판 검색…", 제출 시 `/search?q=&scope=tech|security|community` (주소는 소문자, API는 대문자로 바꿔 보냄). 범위가 정해지지 않는 화면은 마지막 범위(`sessionStorage`), 없으면 기술 뉴스
+  - 결과 화면: 맨 위 범위 글자 탭 `기술 뉴스 · 보안 뉴스 · 자유 게시판` (q·정렬·기간 유지, 범위 필터·page 초기화), 1단 탭은 범위에 맞춰 선택 표시
+  - 왼쪽 필터: 기술 = 지금 그대로, 보안 = 지역, 자유 게시판 = 말머리. 결과 없음 문구에 범위 이름 + 다른 두 범위 링크
+
+### pm (server·client 의견 결정, 2026-11-23)
+- 색인: server 희망 수용 — `post_search`는 블로그 전용 유지, 보안·자유 게시판은 별도 색인(구조는 dba 판단). 자유 게시판 숨김·삭제는 색인 행 대신 검색 시 `status = 'VISIBLE'` 조인으로 거름. 본문은 마크다운 제거 앞 2,000자 + 태그
+- 보안 뉴스 백필: server 스크립트, 운영 실행은 마이그레이션 적용 후 사용자 승인
+- API: `GET /search`에 `scope=TECH|SECURITY|COMMUNITY`(생략 = TECH), 화면 주소는 소문자 — 두 의견 같음, 수용
+- **범위에 없는 필터: 400 (server안)**. client가 범위를 바꿀 때 해당 범위 필터만 남겨 보내므로 공유 주소에 섞여도 화면은 깨지지 않음 (client는 API 호출 전 정리)
+- **자유 게시판 캐시: `COMMUNITY`는 캐시하지 않음** (숨김·삭제·수정 즉시 반영, 글 수가 작아 부담 작음). 보안 뉴스는 기술과 같은 캐시
+- 본문 뒤쪽에서만 걸린 글의 하이라이트 없음 허용, `snippet`은 Next
