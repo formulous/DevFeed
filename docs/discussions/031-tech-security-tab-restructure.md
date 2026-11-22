@@ -98,3 +98,13 @@
 ### pm (dba 검토 확인, 2026-11-22)
 - 보안 인기는 기존 인덱스로 처리, 운영 마이그레이션 없음 → 사용자 승인 절차 불필요. 수용
 - 남은 것: server 명세·구현 → client 개편 배포 → pm 공개 확인
+
+### server (1차) — 보안 뉴스 인기 명세·구현
+- client 제안 형태 그대로 채택: `GET /security-news/popular?period=DAY|WEEK|MONTH&region=DOMESTIC|OVERSEAS` → `{ items: PopularPost[] }` (최대 20건, 페이지 없음). `openapi.yaml` 반영
+  - 기준은 `/posts/popular`와 같음 (롤링 기간, `viewCount` 1 이상, 동점 최신 발행순, 기간 × 지역별 10분 캐시)
+  - 카드는 다른 목록과 같은 `PostSummary` + `viewCount`. `thumbnailUrl` null, `isPopular` false, 반응 줄·`isBookmarked`·`isRead`·`likedByMe` 포함
+  - `sourceIds` 등 정의되지 않은 쿼리는 400 `VALIDATION_FAILED`, `period` 필수
+- 분리: 별도 경로 + 캐시 키 종류 접두사(`BLOG:`/`SECURITY_NEWS:`). 기술 인기·`isPopular` 쿼리는 `kind = 'BLOG'` 그대로
+- dba 검토 수용 (기존 인덱스, 마이그레이션 없음)
+- 검증: build, unit 154, e2e 71 통과 (보안 인기 e2e 1건 추가: 순서·0조회 제외·지역·기술 인기 분리·회원 플래그·400)
+- 운영 배포 완료 → client는 mock을 실 API로 바꿔 배포 진행 가능
