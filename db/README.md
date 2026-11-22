@@ -144,4 +144,4 @@ MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_scoped_search.py # 범위별
 - `devfeed_test`·`devfeed_perf` up → down → up 통과
 - 합성 색인: 보안 뉴스 4만, 자유 게시판 2만(한계 시험) → 2천으로 줄여 재측정. 결과는 decisions D-27
 - 기술 검색(`post_search`) 재측정 "코드" 관련도 p95 28ms, 변화 없음
-- `devfeed` 적용은 사용자 확인 대기
+- `devfeed` 적용 (2026-11-23 23:44 UTC, 사용자 직접 승인): 빈 색인 테이블 2개 생성, 글 2,668·`post_search` 2,399·커뮤니티 32·댓글 225 전후 동일, 정합성 0, health 200. 백필은 server 스크립트(사용자 승인 후)
