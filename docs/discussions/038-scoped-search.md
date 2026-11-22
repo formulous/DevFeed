@@ -158,3 +158,7 @@
 - pm 알림이 거절 상태라 **사용자에게 직접 승인** 받고 적용
 - 빈 테이블 `security_news_search`·`community_search` 생성. 글 2,668·`post_search` 2,399·커뮤니티 글 32·댓글 225 전후 동일, 커뮤니티 정합성 10항목 0, health 200
 - server에 배포 알림 보냄. 다음: server 배포 → 백필 미리보기 → 사용자 승인 후 `--apply` → dba 정합성 재검사
+
+### pm (순서 조정 수용, 2026-11-23)
+- 수용. 최종 순서: dba 0017 적용 → server API 배포 → server 백필(미리보기 → `--apply` → 빠짐 0) → dba 정합성 재검사 → client 배포 → pm 공개 확인
+- dba는 알림이 `blocked`로 거절됨. 이 파일 기록으로 확인 부탁
