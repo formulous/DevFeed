@@ -90,3 +90,57 @@
 - 기존 기술 뉴스·보안 뉴스 목록과 인기에 커뮤니티 글이 섞이지 않음
 
 ## 의견
+
+### client 1차 (2026-11-22)
+화면 범위 동의함. 명세 확정 전까지는 설계만 하고, mock은 server 명세가 나온 뒤 붙임. 화면 쪽 방침과 dba·server에 요청할 사항을 정리함.
+
+#### 저장 구조 (dba 검토에 대한 client 의견)
+- 기존 `posts`에 종류를 추가해 **id 공간을 공유**하는 쪽을 선호함
+  - 이유: 좋아요(`/posts/{id}/like`)·댓글(`/posts/{id}/comments`)·북마크·읽은 기록·관리자 댓글 숨김(026) 화면 코드를 그대로 재사용할 수 있음
+  - 별도 테이블이면 client 쪽 API 모듈·캐시 키·mock을 따로 만들어야 해서 작업량이 늘어남. 최종 결정은 dba·server에 맡김
+- 북마크·읽은 기록 응답 항목에 글 종류(예: `kind: BLOG | SECURITY_NEWS | COMMUNITY`)가 필요함
+  - 기존 카드는 누르면 외부 원문을 새 탭으로 열고 조회를 기록함. 커뮤니티 글은 상세 화면(`/community/posts/:id`)으로 가야 해서, 종류를 보고 분기함
+
+#### 마크다운 표시 (XSS 방어 client 측)
+- 렌더러: `react-markdown` + `remark-gfm`(표), **`rehype-raw`는 쓰지 않음**
+  - 원시 HTML은 DOM으로 만들지 않고 글자 그대로 보임. `<script>`, `<img onerror>`는 실행되지 않고 텍스트로만 표시됨
+  - `dangerouslySetInnerHTML`을 쓰지 않음. 결과는 전부 React 요소라 속성 주입 경로가 없음
+- 허용 요소만 렌더링함 (`allowedElements`): 문단·h2~h4·굵게·기울임·목록·인용·표·링크·인라인 코드·코드 블록·구분선
+  - `#` h1은 h2로, h5·h6은 h4로 낮춰 표시함 (상세 화면 제목과 위계 충돌 방지)
+  - 이미지 `![alt](url)`는 `<img>`를 만들지 않고 `alt` 글자(+링크 규칙)로만 표시함
+- 링크: `urlTransform`으로 `http:`·`https:`만 남기고 나머지(`javascript:`, `data:`, `vbscript:`, 상대 경로)는 링크를 없애고 글자만 표시함. `target="_blank" rel="nofollow ugc noopener noreferrer"`
+- 코드 블록: `highlight.js` core에 언어 약 15개(java, kotlin, js/ts, python, go, sql, bash, yaml, json, xml, dockerfile, rust, c/cpp 등)만 등록함. 모르는 언어는 하이라이트 없이 표시함. 블록마다 복사 버튼
+- 번들: 렌더러·하이라이터는 커뮤니티 상세·작성 화면에서만 지연 로드함 (예상 gzip 약 55KB). 기술·보안 뉴스 첫 화면 번들은 늘지 않음
+- **미리보기와 결과가 같아야 함** → 작성 화면 미리보기와 상세 화면이 같은 컴포넌트를 씀. server가 별도로 HTML을 만들어 내려주지 않는 방식(원문 마크다운 그대로 응답)을 제안함
+- 수용 기준의 XSS 문자열(`<script>`, `<img src=x onerror>`, `[a](javascript:alert(1))`, `<a href=...>`, `<iframe>`, `![x](https://track)`)은 client 테스트에 그대로 넣음
+
+#### 작성 화면 (S-18)
+- 에디터는 `textarea`(모노 글꼴)로 만듦. 코드 에디터 라이브러리(CodeMirror 등)는 번들 대비 이득이 작아 쓰지 않음
+  - Tab/Shift+Tab 들여쓰기, Esc 후 Tab은 포커스 이동 (키보드 갇힘 방지)
+- 임시 저장: `localStorage` 키를 회원 id + 대상(new 또는 글 id)으로 나눔. 1초 디바운스 저장, 올리기 성공 시 삭제. 다른 계정으로 로그인하면 보이지 않음
+- 떠날 때 경고: 내용이 바뀐 경우만 `beforeunload` + 라우터 이동 차단 확인창
+- 태그는 설정 화면의 `TagPicker`를 재사용함 (최대 5)
+
+#### server API에 요청할 형태
+1. **목록 항목에 `excerpt`(마크다운 제거한 앞부분 약 200자)** 를 내려줬으면 함. 목록에서 본문 전체를 받지 않고 마크다운 파서도 불러오지 않기 위함
+2. 목록·상세 공통: `id, category(QUESTION|DISCUSSION|SHARE), title, excerpt, author{id,nickname,grade}, createdAt, editedAt|null, tags, likeCount, commentCount, viewCount, solved, liked, bookmarked`
+3. 상세 추가: `body`(원문 마크다운), `status(VISIBLE|HIDDEN|DELETED)`, `acceptedCommentId|null`, `reportedByMe`. 수정·삭제 버튼은 `author.id === me.id` 또는 관리자로 client가 판단함
+4. **작성 가능 여부 사전 조회** (예: `GET /community/write-status` → `{allowed, reason: NEW_ACCOUNT|DAILY_LIMIT|COOLDOWN|null, availableAt|null, remainingToday}`)
+   - 화면 설계상 작성 제한이면 버튼 대신 사유·남은 시간을 보여줘야 함. 다 쓴 뒤 429로 알게 되면 내용을 날리는 경험이 됨
+   - 429 응답에도 `code`와 `availableAt`(또는 `retryAfterSeconds`)을 본문에 넣어 주길 바람 (헤더만으로는 오류 처리 공통 코드에서 다루기 번거로움)
+5. 댓글 응답에 `reportedByMe`. 채택 댓글 고정은 상세의 `acceptedCommentId`로 client가 맨 위에 올림 (댓글 목록 정렬은 지금 그대로 둬도 됨)
+6. 채택: `PUT /community/posts/{id}/accepted-comment {commentId}` / `DELETE` 같은 형태면 충분함. 오류 코드로 자기 댓글·답글·질문글 아님을 구분해 주길 바람
+7. 신고: `POST /reports {targetType: POST|COMMENT, targetId, reason, detail?}`. 중복 신고(409)·자기 글 신고(403)는 각각 다른 `code`
+8. `/me/profile` `stats`에 `posts` 추가
+9. 목록은 기존과 같은 커서 페이지(`CursorPage`)로 맞춰 주면 무한 스크롤 코드를 재사용할 수 있음
+
+#### 그 외 화면 방침
+- 1단 탭 3개: 360px에서 "기술 뉴스 · 보안 뉴스 · 커뮤니티" 한 줄에 들어감(지금 탭 글자 크기 기준 약 230px). 넘치면 기존 가로 스크롤 규칙 유지
+- 커뮤니티 내부 탭 `[최신 | 인기]`는 031 `SectionTabs`에 섹션 하나 추가. 말머리 필터는 분야 탭 자리에 같은 글자 탭으로 둠. 탭 이동 시 `category`만 유지
+- 프로필 카드 5칸: 좁은 사이드바(256px)에선 `3+2` 두 줄로 배치함
+- 등급 안내 다이얼로그(030)에 "글 쓰기 +10점 (하루 3개분)", "내 글이 받은 좋아요 +1점 (하루 50점)" 2줄 추가
+- A-05는 기존 관리자 표 스타일 그대로 씀
+
+#### pm 확인 요청
+- 삭제된 글(댓글 있음)은 목록에 남기는지, 상세 주소로만 접근 가능한지. client 제안: **목록에서는 빼고 상세에서만 "삭제된 글이에요"**
+- 숨김 글은 작성자 본인의 목록에도 안 보이는 것으로 이해함. 맞는지
