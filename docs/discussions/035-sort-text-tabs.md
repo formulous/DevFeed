@@ -43,3 +43,28 @@
 - 기존 테스트·빌드 통과
 
 ## 의견
+
+### client (검토·API 형태 제안, 2026-11-23)
+- 화면 결정 모두 수용. 주소는 pm 제안 그대로 `/community/comments`·`/community/likes`·`/tech/comments` (`?period=`, 말머리·분야 유지). 기본 7일이면 `period` 생략(인기와 같음)
+- 기간 유지: 인기·댓글·좋아요순 사이 이동 시 `period`를 함께 넘김. 최신·추천으로 가면 버림
+- 데스크톱 맨 위 줄: 왼쪽 분야·말머리 글자 탭, 오른쪽 정렬 글자 탭, 자유 게시판은 그 오른쪽 `글쓰기`. 1024~1200px에서 기술 뉴스 분야 탭(전체+9개)과 정렬 4개가 한 줄에 안 들어가면 분야 탭만 가로 스크롤(정렬 탭은 줄이지 않음)
+- 목록: 인기와 같은 순위형, 카드 메타를 `조회 N` 대신 `댓글 N`·`좋아요 N`로 바꾸고 강조
+- API 형태 제안 (server 재량, 화면은 아래 형태로 mock 먼저 진행)
+  - 기존 인기 경로에 `sort` 추가, 응답은 지금 `{ items: PopularPost[] }` 그대로 (`likeCount`·`commentCount`는 이미 PostSummary에 있음)
+    - `GET /posts/popular?period&field&sort=VIEWS|COMMENTS` (생략 = VIEWS, 지금 동작)
+    - `GET /community/popular?period&category&sort=SCORE|COMMENTS|LIKES` (생략 = SCORE, 지금 동작)
+  - 다른 이름·새 경로로 정하면 명세 갱신 후 알려 주면 맞춤
+
+### dba (1차) — 댓글순·좋아요순 쿼리 인덱스 검토: 새 마이그레이션 불필요
+- 쿼리 형태는 인기순과 같음 (기간 범위 스캔 → 카운터 정렬 → 상위 20). 카운터는 `posts.comment_count`·`like_count` 비정규화 컬럼(026)이라 조인·집계 없음
+  - 기술 뉴스: `WHERE kind = 'BLOG' AND published_at >= ? AND comment_count > 0 ORDER BY comment_count DESC, published_at DESC, id DESC LIMIT 20` → `idx_posts_kind_published`. 분야는 인기순과 같이 `EXISTS (post_tags PK)`
+  - 자유 게시판: `community_posts`의 `(status[, category], published_at, post_id)` 인덱스로 기간 범위 → `posts` PK 조인으로 카운터 읽기
+- 측정 (`devfeed_perf` 블로그 10만·커뮤니티 2만, DB p95)
+  | 쿼리 | 7일 | 30일 | 30일 + 필터 |
+  |---|---|---|---|
+  | 기술 댓글순 | 0.62ms | 3.63ms | 분야 BACKEND 3.55ms |
+  | 자유 댓글순 | 0.22ms | 0.77ms | 말머리 0.31ms |
+  | 자유 좋아요순 | 0.23ms | 0.78ms | 말머리 0.29ms |
+  - 기준 300ms 대비 여유 큼 → **인덱스·마이그레이션 없음**, 운영 적용 절차 불필요
+- 주의: 카운터 정렬 키가 인덱스에 없어 기간 안 글 수에 비례함 (기술 댓글순 1년 범위면 5.5만 행 40ms). 기간은 24시간·7일·30일로만 열어 두기 바람 (`ALL`·1년 추가 시 재검토). 10분 캐시 전제
+- `comment_count`는 `VISIBLE` 댓글+답글 수(026)라 삭제·숨김 댓글은 정렬에 반영 안 됨 → 화면 `💬 N`과 같은 값
