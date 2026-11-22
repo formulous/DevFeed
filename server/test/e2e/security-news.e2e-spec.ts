@@ -97,6 +97,23 @@ describe('분야 필터·보안 뉴스 분리 (021)', () => {
     expect((await api(t, 'GET', '/security-news?region=KR')).status).toBe(400);
   });
 
+  it('보안 뉴스 인기: 조회수순, 조회 0건 제외, 지역 필터, 기술 인기와 분리 (031)', async () => {
+    const all = await api(t, 'GET', '/security-news/popular?period=DAY');
+    expect(all.status).toBe(200);
+    expect(ids(all.body)).toEqual([post.n1, post.n2]);
+    const n1 = all.body.items.find((i: { id: number }) => i.id === post.n1);
+    expect(n1).toMatchObject({ viewCount: 50, thumbnailUrl: null, isPopular: false });
+    expect(ids((await api(t, 'GET', '/security-news/popular?period=WEEK&region=DOMESTIC')).body)).toEqual([post.n1]);
+    expect(ids((await api(t, 'GET', '/security-news/popular?period=MONTH&region=OVERSEAS')).body)).toEqual([post.n2]);
+    expect(ids((await api(t, 'GET', '/posts/popular?period=DAY')).body)).toEqual([post.b1, post.b2]);
+    const user = await signup(t, 'secpop');
+    const authed = await api(t, 'GET', '/security-news/popular?period=DAY', { token: user.token });
+    expect(authed.body.items.find((i: { id: number }) => i.id === post.n1)).toMatchObject({ isBookmarked: false, isRead: false, likedByMe: false });
+    expect((await api(t, 'GET', '/security-news/popular')).status).toBe(400);
+    expect((await api(t, 'GET', '/security-news/popular?period=DAY&region=KR')).status).toBe(400);
+    expect((await api(t, 'GET', `/security-news/popular?period=DAY&sourceIds=${src.domestic}`)).status).toBe(400);
+  });
+
   it('출처 목록은 국내 → 해외, /sources와 태그 글 수에는 뉴스 제외', async () => {
     const sources = await api(t, 'GET', '/security-news/sources');
     const mine = sources.body.items.filter((s: { id: number }) => s.id === src.domestic || s.id === src.overseas);

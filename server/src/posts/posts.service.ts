@@ -4,6 +4,7 @@ import { decodeCursor, encodeCursor } from '../common/pagination/cursor';
 import { buildFeedQuery } from './feed-query';
 import { FeedQuery, SecurityNewsQuery } from './dto/posts.dto';
 import { DirectoryService } from './directory.service';
+import type { NewsRegion } from '../entities/source.entity';
 import type { Field } from './fields';
 import { PopularPeriod } from './period';
 import { PopularIdsService } from './popular-ids.service';
@@ -81,8 +82,16 @@ export class PostsService {
   }
 
   async popular(period: PopularPeriod, field?: Field, userId?: number, now = Date.now()) {
-    const key = `${period}:${field ?? ''}`;
     const ids = await this.popularIds.ids(period, field, now);
+    return this.popularCards(`BLOG:${period}:${field ?? ''}`, ids, userId);
+  }
+
+  async securityPopular(period: PopularPeriod, region?: NewsRegion, userId?: number, now = Date.now()) {
+    const ids = await this.popularIds.securityIds(period, region, now);
+    return this.popularCards(`SECURITY_NEWS:${period}:${region ?? ''}`, ids, userId);
+  }
+
+  private async popularCards(key: string, ids: number[], userId?: number) {
     let entry = this.popularCache.get(key);
     if (!entry || entry.ids !== ids) {
       const cards = this.cards.load(ids).catch((error) => {

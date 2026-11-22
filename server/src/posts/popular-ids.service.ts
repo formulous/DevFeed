@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { DirectoryService } from './directory.service';
+import type { NewsRegion } from '../entities/source.entity';
 import type { Field } from './fields';
 import { PopularPeriod, popularSince } from './period';
 
@@ -22,10 +23,17 @@ export class PopularIdsService {
   ) {}
 
   ids(period: PopularPeriod, field?: Field, now = Date.now()): Promise<number[]> {
-    const key = `${period}:${field ?? ''}`;
+    return this.cached(`BLOG:${period}:${field ?? ''}`, now, () => this.query(period, field, new Date(now)));
+  }
+
+  securityIds(period: PopularPeriod, region?: NewsRegion, now = Date.now()): Promise<number[]> {
+    return this.cached(`SECURITY_NEWS:${period}:${region ?? ''}`, now, () => this.securityQuery(period, region, new Date(now)));
+  }
+
+  private cached(key: string, now: number, load: () => Promise<number[]>): Promise<number[]> {
     let entry = this.cache.get(key);
     if (!entry || now - entry.at > POPULAR_TTL_MS) {
-      const ids = this.query(period, field, new Date(now)).catch((error) => {
+      const ids = load().catch((error) => {
         if (this.cache.get(key)?.ids === ids) this.cache.delete(key);
         throw error;
       });
@@ -48,11 +56,26 @@ export class PopularIdsService {
       where.push(`EXISTS (SELECT 1 FROM post_tags fx WHERE fx.post_id = p.id AND fx.tag_id IN (${tagIds.map(() => '?').join(', ')}))`);
       params.push(...tagIds);
     }
-    params.push(POPULAR_LIMIT);
+    return this.top(where, params);
+  }
+
+  private async securityQuery(period: PopularPeriod, region: NewsRegion | undefined, now: Date): Promise<number[]> {
+    const where = ["p.kind = 'SECURITY_NEWS'", 'p.published_at >= ?', 'p.view_count > 0'];
+    const params: unknown[] = [popularSince(period, now)];
+    if (region) {
+      const sourceIds = (await this.directory.sourcesOf('SECURITY_NEWS')).filter((s) => s.region === region).map((s) => s.id);
+      if (!sourceIds.length) return [];
+      where.push(`p.source_id IN (${sourceIds.map(() => '?').join(', ')})`);
+      params.push(...sourceIds);
+    }
+    return this.top(where, params);
+  }
+
+  private async top(where: string[], params: unknown[]): Promise<number[]> {
     const rows = (await this.dataSource.query(
       `SELECT p.id FROM posts p WHERE ${where.join(' AND ')}
         ORDER BY p.view_count DESC, p.published_at DESC, p.id DESC LIMIT ?`,
-      params,
+      [...params, POPULAR_LIMIT],
     )) as { id: number | string }[];
     return rows.map((r) => Number(r.id));
   }

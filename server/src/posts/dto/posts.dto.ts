@@ -52,6 +52,15 @@ export class PopularQuery {
   field?: Field;
 }
 
+export class SecurityPopularQuery {
+  @IsIn(['DAY', 'WEEK', 'MONTH'], { message: 'DAY, WEEK, MONTH 중 하나여야 해요' })
+  period: PopularPeriod;
+
+  @IsOptional()
+  @IsIn(['DOMESTIC', 'OVERSEAS'], { message: 'DOMESTIC 또는 OVERSEAS여야 해요' })
+  region?: NewsRegion;
+}
+
 export class SecurityNewsQuery {
   @IsOptional()
   @IsString({ message: '문자열이어야 해요' })

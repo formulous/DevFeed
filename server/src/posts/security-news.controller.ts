@@ -2,7 +2,7 @@ import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import type { AuthUser } from '../auth/auth.types';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { OptionalAuthGuard } from '../auth/optional-auth.guard';
-import { SecurityNewsQuery } from './dto/posts.dto';
+import { SecurityNewsQuery, SecurityPopularQuery } from './dto/posts.dto';
 import { PostsService } from './posts.service';
 
 @Controller('security-news')
@@ -13,6 +13,12 @@ export class SecurityNewsController {
   @UseGuards(OptionalAuthGuard)
   list(@Query() query: SecurityNewsQuery, @CurrentUser() user?: AuthUser) {
     return this.posts.securityNews(query, user?.id);
+  }
+
+  @Get('popular')
+  @UseGuards(OptionalAuthGuard)
+  popular(@Query() query: SecurityPopularQuery, @CurrentUser() user?: AuthUser) {
+    return this.posts.securityPopular(query.period, query.region, user?.id);
   }
 
   @Get('sources')
