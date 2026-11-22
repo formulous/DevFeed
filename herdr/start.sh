@@ -25,7 +25,7 @@ done
 
 pane_id() { jq -r '.result.pane.pane_id // .result.root_pane.pane_id // empty'; }
 
-ws_json="$(herdr workspace create --cwd "$ROOT" --label dev-feed --no-focus)"
+ws_json="$(herdr workspace create --cwd "$ROOT" --label formulous --no-focus)"
 WS="$(jq -r '.result.workspace.workspace_id // .result.workspace.id' <<<"$ws_json")"
 P_PM="$(pane_id <<<"$ws_json")"
 P_SERVER="$(herdr pane split "$P_PM" --direction right --cwd "$ROOT" --no-focus | pane_id)"

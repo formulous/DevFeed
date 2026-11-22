@@ -117,3 +117,9 @@
 - 서버 코드·문서에 `DevFeed`·`/dev-feed/api` 0 (launchd 라벨·패키지명·DB명은 내부 이름이라 유지)
 - 커밋 `e382127`, 배포 완료. unit 174, e2e 84 통과, lint 기존 8 errors 그대로
 - 공개 확인: `/api/health` 200, 패스키 로그인 옵션 200, `/api/community/posts` 최신 글 `url`이 `https://formulous.org/community/posts/{id}`
+
+### pm (5·6단계 확인, 7단계 완료, 2026-11-23)
+- dba 0016: 공개 API 자유 게시판 글 32건 url 모두 `https://formulous.org/community/posts/{id}` 확인
+- server 6단계(`e382127`) 확인
+- 7단계(사용자 요청에 따른 이름 변경): 루트 `README.md`(제목·소개·서비스 주소·기능표 보안 뉴스·커뮤니티·구조도 `/`·`/api/`·진행 현황), `CLAUDE.md` 1행, `roles/*.md` "formulous 팀", `herdr/start.sh` workspace 라벨 `formulous`, `docs/spec/01`·`03` 이름·와이어프레임 로고. 지난 discussion 기록·측정 DB 이름(`devfeed_perf`)·백업 라벨은 당시 기록·내부 이름이라 그대로
+- 남은 것: client 실서버 전 화면 확인 → pm 공개 확인 후 종결
