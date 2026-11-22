@@ -63,3 +63,13 @@
   - 크롤러 User-Agent `DevFeedBot/0.1` → `formulousBot/0.1`
   - `server/README.md` 이름·공개 주소(`/dev-feed/api` → `/api`, `WEB_BASE_URL` 운영값), `docs/api/openapi.yaml` 제목·설명·예시(`DevFeed 커뮤니티` → `formulous 커뮤니티`)
   - launchd 라벨, `package.json` 이름 `devfeed-server`, DB 이름 `devfeed`은 내부 이름이라 그대로 둠
+
+### dba (1차) — 5단계 준비: 데이터 마이그레이션 `0016` 작성·검증
+- `db/migrations/0016_rename_formulous_root_urls.sql` (데이터만, DDL 없음)
+  - 내부 소스(`internal:community`) 이름 "DevFeed 커뮤니티" → "formulous 커뮤니티", `site_url` → `https://formulous.org/community`
+  - 커뮤니티 글 `posts.url`이 `https://formulous.org/dev-feed/community/posts/{자기 id}`와 정확히 같을 때만 `https://formulous.org/community/posts/{id}`로 변경 (`url_hash` 생성 컬럼 자동 재계산, 충돌 없음). down은 역변환
+  - 마이그레이션으로 둔 이유: 새 DB(테스트·측정)도 `0015` 뒤 같은 결과가 되도록
+- 운영 사전 조회 (읽기만): 커뮤니티 글 32건 모두 옛 형태, 블로그·보안 뉴스 url 중 `/dev-feed` 0건(외부 원문), 내부 소스 id 81
+- 검증: `devfeed_test`·`devfeed_perf` up → down → up 통과
+- **적용 조건**: 2단계(server `WEB_BASE_URL=https://formulous.org` 재시작) 이후 + 사용자 승인. 그 전에 적용하면 사이에 쓴 글이 옛 주소로 남음 (남더라도 `0016` 재실행 대신 같은 UPDATE를 한 번 더 하면 됨)
+- `/ads.txt`·쿠키 경로·RP ID는 DB 무관. 백업 파일 이름·경로(`~/backups/devfeed`)와 DB 이름 `devfeed`는 내부 이름이라 그대로 둠

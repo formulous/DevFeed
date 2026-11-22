@@ -9,7 +9,7 @@ db/
 ├── perf/                # 성능 측정용 대량 시드 생성기, 측정 스크립트
 ├── queries/            # feed.sql(007·021 분야·보안 뉴스·kind 정합성 검사), reactions.sql(026 좋아요·댓글·탈퇴·정합성 검사), passkeys.sql(027 패스키·챌린지), score.sql(029 점수 적립·회수·백필·정합성 검사), community.sql(032 커뮤니티 글·신고·채택·점수·정합성 검사), personal.sql·withdrawal-check.sql(012), recommendation.sql(013) 기준 쿼리
 ├── ops/                 # launchd 일일 백업 템플릿·설치 스크립트
-├── migrations/          # 0001~0015, -- migrate:up / -- migrate:down
+├── migrations/          # 0001~0016, -- migrate:up / -- migrate:down
 ├── scripts/migrate.sh   # 컨테이너에 마이그레이션 적용
 ├── scripts/seed.sh      # seeds/*.sql 순서대로 적용 (재실행 안전)
 ├── scripts/perf-seed.sh # 측정 DB(devfeed_perf)에 글 10만·회원 1만 생성
@@ -132,3 +132,8 @@ MYSQL_PWD=<비밀번호> python3 -I db/perf/measure_community.py # 커뮤니티 
 - CHECK 거부: 본문 10자 미만, 숨김인데 시각·사유 없음, `OTHER` 아닌 사유에 detail, LIKE_RECEIVED인데 actor 0, 커뮤니티 소스에 region. 대상 행 없는 신고 FK 거부
 - 시나리오 (롤백): 글 4개 → POST_WRITE 30점(4번째 0점), 서로 다른 2명 신고 → 숨김 아님, 3명 → 자동 숨김(`REPORTS`)·POST_WRITE 회수·중복 신고 0, 받은 좋아요 켜기 2번 1행·끄기 0행
 - `devfeed` 적용 (2026-11-22 11:42 UTC, 사용자 승인, server에 사전·완료 알림): 소스 42 → 43(내부 소스 id 81), 글 2,622·태그 3,089·댓글 2·원장 17·점수 합 28 동일. 정합성 026·029·032 전부 0, 공개 API 200, `/sources`에 내부 소스 노출 없음
+
+## 검증 기록 (2026-11-23, `0016`, 037)
+- `devfeed_test`·`devfeed_perf` up → down → up 통과 (임시 커뮤니티 글 1건으로 url 변환·역변환 확인, 다른 형태 url은 불변)
+- 운영 사전 조회: 커뮤니티 글 32건 모두 옛 형태, 다른 종류 글의 `/dev-feed` url 0, 내부 소스 id 81
+- `devfeed` 적용은 037 2단계(server `WEB_BASE_URL` 변경) 후 사용자 승인 대기

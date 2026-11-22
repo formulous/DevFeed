@@ -182,7 +182,7 @@
 | hidden_at / hidden_by / hidden_reason | | NULL | 댓글과 같은 숨김 규칙 (`ADMIN`·`REPORTS`) |
 | created_at / updated_at | DATETIME(3) | NOT NULL | |
 
-- `posts` 쪽: `source_id` = 내부 소스, `source_type` `PERSONAL`(쓰지 않음), `url` = 정식 주소(`{base}/community/posts/{id}`, 삽입 후 같은 트랜잭션에서 갱신), `title` 2~100자, `summary` = 마크다운을 걷어낸 앞부분(목록 excerpt), `thumbnail_url` NULL, `post_search` 행 없음(검색 제외)
+- `posts` 쪽: `source_id` = 내부 소스, `source_type` `PERSONAL`(쓰지 않음), `url` = 정식 주소(`{base}/community/posts/{id}`, 삽입 후 같은 트랜잭션에서 갱신. `0016`부터 base = `https://formulous.org`, 037), `title` 2~100자, `summary` = 마크다운을 걷어낸 앞부분(목록 excerpt), `thumbnail_url` NULL, `post_search` 행 없음(검색 제외)
 
 인덱스
 - `idx_community_posts_status_published (status, published_at, post_id)`: 최신 커서, 인기 기간 범위
