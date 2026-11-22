@@ -403,7 +403,8 @@ npm run capture    # 반응형 점검·README용 스크린샷 (Playwright, 최�
 - `npm run build:web` → `dist-root/` (`VITE_BASE=/`, mock 끔, git 제외). nginx가 `/`를 이 폴더로, `/api/`를 서버로 넘김 (pm 담당)
 - `check-build`: mock 코드·워커, 옛 이름·주소(`/portfolio/`·`/dev-feed/`·`DevFeed`)가 결과(`index.html`·자산·`robots.txt`·`sitemap.xml`)에 있으면 실패. `--release`면 `ads.txt` 내용(AdSense)과 `/assets/` 루트 경로도 확인
 - `public/`: `ads.txt`(옛 home과 같은 내용), `robots.txt`(관리자·내 정보·온보딩·글쓰기 제외), `sitemap.xml`(공개 목록 주소만), `favicon.svg`, `og.png`(`npm run og`로 생성)
-- 기존 `dist-web/`(`/dev-feed/` 빌드)은 nginx 전환 전까지 남겨 둠. 전환 뒤 `/dev-feed/...`는 404 (넘김 없음)
+- 2026-11-23 nginx 전환 완료. `/dev-feed/...`는 404 (넘김 없음). `dist-web/`은 더 이상 쓰지 않음
+- 실서버 확인(2026-11-23): 공개 16개 주소 × 1440·360 × 라이트·다크 직접 진입, 가입 → 새로고침 로그인 유지(`df_rt` `Path=/api/auth`) → 회원 화면 → 다른 창 로그인 → 탈퇴
 - 하위 경로 처리는 그대로 남아 있음: Vite `base` = `VITE_BASE`, 라우터 `basename` = `BASE_URL`, API `apiUrl` = `${BASE_URL}api`
 
 ## 이름·로고 (037)

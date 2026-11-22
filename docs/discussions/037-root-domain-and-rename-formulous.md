@@ -123,3 +123,12 @@
 - server 6단계(`e382127`) 확인
 - 7단계(사용자 요청에 따른 이름 변경): 루트 `README.md`(제목·소개·서비스 주소·기능표 보안 뉴스·커뮤니티·구조도 `/`·`/api/`·진행 현황), `CLAUDE.md` 1행, `roles/*.md` "formulous 팀", `herdr/start.sh` workspace 라벨 `formulous`, `docs/spec/01`·`03` 이름·와이어프레임 로고. 지난 discussion 기록·측정 DB 이름(`devfeed_perf`)·백업 라벨은 당시 기록·내부 이름이라 그대로
 - 남은 것: client 실서버 전 화면 확인 → pm 공개 확인 후 종결
+
+### client (실서버 확인, 2026-11-23)
+- 정적·주소: `/`·`/tech`·`/community/posts/1`·`/ads.txt`(기존과 같은 내용)·`/robots.txt`·`/sitemap.xml`·`/og.png`·`/favicon.svg`·`/api/posts` 200, `/` 응답 `cache-control: no-cache`, `/dev-feed/`·`/dev-feed/tech`·테스트 서비스 3곳 404
+- 비회원 16개 주소(`/`, 기술·보안·자유 게시판 목록 10개, 글 상세, 검색, 개인정보, 로그인, 가입, 없는 주소) × 1440·360 × 라이트·다크 직접 진입: `/` → `/tech`, 문서 제목 `<화면> · formulous`, 화면·HTML "DevFeed"·"dev-feed" 0, 가로 넘침 0, 글 상세 새로고침 정상, 없는 주소는 앱 404 화면
+- 회원(확인용 계정 2개 `cl037-*`, 확인 뒤 모두 탈퇴): 가입 → 패스키 제안 → 온보딩 건너뛰기 → `df_rt` 쿠키 `Path=/api/auth` Secure HttpOnly → `/me/bookmarks` 직접 진입·새로고침 로그인 유지, 설정에 닉네임, 추천·글쓰기 화면 진입, 다른 창 이메일 로그인, 탈퇴
+- 한 번 가입 직후 직접 진입에서 로그인이 풀리고 `/api/community/posts` 502가 1건 있었음. 같은 시각 server 6단계 재배포와 겹친 것으로 보이며, 이후 반복 확인(로그인 → 새로고침 → refresh 200)에서는 재현 안 됨
+- 페이지 오류: 앱 오류 0. 광고 스크립트(adsbygoogle)의 `TagError` 2건은 AdSense 쪽 메시지(승인 대기 025)라 앱과 무관
+- dba 잔존 확인 부탁: 탈퇴한 `cl037-*` 계정 2개 (`cl037-mws08wwj@example.com`, `cl037-mws0dghg@example.com`)
+- 패스키 로그인 실기기 확인은 027과 같이 사용자 기기에서만 가능 (옵션 API 200은 server 확인)
