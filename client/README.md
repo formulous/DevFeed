@@ -404,8 +404,16 @@ npm run capture    # 반응형 점검·README용 스크린샷 (Playwright, 최�
   - S-08 북마크 태그 필터도 같은 선택 창 사용 (2026-11-20): [태그 ▾] 버튼 → S-12, 여러 개 OR(최대 10), URL `?tagIds=`(예전 `?tagId=` 링크도 읽음), 고른 태그는 칩 줄·초기화. 실서버 `tagIds` OR 동작 확인
   - 수용 기준 측정 (`npm run capture` + 실서버 데이터 임시 측정): 1280×720·1440×900에서 기본·최대 선택(태그 10, 소스 20) 모두 사이드바 `scrollHeight ≤ clientHeight`. 실데이터 최대 선택 처음 613/584px 넘침 → 소스 추가 표시 2개·칩 간격 4px로 줄여 567/567
 - 광고(F-060)는 사용자 결정으로 제외 (`docs/discussions/016` decided). 관련 코드 없음
-- 비공개 화면 `meta robots noindex` (016, 사용자가 nginx `noindex` 해제): S-05~S-10, A-01~A-04 진입 시 `RouteTitle`이 `<meta name="robots" content="noindex">`를 붙이고, 공개 화면(S-01~S-04, S-11)으로 오면 뗌
-- 화면별 `<title>`: `components/layout/RouteTitle.tsx`의 경로 표 한 곳에서 관리 (예: "검색: 카프카 · formulous")
+- 검색엔진 머리말 (044): 경로 원천은 `src/lib/seoRoutes.ts` 한 곳 (경로 패턴·제목·설명·robots·canonical)
+  - 빌드 때 `dist-root/routes.json`으로 내보냄 (`vite.config.ts` `emit-routes-manifest`). server가 이 파일로 머리말을 만들고 목록에 없는 경로는 404로 판정함
+  - 라우트를 추가하면 `seoRoutes.ts`에도 넣어야 함. `tests/seoHead.test.tsx`가 `App.tsx`·`AdminRoutes.tsx` 라우트와 대조해 빠지면 실패
+  - robots: 공개 `index, follow`, 검색·없는 경로 `noindex, follow`, 로그인·가입·온보딩·내 정보·관리자·글쓰기·수정·추천 `noindex, nofollow`
+  - canonical: 쿼리를 뺀 경로. 정렬 화면은 기본 목록(`/tech/popular`·`/tech/comments` → `/tech` 등), 옛 경로(`/`·`/popular`…)는 넘겨 갈 화면
+  - `index.html`: `<!--seo:head-->`…`<!--/seo:head-->` 구간 안 태그(`data-seo` 키)를 server가 통째로 바꿈. `<div id="root"><!--seo:body--></div>`에 server 본문이 들어가고 React가 첫 렌더 때 교체함 (hydrate 아님)
+  - `RouteTitle`이 화면 이동 때 `data-seo` 태그(title·description·canonical·robots·og·twitter)를 갱신하고, 처음 화면을 벗어나면 server가 넣은 다른 `data-seo` 태그(JSON-LD 등)를 지움
+  - 글 상세는 데이터를 받은 뒤 `useSeoOverride`로 글 제목·요약 앞 120자(`lib/excerpt.ts`)·`og:type=article`. 첫 로드에서는 데이터가 올 때까지 server 값을 건드리지 않음. 없는 글은 `noindex`
+  - 첫 경로가 글 상세면 `main.tsx`가 그 화면 코드를 먼저 불러온 뒤 render함 (`lazyPages.ts`·`lib/preloadable.ts`, 스피너 단계 없음)
+  - `sitemap.xml`·`/community/rss.xml`은 server가 응답함 (정적 sitemap 제거). `index.html`에 RSS `alternate` 고정
 - 글 카드 배지 (F-014, `docs/discussions/020`): 소스 줄 시간 옆에 `NEW`(발행 24시간 이내, client 계산)·`인기`(`PostSummary.isPopular`, 7일 인기 상위 20) 최대 2개
   - `components/post/PostBadges.tsx`, `PostCard`의 `badges` prop: 기본 `all`, S-03 인기는 `new`(인기 배지 생략), S-09 기록은 `none`
   - `isPopular`가 없는 응답이면 `인기`만 생략. mock은 7일 조회수 상위 20건에 `isPopular: true`
@@ -425,8 +433,8 @@ npm run capture    # 반응형 점검·README용 스크린샷 (Playwright, 최�
 
 ## 배포 (루트 `https://formulous.org/`, `docs/discussions/037`)
 - `npm run build:web` → `dist-root/` (`VITE_BASE=/`, mock 끔, git 제외). nginx가 `/`를 이 폴더로, `/api/`를 서버로 넘김 (pm 담당)
-- `check-build`: mock 코드·워커, 옛 이름·주소(`/portfolio/`·`/dev-feed/`·`DevFeed`)가 결과(`index.html`·자산·`robots.txt`·`sitemap.xml`)에 있으면 실패. `--release`면 `ads.txt` 내용(AdSense)과 `/assets/` 루트 경로도 확인
-- `public/`: `ads.txt`(옛 home과 같은 내용), `robots.txt`(관리자·내 정보·온보딩·글쓰기 제외), `sitemap.xml`(공개 목록 주소만), `favicon.svg`, `og.png`(`npm run og`로 생성), `naver1b83f49df582ce7053ed234240a742b9.html`(네이버 서치어드바이저 소유 확인, 원본 그대로 유지·삭제 금지)
+- `check-build`: mock 코드·워커, 옛 이름·주소(`/portfolio/`·`/dev-feed/`·`DevFeed`)가 결과(`index.html`·자산·`robots.txt`)에 있으면 실패. `--release`면 `ads.txt` 내용(AdSense), `/assets/` 루트 경로, `seo:head` 구간·`seo:body` 표시, `routes.json` 필드도 확인
+- `public/`: `ads.txt`(옛 home과 같은 내용), `robots.txt`(관리자·내 정보·온보딩·글쓰기 제외), `favicon.svg`, `og.png`(`npm run og`로 생성), `naver1b83f49df582ce7053ed234240a742b9.html`(네이버 서치어드바이저 소유 확인, 원본 그대로 유지·삭제 금지)
 - 2026-11-23 nginx 전환 완료. `/dev-feed/...`는 404 (넘김 없음). `dist-web/`은 더 이상 쓰지 않음
 - 실서버 확인(2026-11-23): 공개 16개 주소 × 1440·360 × 라이트·다크 직접 진입, 가입 → 새로고침 로그인 유지(`df_rt` `Path=/api/auth`) → 회원 화면 → 다른 창 로그인 → 탈퇴
 - 하위 경로 처리는 그대로 남아 있음: Vite `base` = `VITE_BASE`, 라우터 `basename` = `BASE_URL`, API `apiUrl` = `${BASE_URL}api`

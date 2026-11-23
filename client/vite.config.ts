@@ -4,6 +4,7 @@ import { fileURLToPath, URL } from 'node:url';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
+import { routesManifest } from './src/lib/seoRoutes';
 
 function dropMockWorker(): Plugin {
   let outDir = 'dist';
@@ -19,9 +20,19 @@ function dropMockWorker(): Plugin {
   };
 }
 
+function emitRoutesManifest(): Plugin {
+  return {
+    name: 'emit-routes-manifest',
+    apply: 'build',
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'routes.json', source: `${JSON.stringify(routesManifest(), null, 2)}\n` });
+    },
+  };
+}
+
 export default defineConfig({
   base: process.env.VITE_BASE ?? '/',
-  plugins: [react(), dropMockWorker()],
+  plugins: [react(), dropMockWorker(), emitRoutesManifest()],
   resolve: {
     alias: {
       '@onyx': fileURLToPath(new URL('../onyx-ui/src', import.meta.url)),

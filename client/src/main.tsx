@@ -1,7 +1,8 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter } from 'react-router';
+import { BrowserRouter, matchPath } from 'react-router';
 import { App } from './App';
+import { communityPostPage } from './lazyPages';
 import { Providers } from './Providers';
 import './index.css';
 
@@ -16,7 +17,13 @@ async function enableMocking() {
   });
 }
 
-enableMocking().then(() => {
+function preloadRoute() {
+  const path = window.location.pathname.slice(ROUTER_BASENAME === '/' ? 0 : ROUTER_BASENAME.length) || '/';
+  if (matchPath('/community/posts/:id', path)) return communityPostPage.preload().catch(() => undefined);
+  return undefined;
+}
+
+Promise.all([enableMocking(), preloadRoute()]).then(() => {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <BrowserRouter basename={ROUTER_BASENAME}>

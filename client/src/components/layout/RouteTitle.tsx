@@ -1,72 +1,161 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { matchPath, useLocation } from 'react-router';
+import { NOT_FOUND_ROUTE, ROBOTS_INDEX, ROBOTS_NOINDEX, SEO_ROUTES, SITE_NAME, SITE_ORIGIN, type SeoRoute } from '@/lib/seoRoutes';
 
-const APP = 'formulous';
+export interface SeoOverride {
+  title?: string;
+  description?: string;
+  robots?: string;
+  ogType?: 'website' | 'article';
+}
 
-const TITLES: [string, string][] = [
-  ['/tech', '최신 기술 글'],
-  ['/tech/for-you', '나를 위한 추천'],
-  ['/tech/popular', '인기 기술 글'],
-  ['/tech/comments', '댓글 많은 기술 글'],
-  ['/security', '보안 뉴스'],
-  ['/security/popular', '인기 보안 뉴스'],
-  ['/community', '자유 게시판'],
-  ['/community/popular', '인기 자유 게시판 글'],
-  ['/community/comments', '댓글 많은 자유 게시판 글'],
-  ['/community/likes', '좋아요 많은 자유 게시판 글'],
-  ['/community/new', '글 쓰기'],
-  ['/community/posts/:id/edit', '글 고치기'],
-  ['/community/posts/:id', '자유 게시판 글'],
-  ['/login', '로그인'],
-  ['/signup', '회원가입'],
-  ['/onboarding/passkey', '패스키 만들기'],
-  ['/onboarding/tags', '관심 태그 선택'],
-  ['/me/bookmarks', '북마크'],
-  ['/me/history', '읽은 기록'],
-  ['/me/settings', '설정'],
-  ['/privacy', '개인정보 안내'],
-  ['/admin', '수집 현황'],
-  ['/admin/sources/new', '소스 등록'],
-  ['/admin/sources/:id/edit', '소스 수정'],
-  ['/admin/sources/:id', '소스 상세'],
-  ['/admin/tags', '태그 사전'],
-  ['/admin/reports', '신고 관리'],
-];
+const MANAGED = ['title', 'description', 'canonical', 'robots', 'og:type', 'og:title', 'og:description', 'og:url', 'twitter:title', 'twitter:description'];
+
+let override: { path: string; value: SeoOverride } | null = null;
+const listeners = new Set<() => void>();
+
+export function setSeoOverride(path: string, value: SeoOverride | null) {
+  const cur = override;
+  if (!value) {
+    if (!cur || cur.path !== path) return;
+    override = null;
+  } else {
+    override = { path, value };
+  }
+  listeners.forEach((l) => l());
+}
+
+const subscribe = (l: () => void) => {
+  listeners.add(l);
+  return () => listeners.delete(l);
+};
+const getOverride = () => override;
+
+export function useSeoOverride(value: SeoOverride | null) {
+  const { pathname } = useLocation();
+  const key = value ? JSON.stringify(value) : '';
+  useEffect(() => {
+    if (!key) return;
+    setSeoOverride(pathname, JSON.parse(key) as SeoOverride);
+    return () => setSeoOverride(pathname, null);
+  }, [pathname, key]);
+}
+
+export function routeFor(pathname: string): SeoRoute {
+  return SEO_ROUTES.find((r) => matchPath(r.pattern, pathname)) ?? NOT_FOUND_ROUTE;
+}
 
 export function titleFor(pathname: string, search: string) {
   if (matchPath('/search', pathname)) {
     const q = new URLSearchParams(search).get('q')?.trim();
-    return q ? `검색: ${q} · ${APP}` : `검색 · ${APP}`;
+    return q ? `검색: ${q} · ${SITE_NAME}` : `검색 · ${SITE_NAME}`;
   }
-  const hit = TITLES.find(([pattern]) => matchPath(pattern, pathname));
-  return hit ? `${hit[1]} · ${APP}` : `페이지를 찾을 수 없어요 · ${APP}`;
+  return routeFor(pathname).title;
 }
 
-const NOINDEX_PATTERNS = ['/community/new', '/community/posts/:id/edit', '/login', '/signup', '/onboarding/*', '/me/*', '/admin', '/admin/*'];
+export function robotsFor(pathname: string) {
+  return routeFor(pathname).robots;
+}
 
 export function isNoindex(pathname: string) {
-  return NOINDEX_PATTERNS.some((pattern) => matchPath(pattern, pathname));
+  return robotsFor(pathname) !== ROBOTS_INDEX;
 }
 
-function setRobots(noindex: boolean) {
-  let meta = document.head.querySelector<HTMLMetaElement>('meta[name="robots"]');
-  if (!noindex) {
-    meta?.remove();
-    return;
+export function canonicalFor(pathname: string) {
+  const route = routeFor(pathname);
+  if (route === NOT_FOUND_ROUTE) return '';
+  if (route.canonical === route.pattern) return `${SITE_ORIGIN}${pathname.replace(/\/+$/, '') || '/'}`;
+  return `${SITE_ORIGIN}${route.canonical}`;
+}
+
+function upsert(key: string, create: () => HTMLElement, set: (el: HTMLElement) => void) {
+  let el = document.head.querySelector<HTMLElement>(`[data-seo="${key}"]`);
+  if (!el) {
+    el = create();
+    el.setAttribute('data-seo', key);
+    document.head.appendChild(el);
   }
-  if (!meta) {
-    meta = document.createElement('meta');
-    meta.name = 'robots';
-    document.head.appendChild(meta);
+  set(el);
+}
+
+function meta(key: string, attr: 'name' | 'property', name: string, content: string) {
+  upsert(
+    key,
+    () => {
+      const m = document.createElement('meta');
+      m.setAttribute(attr, name);
+      return m;
+    },
+    (el) => el.setAttribute('content', content),
+  );
+}
+
+interface HeadValues {
+  title: string;
+  description: string;
+  canonical: string;
+  robots: string;
+  ogType: string;
+}
+
+function applyHead(v: HeadValues) {
+  upsert(
+    'title',
+    () => document.head.querySelector('title') ?? document.createElement('title'),
+    (el) => {
+      el.textContent = v.title;
+    },
+  );
+  document.title = v.title;
+  meta('description', 'name', 'description', v.description);
+  meta('robots', 'name', 'robots', v.robots);
+  meta('og:type', 'property', 'og:type', v.ogType);
+  meta('og:title', 'property', 'og:title', v.title);
+  meta('og:description', 'property', 'og:description', v.description);
+  meta('twitter:title', 'name', 'twitter:title', v.title);
+  meta('twitter:description', 'name', 'twitter:description', v.description);
+  if (v.canonical) {
+    meta('og:url', 'property', 'og:url', v.canonical);
+    upsert(
+      'canonical',
+      () => {
+        const l = document.createElement('link');
+        l.rel = 'canonical';
+        return l;
+      },
+      (el) => el.setAttribute('href', v.canonical),
+    );
+  } else {
+    document.head.querySelectorAll('[data-seo="canonical"], [data-seo="og:url"]').forEach((el) => el.remove());
   }
-  meta.content = 'noindex';
+}
+
+function dropForeign() {
+  document.head.querySelectorAll<HTMLElement>('[data-seo]').forEach((el) => {
+    if (!MANAGED.includes(el.dataset.seo ?? '')) el.remove();
+  });
 }
 
 export function RouteTitle() {
   const { pathname, search } = useLocation();
+  const current = useSyncExternalStore(subscribe, getOverride, getOverride);
+  const firstPath = useRef(pathname);
+  const left = useRef(false);
+
   useEffect(() => {
-    document.title = titleFor(pathname, search);
-    setRobots(isNoindex(pathname));
-  }, [pathname, search]);
+    const route = routeFor(pathname);
+    const own = current && current.path === pathname ? current.value : null;
+    if (pathname !== firstPath.current) left.current = true;
+    if (left.current) dropForeign();
+    if (route.dynamic && !own && !left.current) return;
+    applyHead({
+      title: own?.title ?? titleFor(pathname, search),
+      description: own?.description ?? route.description,
+      canonical: canonicalFor(pathname),
+      robots: own?.robots ?? (route === NOT_FOUND_ROUTE ? ROBOTS_NOINDEX : route.robots),
+      ogType: own?.ogType ?? 'website',
+    });
+  }, [pathname, search, current]);
+
   return null;
 }

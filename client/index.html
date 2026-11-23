@@ -3,8 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>formulous — 기술·보안 뉴스와 개발자 커뮤니티</title>
-    <meta name="description" content="국내 기술 블로그와 보안 뉴스를 모아 읽고 검색하고, 개발자끼리 묻고 나누는 자유 게시판이에요" />
+    <!--seo:head-->
+    <title data-seo="title">formulous — 기술·보안 뉴스와 개발자 커뮤니티</title>
+    <meta name="description" content="국내 기술 블로그와 보안 뉴스를 모아 읽고 검색하고, 개발자끼리 묻고 나누는 자유 게시판이에요" data-seo="description" />
+    <meta name="robots" content="index, follow" data-seo="robots" />
+    <meta property="og:type" content="website" data-seo="og:type" />
+    <meta property="og:title" content="formulous — 기술·보안 뉴스와 개발자 커뮤니티" data-seo="og:title" />
+    <meta property="og:description" content="국내 기술 블로그와 보안 뉴스를 모아 읽고 검색하고, 개발자끼리 묻고 나누는 자유 게시판이에요" data-seo="og:description" />
+    <meta name="twitter:title" content="formulous — 기술·보안 뉴스와 개발자 커뮤니티" data-seo="twitter:title" />
+    <meta name="twitter:description" content="국내 기술 블로그와 보안 뉴스를 모아 읽고 검색하고, 개발자끼리 묻고 나누는 자유 게시판이에요" data-seo="twitter:description" />
+    <!--/seo:head-->
     <meta name="google-adsense-account" content="ca-pub-1750461537555326" />
     <meta name="theme-color" content="#fbfbfc" />
     <script>
@@ -16,23 +24,18 @@
         document.querySelector('meta[name="theme-color"]').setAttribute('content', d === 'dark' ? '#0b0b0d' : '#fbfbfc');
       })();
     </script>
+    <link rel="alternate" type="application/rss+xml" title="formulous 자유 게시판" href="https://formulous.org/community/rss.xml" />
     <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
-    <meta property="og:type" content="website" />
     <meta property="og:site_name" content="formulous" />
-    <meta property="og:title" content="formulous — 기술·보안 뉴스와 개발자 커뮤니티" />
-    <meta property="og:description" content="국내 기술 블로그와 보안 뉴스를 모아 읽고 검색하고, 개발자끼리 묻고 나누는 자유 게시판이에요" />
-    <meta property="og:url" content="https://formulous.org/" />
     <meta property="og:image" content="https://formulous.org/og.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:locale" content="ko_KR" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="formulous — 기술·보안 뉴스와 개발자 커뮤니티" />
-    <meta name="twitter:description" content="국내 기술 블로그와 보안 뉴스를 모아 읽고 검색하고, 개발자끼리 묻고 나누는 자유 게시판이에요" />
     <meta name="twitter:image" content="https://formulous.org/og.png" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><!--seo:body--></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

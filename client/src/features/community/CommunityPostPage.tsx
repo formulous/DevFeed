@@ -11,6 +11,7 @@ import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { EmptyState } from '@/components/common/EmptyState';
 import { ErrorState } from '@/components/common/ErrorState';
 import { useToast } from '@/components/common/Toast';
+import { useSeoOverride } from '@/components/layout/RouteTitle';
 import { LazyMarkdown } from '@/components/markdown/LazyMarkdown';
 import { CategoryBadge, SolvedBadge } from '@/components/post/CommunityBadges';
 import { Avatar } from '@/components/profile/Avatar';
@@ -20,8 +21,10 @@ import { POSTS_KEY, useOpenPost, useToggleBookmark, useToggleLike } from '@/hook
 import { refreshProfile } from '@/hooks/useProfile';
 import { cn } from '@/lib/cn';
 import { errorMessage } from '@/lib/errors';
+import { plainExcerpt } from '@/lib/excerpt';
 import { compactNumber, formatNumber } from '@/lib/format';
 import { communityEditPath, PATHS } from '@/lib/routes';
+import { ROBOTS_NOINDEX, SITE_NAME } from '@/lib/seoRoutes';
 import { relativeTime } from '@/lib/time';
 import { communityPostKey, communityPostQuery } from './queries';
 
@@ -269,8 +272,19 @@ export function CommunityPostPage() {
   const { status } = useAuth();
   const valid = Number.isInteger(postId) && postId > 0;
   const query = useQuery({ ...communityPostQuery(postId, status), enabled: valid && status !== 'loading' });
+  const notFound = !valid || (query.isError && query.error instanceof ApiError && query.error.status === 404);
+  const post = query.data;
+  useSeoOverride(
+    notFound
+      ? { title: `글을 찾을 수 없어요 · ${SITE_NAME}`, robots: ROBOTS_NOINDEX }
+      : post && post.status === 'VISIBLE'
+        ? { title: `${post.title} · ${SITE_NAME}`, description: plainExcerpt(post.summary || post.body) || undefined, ogType: 'article' }
+        : post
+          ? { title: `${post.title} · ${SITE_NAME}`, robots: ROBOTS_NOINDEX }
+          : null,
+  );
 
-  if (!valid || (query.isError && query.error instanceof ApiError && query.error.status === 404)) {
+  if (notFound) {
     return (
       <EmptyState
         title="글을 찾을 수 없어요"

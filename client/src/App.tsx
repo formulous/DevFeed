@@ -18,6 +18,7 @@ import { HomePage } from '@/features/feed/HomePage';
 import { SecurityNewsPage } from '@/features/security/SecurityNewsPage';
 import { SecurityPopularPage } from '@/features/security/SecurityPopularPage';
 import { PATHS } from '@/lib/routes';
+import { communityPostPage } from '@/lazyPages';
 import { M7_API_READY } from '@/lib/features';
 import { PopularPage } from '@/features/popular/PopularPage';
 import { ForYouPage } from '@/features/recommend/ForYouPage';
@@ -28,7 +29,7 @@ import { CommunityPopularPage } from '@/features/community/CommunityPopularPage'
 
 
 const AdminRoutes = lazy(() => import('@/features/admin/AdminRoutes'));
-const CommunityPostPage = lazy(() => import('@/features/community/CommunityPostPage').then((m) => ({ default: m.CommunityPostPage })));
+const CommunityPostPage = communityPostPage.Component;
 const CommunityNewPage = lazy(() => import('@/features/community/CommunityEditorPage').then((m) => ({ default: m.CommunityNewPage })));
 const CommunityEditPage = lazy(() => import('@/features/community/CommunityEditorPage').then((m) => ({ default: m.CommunityEditPage })));
 
