@@ -1,0 +1,535 @@
+{
+ "deleteCommentIds": [
+  6,
+  7,
+  8,
+  22,
+  26,
+  30,
+  37,
+  38,
+  42,
+  43,
+  44,
+  46,
+  50,
+  51,
+  52,
+  53,
+  54,
+  56,
+  58,
+  60,
+  62,
+  63,
+  64,
+  65,
+  66,
+  67,
+  68,
+  69,
+  70,
+  71,
+  72,
+  74,
+  75,
+  76,
+  78,
+  79,
+  81,
+  82,
+  83,
+  84,
+  85,
+  86,
+  87,
+  89,
+  90,
+  91,
+  92,
+  93,
+  94,
+  96,
+  97,
+  98,
+  99,
+  100,
+  101,
+  102,
+  104,
+  106,
+  107,
+  108,
+  109,
+  110,
+  111,
+  112,
+  114,
+  115,
+  116,
+  117,
+  118,
+  120,
+  121,
+  122,
+  123,
+  124,
+  125,
+  126,
+  127,
+  128,
+  129,
+  130,
+  131,
+  132,
+  133,
+  134,
+  135,
+  136,
+  137,
+  138,
+  139,
+  140,
+  141,
+  142,
+  143,
+  144,
+  145,
+  146,
+  147,
+  148,
+  149,
+  150,
+  151,
+  153,
+  154,
+  155,
+  157,
+  158,
+  159,
+  160,
+  161,
+  162,
+  163,
+  164,
+  165,
+  166,
+  167,
+  168,
+  169,
+  170,
+  172,
+  173,
+  174,
+  175,
+  176,
+  177,
+  178,
+  179,
+  180,
+  181,
+  182,
+  183,
+  184,
+  185,
+  187,
+  188,
+  189,
+  190,
+  191,
+  192,
+  193,
+  195,
+  196,
+  197,
+  199,
+  200,
+  201,
+  202,
+  203,
+  204,
+  205,
+  206,
+  207,
+  208,
+  209,
+  210,
+  211,
+  212,
+  213,
+  214,
+  215,
+  216,
+  217,
+  218,
+  219,
+  220,
+  221,
+  222,
+  224,
+  225,
+  226,
+  227
+ ],
+ "posts": [
+  {
+   "postId": 2664,
+   "commentsBefore": 30,
+   "commentsAfter": 5,
+   "keepCommentIds": [
+    28,
+    31,
+    35,
+    39,
+    194
+   ],
+   "acceptedCommentId": null,
+   "likesBefore": 20,
+   "likesAfter": 3
+  },
+  {
+   "postId": 2640,
+   "commentsBefore": 24,
+   "commentsAfter": 5,
+   "keepCommentIds": [
+    23,
+    55,
+    57,
+    59,
+    223
+   ],
+   "acceptedCommentId": null,
+   "likesBefore": 16,
+   "likesAfter": 5
+  },
+  {
+   "postId": 2653,
+   "commentsBefore": 18,
+   "commentsAfter": 4,
+   "keepCommentIds": [
+    27,
+    34,
+    61,
+    198
+   ],
+   "acceptedCommentId": null,
+   "likesBefore": 15,
+   "likesAfter": 2
+  },
+  {
+   "postId": 2665,
+   "commentsBefore": 15,
+   "commentsAfter": 3,
+   "keepCommentIds": [
+    24,
+    29,
+    32
+   ],
+   "acceptedCommentId": null,
+   "likesBefore": 11,
+   "likesAfter": 3
+  },
+  {
+   "postId": 2666,
+   "commentsBefore": 13,
+   "commentsAfter": 4,
+   "keepCommentIds": [
+    25,
+    47,
+    80,
+    228
+   ],
+   "acceptedCommentId": null,
+   "likesBefore": 9,
+   "likesAfter": 4
+  },
+  {
+   "postId": 2646,
+   "commentsBefore": 12,
+   "commentsAfter": 1,
+   "keepCommentIds": [
+    21
+   ],
+   "acceptedCommentId": null,
+   "likesBefore": 9,
+   "likesAfter": 1
+  },
+  {
+   "postId": 2648,
+   "commentsBefore": 10,
+   "commentsAfter": 1,
+   "keepCommentIds": [
+    41
+   ],
+   "acceptedCommentId": null,
+   "likesBefore": 10,
+   "likesAfter": 2
+  },
+  {
+   "postId": 2644,
+   "commentsBefore": 9,
+   "commentsAfter": 2,
+   "keepCommentIds": [
+    19,
+    49
+   ],
+   "acceptedCommentId": null,
+   "likesBefore": 7,
+   "likesAfter": 1
+  },
+  {
+   "postId": 2663,
+   "commentsBefore": 8,
+   "commentsAfter": 1,
+   "keepCommentIds": [
+    88
+   ],
+   "acceptedCommentId": 88,
+   "likesBefore": 7,
+   "likesAfter": 1
+  },
+  {
+   "postId": 2659,
+   "commentsBefore": 8,
+   "commentsAfter": 2,
+   "keepCommentIds": [
+    17,
+    45
+   ],
+   "acceptedCommentId": null,
+   "likesBefore": 10,
+   "likesAfter": 1
+  },
+  {
+   "postId": 2654,
+   "commentsBefore": 7,
+   "commentsAfter": 1,
+   "keepCommentIds": [
+    33
+   ],
+   "acceptedCommentId": null,
+   "likesBefore": 9,
+   "likesAfter": 1
+  },
+  {
+   "postId": 2649,
+   "commentsBefore": 6,
+   "commentsAfter": 1,
+   "keepCommentIds": [
+    119
+   ],
+   "acceptedCommentId": null,
+   "likesBefore": 5,
+   "likesAfter": 3
+  },
+  {
+   "postId": 2639,
+   "commentsBefore": 6,
+   "commentsAfter": 2,
+   "keepCommentIds": [
+    20,
+    186
+   ],
+   "acceptedCommentId": 186,
+   "likesBefore": 5,
+   "likesAfter": 1
+  },
+  {
+   "postId": 2660,
+   "commentsBefore": 5,
+   "commentsAfter": 1,
+   "keepCommentIds": [
+    18
+   ],
+   "acceptedCommentId": null,
+   "likesBefore": 8,
+   "likesAfter": 1
+  },
+  {
+   "postId": 2642,
+   "commentsBefore": 5,
+   "commentsAfter": 1,
+   "keepCommentIds": [
+    77
+   ],
+   "acceptedCommentId": 77,
+   "likesBefore": 6,
+   "likesAfter": 2
+  },
+  {
+   "postId": 2655,
+   "commentsBefore": 4,
+   "commentsAfter": 1,
+   "keepCommentIds": [
+    36
+   ],
+   "acceptedCommentId": 36,
+   "likesBefore": 5,
+   "likesAfter": 1
+  },
+  {
+   "postId": 2652,
+   "commentsBefore": 4,
+   "commentsAfter": 1,
+   "keepCommentIds": [
+    152
+   ],
+   "acceptedCommentId": 152,
+   "likesBefore": 4,
+   "likesAfter": 3
+  },
+  {
+   "postId": 2645,
+   "commentsBefore": 4,
+   "commentsAfter": 1,
+   "keepCommentIds": [
+    113
+   ],
+   "acceptedCommentId": null,
+   "likesBefore": 5,
+   "likesAfter": 3
+  },
+  {
+   "postId": 2657,
+   "commentsBefore": 3,
+   "commentsAfter": 0,
+   "keepCommentIds": [],
+   "acceptedCommentId": null,
+   "likesBefore": 5,
+   "likesAfter": 0
+  },
+  {
+   "postId": 2656,
+   "commentsBefore": 3,
+   "commentsAfter": 0,
+   "keepCommentIds": [],
+   "acceptedCommentId": null,
+   "likesBefore": 5,
+   "likesAfter": 1
+  },
+  {
+   "postId": 2651,
+   "commentsBefore": 3,
+   "commentsAfter": 1,
+   "keepCommentIds": [
+    73
+   ],
+   "acceptedCommentId": 73,
+   "likesBefore": 3,
+   "likesAfter": 3
+  },
+  {
+   "postId": 2643,
+   "commentsBefore": 3,
+   "commentsAfter": 0,
+   "keepCommentIds": [],
+   "acceptedCommentId": null,
+   "likesBefore": 6,
+   "likesAfter": 2
+  },
+  {
+   "postId": 2634,
+   "commentsBefore": 3,
+   "commentsAfter": 0,
+   "keepCommentIds": [],
+   "acceptedCommentId": null,
+   "likesBefore": 3,
+   "likesAfter": 2
+  },
+  {
+   "postId": 2661,
+   "commentsBefore": 2,
+   "commentsAfter": 1,
+   "keepCommentIds": [
+    40
+   ],
+   "acceptedCommentId": 40,
+   "likesBefore": 5,
+   "likesAfter": 2
+  },
+  {
+   "postId": 2650,
+   "commentsBefore": 2,
+   "commentsAfter": 1,
+   "keepCommentIds": [
+    105
+   ],
+   "acceptedCommentId": 105,
+   "likesBefore": 5,
+   "likesAfter": 2
+  },
+  {
+   "postId": 2647,
+   "commentsBefore": 2,
+   "commentsAfter": 1,
+   "keepCommentIds": [
+    171
+   ],
+   "acceptedCommentId": 171,
+   "likesBefore": 3,
+   "likesAfter": 3
+  },
+  {
+   "postId": 2638,
+   "commentsBefore": 2,
+   "commentsAfter": 1,
+   "keepCommentIds": [
+    103
+   ],
+   "acceptedCommentId": 103,
+   "likesBefore": 3,
+   "likesAfter": 2
+  },
+  {
+   "postId": 2662,
+   "commentsBefore": 1,
+   "commentsAfter": 1,
+   "keepCommentIds": [
+    156
+   ],
+   "acceptedCommentId": null,
+   "likesBefore": 5,
+   "likesAfter": 1
+  },
+  {
+   "postId": 2658,
+   "commentsBefore": 1,
+   "commentsAfter": 1,
+   "keepCommentIds": [
+    48
+   ],
+   "acceptedCommentId": 48,
+   "likesBefore": 2,
+   "likesAfter": 2
+  },
+  {
+   "postId": 2641,
+   "commentsBefore": 1,
+   "commentsAfter": 0,
+   "keepCommentIds": [],
+   "acceptedCommentId": null,
+   "likesBefore": 4,
+   "likesAfter": 0
+  },
+  {
+   "postId": 2637,
+   "commentsBefore": 1,
+   "commentsAfter": 1,
+   "keepCommentIds": [
+    95
+   ],
+   "acceptedCommentId": 95,
+   "likesBefore": 3,
+   "likesAfter": 3
+  },
+  {
+   "postId": 2635,
+   "commentsBefore": 0,
+   "commentsAfter": 0,
+   "keepCommentIds": [],
+   "acceptedCommentId": null,
+   "likesBefore": 0,
+   "likesAfter": 0
+  }
+ ]
+}
