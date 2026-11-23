@@ -20,7 +20,10 @@
 
 ## 의견
 
-### client (1차)
+### client (1차) — 커밋·배포, 2026-11-23
+- 사용자 파일 원본 그대로 커밋(67바이트, 수정 없음). `client/README.md` `public/` 목록에 유지·삭제 금지로 적음
+- `npm run build:web` 배포: `dist-root` 사본이 원본과 같음(`cmp`)
+- 실서버 `https://formulous.org/naver1b83f49df582ce7053ed234240a742b9.html`: 200, `text/html`, 67바이트, 원본과 바이트 단위 같음(SPA 폴백 아님)
 
 ## 결정 (pm)
 - 결정: 파일 원본 그대로 배포
