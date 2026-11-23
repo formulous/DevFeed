@@ -19,18 +19,18 @@ describe('038 페이지별 검색', () => {
   it('검색창 안내 문구가 페이지에 맞고, 자유 게시판에서 검색하면 그 범위 결과로 감', async () => {
     const user = userEvent.setup();
     const first = renderWithApp(<App />, '/security');
-    expect(await screen.findByPlaceholderText('보안 뉴스 검색…')).toBeInTheDocument();
+    expect(await screen.findByPlaceholderText('보안 뉴스에서 찾기')).toBeInTheDocument();
     first.unmount();
 
     renderWithApp(<App />, '/community');
-    const box = await screen.findByPlaceholderText('자유 게시판 검색…');
+    const box = await screen.findByPlaceholderText('자유 게시판에서 찾기');
     await user.type(box, '모노레포{Enter}');
     await waitFor(() => expect(currentLocation).toBe('/search?q=%EB%AA%A8%EB%85%B8%EB%A0%88%ED%8F%AC&scope=community'));
     const link = await results().findByRole('link', { name: '모노레포 vs 멀티레포, 팀 규모별 경험 나눠요' });
     expect(link.getAttribute('href')).toMatch(/^\/community\/posts\/\d+$/);
     expect(scopeTabs().getByRole('link', { name: '자유 게시판' })).toHaveAttribute('aria-current', 'page');
     expect(feedNav().getByRole('link', { name: '자유 게시판' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByPlaceholderText('자유 게시판 검색…')).toHaveValue('모노레포');
+    expect(screen.getByPlaceholderText('자유 게시판에서 찾기')).toHaveValue('모노레포');
     expect(screen.getByRole('radiogroup', { name: '말머리' })).toBeInTheDocument();
     expect(screen.queryByTestId('filter-sidebar')).toBeNull();
   });
@@ -103,7 +103,7 @@ describe('038 페이지별 검색', () => {
   it('범위가 정해지지 않는 화면은 마지막 범위를 씀', async () => {
     const user = userEvent.setup();
     renderWithApp(<App />, '/community');
-    await screen.findByPlaceholderText('자유 게시판 검색…');
+    await screen.findByPlaceholderText('자유 게시판에서 찾기');
     await user.click(screen.getByRole('link', { name: '개인정보 안내' }));
     expect(await screen.findByRole('link', { name: '자유 게시판 검색으로 이동' })).toHaveAttribute('href', '/search?scope=community');
   });

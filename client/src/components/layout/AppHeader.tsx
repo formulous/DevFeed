@@ -1,6 +1,6 @@
 import { HOME } from '@/lib/routes';
-import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react';
-import { FiSearch } from 'react-icons/fi';
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
+import { FiSearch, FiX } from 'react-icons/fi';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '@/auth/AuthProvider';
 import { cn } from '@/lib/cn';
@@ -17,14 +17,45 @@ export const SEARCH_MAX = 50;
 
 const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring';
 
+function isEditable(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
+}
+
+function Keycap({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <kbd
+      className={cn(
+        'pointer-events-none hidden h-5 min-w-5 items-center justify-center rounded-[5px] border border-line bg-surface px-1 font-sans text-[11px] font-medium text-fg-muted lg:flex',
+        className,
+      )}
+    >
+      {children}
+    </kbd>
+  );
+}
+
 export function SearchBox({ className }: { className?: string }) {
   const [params] = useSearchParams();
   const urlQuery = params.get('q') ?? '';
   const [value, setValue] = useState(urlQuery);
+  const [focused, setFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const scope = useSearchScope();
 
   useEffect(() => setValue(urlQuery), [urlQuery]);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented || isEditable(e.target)) return;
+      if (document.querySelector('[aria-modal="true"]')) return;
+      e.preventDefault();
+      inputRef.current?.focus();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
   const trimmed = value.trim();
   const valid = trimmed.length >= SEARCH_MIN;
 
@@ -33,25 +64,58 @@ export function SearchBox({ className }: { className?: string }) {
     if (valid) navigate(searchPath(trimmed, scope));
   };
 
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Escape') return;
+    e.preventDefault();
+    if (value) setValue('');
+    else inputRef.current?.blur();
+  };
+
   return (
     <form role="search" onSubmit={submit} className={cn('relative', className)}>
       <button
         type="submit"
         disabled={!valid}
         aria-label="검색"
-        className="absolute left-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-fg-secondary disabled:text-fg-muted"
+        className="absolute left-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-fg-secondary disabled:text-fg-muted"
       >
-        <FiSearch size={15} aria-hidden />
+        <FiSearch size={16} aria-hidden />
       </button>
       <input
+        ref={inputRef}
         type="search"
         value={value}
         maxLength={SEARCH_MAX}
         onChange={(e) => setValue(e.target.value)}
+        onKeyDown={onKeyDown}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         placeholder={scopeInfo(scope).placeholder}
         aria-label="검색어"
-        className="h-10 w-full rounded-full border border-line bg-input pl-9 pr-4 text-sm text-fg placeholder:text-fg-muted transition-colors focus:border-line-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-focus"
+        aria-keyshortcuts="/"
+        className="h-10 w-full rounded-[10px] border-0 bg-subtle pl-10 pr-20 text-sm text-fg ring-1 ring-transparent transition-[background-color,box-shadow] placeholder:text-fg-muted focus:bg-surface focus:shadow-sm focus:outline-none focus:ring-[color-mix(in_srgb,var(--color-text-primary)_30%,transparent)] [&::-webkit-search-cancel-button]:appearance-none"
       />
+      <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1.5">
+        {value ? (
+          <>
+            {focused && <Keycap className="w-auto px-1.5 opacity-70">↵ Enter</Keycap>}
+            <button
+              type="button"
+              aria-label="검색어 지우기"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                setValue('');
+                inputRef.current?.focus();
+              }}
+              className="flex h-6 w-6 items-center justify-center rounded-md text-fg-muted hover:bg-hover hover:text-fg"
+            >
+              <FiX size={14} aria-hidden />
+            </button>
+          </>
+        ) : (
+          !focused && <Keycap>/</Keycap>
+        )}
+      </div>
       {trimmed.length === 1 && <p className="absolute left-4 mt-1 text-xs text-fg-muted">2자 이상 입력해 주세요</p>}
     </form>
   );
