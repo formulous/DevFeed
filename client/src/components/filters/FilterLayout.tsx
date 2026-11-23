@@ -1,14 +1,15 @@
-import { useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { FiChevronDown } from 'react-icons/fi';
 import { MAX_SOURCE_FILTER, MAX_TAG_FILTER } from '@/api/posts';
-import { Modal } from '@/components/common/Modal';
 import { ProfileCard } from '@/components/profile/ProfileCard';
 import { ActiveFilterChips } from './ActiveFilterChips';
 import { ChipPickerModal } from './ChipPickerModal';
 import { FilterPanel } from './FilterPanel';
+import { InlinePicker } from './InlinePicker';
 import { Segment } from './Segment';
 import { segmentDefault, type FilterBindings } from './types';
 import { useFilterCatalog } from './useFilterCatalog';
+import { cn } from '@/lib/cn';
 
 type Picker = 'tags' | 'sources' | 'segment' | null;
 
@@ -17,25 +18,41 @@ interface FilterLayoutProps {
   children: ReactNode;
 }
 
-export function BarButton({ label, count, onClick }: { label: string; count: number; onClick: () => void }) {
+interface BarButtonProps {
+  label: string;
+  count: number;
+  onClick: () => void;
+  expanded: boolean;
+  controls: string;
+}
+
+export function BarButton({ label, count, onClick, expanded, controls }: BarButtonProps) {
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-haspopup="dialog"
-      className="flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-line px-3 text-xs font-medium text-fg-secondary"
+      aria-expanded={expanded}
+      aria-controls={controls}
+      className={cn(
+        'flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-3 text-xs font-medium',
+        expanded ? 'border-line-strong bg-subtle text-fg' : 'border-line text-fg-secondary',
+      )}
     >
       {label}
       {count > 0 && <span className="font-semibold text-fg">{count}</span>}
-      <FiChevronDown size={12} aria-hidden />
+      <FiChevronDown size={12} aria-hidden className={cn('transition-transform', expanded && 'rotate-180')} />
     </button>
   );
 }
 
 export function FilterLayout({ b, children }: FilterLayoutProps) {
   const [picker, setPicker] = useState<Picker>(null);
+  const [panel, setPanel] = useState<Picker>(null);
+  const panelId = useId();
   const catalog = useFilterCatalog();
   const close = () => setPicker(null);
+  const toggle = (next: Picker) => setPanel((cur) => (cur === next ? null : next));
+  const closePanel = () => setPanel(null);
   const seg = b.segment;
 
   return (
@@ -50,12 +67,59 @@ export function FilterLayout({ b, children }: FilterLayoutProps) {
       </aside>
 
       <div className="min-w-0 flex-1">
-        <div className="mb-3 flex gap-2 lg:hidden" aria-label="필터 열기">
-          <BarButton label="태그" count={b.tagIds.length} onClick={() => setPicker('tags')} />
-          {seg && (
-            <BarButton label={seg.legend} count={seg.value !== segmentDefault(b) ? 1 : 0} onClick={() => setPicker('segment')} />
+        <div className="lg:hidden">
+          <div className="mb-3 flex gap-2" aria-label="필터 열기">
+            <BarButton label="태그" count={b.tagIds.length} expanded={panel === 'tags'} controls={panelId} onClick={() => toggle('tags')} />
+            {seg && (
+              <BarButton
+                label={seg.legend}
+                count={seg.value !== segmentDefault(b) ? 1 : 0}
+                expanded={panel === 'segment'}
+                controls={panelId}
+                onClick={() => toggle('segment')}
+              />
+            )}
+            <BarButton label="소스" count={b.sourceIds.length} expanded={panel === 'sources'} controls={panelId} onClick={() => toggle('sources')} />
+          </div>
+          {panel === 'tags' && (
+            <InlinePicker
+              key="tags"
+              id={panelId}
+              noun="태그"
+              items={catalog.tagItems}
+              groups={catalog.tagGroups}
+              groupLabel="분류"
+              selected={b.tagIds}
+              max={MAX_TAG_FILTER}
+              onChange={b.setTags}
+              onClose={closePanel}
+            />
           )}
-          <BarButton label="소스" count={b.sourceIds.length} onClick={() => setPicker('sources')} />
+          {panel === 'sources' && (
+            <InlinePicker
+              key="sources"
+              id={panelId}
+              noun="소스"
+              items={catalog.sourceItems}
+              groups={catalog.sourceGroups}
+              groupLabel="유형"
+              selected={b.sourceIds}
+              max={MAX_SOURCE_FILTER}
+              onChange={b.setSources}
+              onClose={closePanel}
+            />
+          )}
+          {panel === 'segment' && seg && (
+            <div id={panelId} role="region" aria-label={`${seg.legend} 고르기`} data-testid="inline-picker" className="mb-3 rounded-[var(--radius-lg)] border border-line bg-surface p-3">
+              <Segment
+                {...seg}
+                onChange={(v) => {
+                  seg.onChange(v);
+                  closePanel();
+                }}
+              />
+            </div>
+          )}
         </div>
         <ActiveFilterChips b={b} />
         {children}
@@ -91,17 +155,6 @@ export function FilterLayout({ b, children }: FilterLayoutProps) {
         }}
         onClose={close}
       />
-      {seg && (
-        <Modal open={picker === 'segment'} onClose={close} title={seg.legend}>
-          <Segment
-            {...seg}
-            onChange={(v) => {
-              seg.onChange(v);
-              close();
-            }}
-          />
-        </Modal>
-      )}
     </div>
   );
 }

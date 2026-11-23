@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { FiChevronDown } from 'react-icons/fi';
 import { useSearchParams } from 'react-router';
 import { MAX_TAG_FILTER } from '@/api/posts';
@@ -10,6 +10,9 @@ import { ErrorState } from '@/components/common/ErrorState';
 import { PostCard } from '@/components/post/PostCard';
 import { PostCardSkeleton } from '@/components/post/PostCardSkeleton';
 import { ChipPickerModal } from '@/components/filters/ChipPickerModal';
+import { FILTER_DIALOG_MEDIA, InlinePicker } from '@/components/filters/InlinePicker';
+import { useMediaQuery } from '@/lib/ads';
+import { cn } from '@/lib/cn';
 import { useFilterCatalog } from '@/components/filters/useFilterCatalog';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useOpenPost, useToggleBookmark } from '@/hooks/usePostActions';
@@ -30,6 +33,10 @@ export function BookmarksPage() {
   const tagIds = useMemo(() => parseBookmarkTagIds(params), [params]);
   const catalog = useFilterCatalog();
   const [picking, setPicking] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const panelId = useId();
+  const dialog = useMediaQuery(FILTER_DIALOG_MEDIA);
+  const inline = panelOpen && !dialog;
   const list = useInfiniteQuery(bookmarksQuery(tagIds));
   const setTags = (ids: number[]) => setParams(ids.length ? { tagIds: ids.join(',') } : {}, { replace: true });
   const openPost = useOpenPost();
@@ -49,15 +56,31 @@ export function BookmarksPage() {
         </h1>
         <button
           type="button"
-          onClick={() => setPicking(true)}
-          aria-haspopup="dialog"
-          className="flex h-8 items-center gap-1 rounded-full border border-line bg-surface px-3 text-xs font-medium text-fg-secondary"
+          onClick={() => (dialog ? setPicking(true) : setPanelOpen((v) => !v))}
+          {...(dialog ? { 'aria-haspopup': 'dialog' as const } : { 'aria-expanded': inline, 'aria-controls': panelId })}
+          className={cn(
+            'flex h-8 items-center gap-1 rounded-full border px-3 text-xs font-medium',
+            inline ? 'border-line-strong bg-subtle text-fg' : 'border-line bg-surface text-fg-secondary',
+          )}
         >
           태그
           {tagIds.length > 0 && <span className="text-brand">{tagIds.length}</span>}
-          <FiChevronDown size={12} aria-hidden />
+          <FiChevronDown size={12} aria-hidden className={cn('transition-transform', inline && 'rotate-180')} />
         </button>
       </div>
+      {inline && (
+        <InlinePicker
+          id={panelId}
+          noun="태그"
+          items={catalog.tagItems}
+          groups={catalog.tagGroups}
+          groupLabel="분류"
+          selected={tagIds}
+          max={MAX_TAG_FILTER}
+          onChange={setTags}
+          onClose={() => setPanelOpen(false)}
+        />
+      )}
 
       {tagIds.length > 0 && (
         <div className="mb-4 flex flex-wrap items-center gap-2" aria-label="적용된 필터">

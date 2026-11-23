@@ -75,18 +75,72 @@ describe('017 필터 요약 패널', () => {
     expect(within(dialog).getByRole('button', { name: '닫기' })).toHaveFocus();
   });
 
-  it('모바일 버튼 줄: 태그·기간·소스 버튼으로 각각 창을 엶 (검색 화면)', async () => {
+  it('모바일 버튼 줄: 다이얼로그 없이 페이지 안에 패널을 펼치고 한 번에 하나만 엶 (040)', async () => {
     const user = userEvent.setup();
     renderWithApp(<App />, '/search?q=%EC%A0%95%EB%A6%AC');
     const bar = await screen.findByLabelText('필터 열기');
-    await user.click(within(bar).getByRole('button', { name: /^기간/ }));
-    const sheet = screen.getByRole('dialog', { name: '기간' });
-    await user.click(within(sheet).getByRole('radio', { name: '1주' }));
+    const period = within(bar).getByRole('button', { name: /^기간/ });
+    expect(period).toHaveAttribute('aria-expanded', 'false');
+    await user.click(period);
+    expect(period).toHaveAttribute('aria-expanded', 'true');
+    const panel = screen.getByRole('region', { name: '기간 고르기' });
+    expect(period).toHaveAttribute('aria-controls', panel.id);
+    await user.click(within(panel).getByRole('radio', { name: '1주' }));
     await waitFor(() => expect(currentLocation).toBe('/search?q=%EC%A0%95%EB%A6%AC&period=1W'));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(within(bar).getByRole('button', { name: /^기간\s*1/ })).toBeInTheDocument();
+
     await user.click(within(bar).getByRole('button', { name: /^태그/ }));
-    expect(screen.getByRole('dialog', { name: '태그 선택' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: '태그 고르기' })).toBeInTheDocument();
+    await user.click(within(bar).getByRole('button', { name: /^소스/ }));
+    expect(screen.queryByRole('region', { name: '태그 고르기' })).toBeNull();
+    expect(screen.getByRole('region', { name: '소스 고르기' })).toBeInTheDocument();
+    await user.click(within(bar).getByRole('button', { name: /^소스/ }));
+    expect(screen.queryByTestId('inline-picker')).toBeNull();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('펼침 패널 칩은 바로 적용(300ms 모아서), 검색·더 보기·초기화·접기 (040)', async () => {
+    const user = userEvent.setup();
+    renderWithApp(<App />, '/tech');
+    const bar = await screen.findByLabelText('필터 열기');
+    await user.click(within(bar).getByRole('button', { name: /^태그/ }));
+    const panel = screen.getByRole('region', { name: '태그 고르기' });
+    const chips = await within(panel).findAllByRole('button', { pressed: false });
+    expect(chips.length).toBeLessThanOrEqual(20);
+    await user.click(chips[0]);
+    await user.click(chips[1]);
+    expect(currentLocation).toBe('/tech');
+    await waitFor(() => expect(currentLocation).toMatch(/^\/tech\?tagIds=\d+%2C\d+$|^\/tech\?tagIds=\d+,\d+$/));
+    expect(within(panel).getByText('선택 2/10')).toBeInTheDocument();
+    expect(screen.getByLabelText('적용된 필터')).toBeInTheDocument();
+
+    await user.type(within(panel).getByRole('searchbox', { name: '태그 검색' }), 'zzzz');
+    expect(within(panel).getByText('일치하는 태그가 없어요')).toBeInTheDocument();
+    await user.clear(within(panel).getByRole('searchbox', { name: '태그 검색' }));
+    const more = within(panel).queryByRole('button', { name: '더 보기 ›' });
+    if (more) {
+      await user.click(more);
+      expect(within(panel).getByRole('tablist', { name: '분류' })).toBeInTheDocument();
+    }
+    await user.click(within(panel).getByRole('button', { name: '초기화' }));
+    await waitFor(() => expect(currentLocation).toBe('/tech'));
+    await user.click(within(panel).getByRole('button', { name: '접기' }));
+    expect(screen.queryByRole('region', { name: '태그 고르기' })).toBeNull();
+    expect(within(bar).getByRole('button', { name: /^태그/ })).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('보안 뉴스 출처도 페이지 안 패널, 칩을 누르면 주소에 반영 (040)', async () => {
+    const user = userEvent.setup();
+    renderWithApp(<App />, '/security');
+    const button = await screen.findByRole('button', { name: /^출처/ });
+    await user.click(button);
+    const panel = screen.getByRole('region', { name: '출처 고르기' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    const chips = await within(panel).findAllByRole('button', { pressed: false });
+    await user.click(chips[0]);
+    await waitFor(() => expect(currentLocation).toMatch(/^\/security\?sourceIds=\d+$/));
+    expect(button).toHaveAttribute('aria-expanded', 'true');
   });
 });
 

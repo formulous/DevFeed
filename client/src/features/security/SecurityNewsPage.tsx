@@ -1,14 +1,14 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { Button } from '@onyx/components/button/button';
 import type { NewsRegion, PostSummary, SecurityNewsSource } from '@/api/types';
 import { useAuth } from '@/auth/AuthProvider';
 import { Chip } from '@/components/common/Chip';
 import { EmptyState } from '@/components/common/EmptyState';
 import { ErrorState } from '@/components/common/ErrorState';
-import { ChipPickerModal } from '@/components/filters/ChipPickerModal';
 import { ProfileCard } from '@/components/profile/ProfileCard';
 import { BarButton } from '@/components/filters/FilterLayout';
+import { InlinePicker } from '@/components/filters/InlinePicker';
 import { ToggleChip } from '@/components/filters/FilterPanel';
 import { Segment } from '@/components/filters/Segment';
 import { PostCard } from '@/components/post/PostCard';
@@ -81,7 +81,8 @@ export function SecurityNewsPage() {
   const { status } = useAuth();
   const state = useSecurityNewsState();
   const { query } = state;
-  const [picking, setPicking] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const panelId = useId();
   const sources = useQuery(securitySourcesQuery);
   const list = useInfiniteQuery({ ...securityNewsQuery(query, status), enabled: status !== 'loading' });
   const openPost = useOpenPost();
@@ -123,9 +124,30 @@ export function SecurityNewsPage() {
             />
           </div>
           <div className="shrink-0 lg:hidden">
-            <BarButton label="출처" count={query.sourceIds.length} onClick={() => setPicking(true)} />
+            <BarButton
+              label="출처"
+              count={query.sourceIds.length}
+              expanded={panelOpen}
+              controls={panelId}
+              onClick={() => setPanelOpen((v) => !v)}
+            />
           </div>
         </div>
+        {panelOpen && (
+          <div className="lg:hidden">
+            <InlinePicker
+              id={panelId}
+              noun="출처"
+              items={pickerItems}
+              groups={['국내', '해외']}
+              groupLabel="지역"
+              selected={query.sourceIds}
+              max={MAX_NEWS_SOURCES}
+              onChange={state.setSources}
+              onClose={() => setPanelOpen(false)}
+            />
+          </div>
+        )}
         {query.sourceIds.length > 0 && (
           <div className="mb-4 flex flex-wrap items-center gap-2" aria-label="적용된 필터">
             {query.sourceIds.map((id) => (
@@ -186,21 +208,6 @@ export function SecurityNewsPage() {
         )}
       </section>
 
-      <ChipPickerModal
-        open={picking}
-        title="출처 선택"
-        noun="출처"
-        items={pickerItems}
-        groups={['국내', '해외']}
-        groupLabel="지역"
-        initial={query.sourceIds}
-        max={MAX_NEWS_SOURCES}
-        onApply={(ids) => {
-          state.setSources(ids);
-          setPicking(false);
-        }}
-        onClose={() => setPicking(false)}
-      />
     </div>
   );
 }
