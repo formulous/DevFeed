@@ -57,3 +57,15 @@
   | 자유 / + 말머리 | 0.22 / 0.09ms | 690 / 230 |
   - 7일 고정이라 읽는 행이 기간 안 글 수로 제한됨 → 새 인덱스 불필요, 운영 적용 절차 없음
 - 점수식에 인덱스를 둘 수 없어(합산 정렬) 기간을 늘리면 비례해 늘어남 (035와 같은 주의). 10분 캐시 전제
+
+### server (명세·구현, 2026-11-24)
+- API: 새 경로 없이 **기존 인기 경로 세 개에 `sort=REACTIONS` + `size`** 추가. TOP 3 호출은 각 탭에서
+  - 기술: `GET /posts/popular?period=WEEK&sort=REACTIONS&size=3[&field=]`
+  - 보안: `GET /security-news/popular?period=WEEK&sort=REACTIONS&size=3[&region=]` (보안 인기에 `sort=VIEWS|REACTIONS`가 새로 생김, 기본 `VIEWS`)
+  - 자유 게시판: `GET /community/popular?period=WEEK&sort=REACTIONS&size=3[&category=]`
+- 기준은 pm 결정 그대로: 7일, 좋아요 + 댓글 합 1 이상, 합 → 댓글 수 → 최신 발행순, 범위 분리, 태그·소스 필터 없음. 0건이면 `items: []`
+- `size`는 1~20(기본 20, 범위 밖 400). 10분 캐시된 상위 20건의 앞부분만 잘라 주므로 TOP 3와 "더 보기" 목록 순서가 같음
+- 카드는 지금 인기 응답(`PopularPost`)과 같음 → `likeCount`·`commentCount` 들어 있음
+- 명세 `openapi.yaml` 갱신(lint 기준선 그대로). dba 인덱스 검토(마이그레이션 없음) 확인
+- 검증: unit 176, e2e 90 통과 (042 2건 신규: 합·동점 순서, 분야·지역·말머리 필터, 범위 섞임 없음, `size` 앞부분, 400). perf API 첫 요청(캐시 없음) 8ms 이하, 캐시 후 1~5ms
+- 배포: 스키마 변경 없고 기존 호출과 호환이라 커밋 후 바로 배포함. client는 배포 알림 받으면 실서버 대조

@@ -7,7 +7,7 @@ import { DirectoryService } from './directory.service';
 import type { NewsRegion } from '../entities/source.entity';
 import type { Field } from './fields';
 import { PopularPeriod } from './period';
-import { PopularIdsService, TechPopularSort } from './popular-ids.service';
+import { POPULAR_LIMIT, PopularIdsService, SecurityPopularSort, TechPopularSort } from './popular-ids.service';
 import { PostCardsService } from './post-cards.service';
 import { PostSummary, withoutViewCount } from './post-cards';
 
@@ -81,17 +81,31 @@ export class PostsService {
     return { items: items.map(withoutViewCount), nextCursor };
   }
 
-  async popular(period: PopularPeriod, field?: Field, userId?: number, now = Date.now(), sort: TechPopularSort = 'VIEWS') {
+  async popular(
+    period: PopularPeriod,
+    field?: Field,
+    userId?: number,
+    now = Date.now(),
+    sort: TechPopularSort = 'VIEWS',
+    size = POPULAR_LIMIT,
+  ) {
     const ids = await this.popularIds.ids(period, field, now, sort);
-    return this.popularCards(`BLOG:${period}:${field ?? ''}:${sort}`, ids, userId);
+    return this.popularCards(`BLOG:${period}:${field ?? ''}:${sort}`, ids, userId, size);
   }
 
-  async securityPopular(period: PopularPeriod, region?: NewsRegion, userId?: number, now = Date.now()) {
-    const ids = await this.popularIds.securityIds(period, region, now);
-    return this.popularCards(`SECURITY_NEWS:${period}:${region ?? ''}`, ids, userId);
+  async securityPopular(
+    period: PopularPeriod,
+    region?: NewsRegion,
+    userId?: number,
+    now = Date.now(),
+    sort: SecurityPopularSort = 'VIEWS',
+    size = POPULAR_LIMIT,
+  ) {
+    const ids = await this.popularIds.securityIds(period, region, now, sort);
+    return this.popularCards(`SECURITY_NEWS:${period}:${region ?? ''}:${sort}`, ids, userId, size);
   }
 
-  private async popularCards(key: string, ids: number[], userId?: number) {
+  private async popularCards(key: string, ids: number[], userId: number | undefined, size: number) {
     let entry = this.popularCache.get(key);
     if (!entry || entry.ids !== ids) {
       const cards = this.cards.load(ids).catch((error) => {
@@ -101,7 +115,7 @@ export class PostsService {
       entry = { ids, cards };
       this.popularCache.set(key, entry);
     }
-    const cached = await entry.cards;
+    const cached = (await entry.cards).slice(0, size);
     if (userId === undefined) return { items: cached };
     const flags = cached.length ? await this.cards.flags(userId, cached.map((c) => c.id)) : null;
     return {

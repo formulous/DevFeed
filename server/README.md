@@ -188,6 +188,7 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - 성능 (`devfeed_perf` 원장 256만 행, `perf/profile-latency.js`, 읽은 기록 1,000·북마크 300·좋아요 50 회원, API p95): 프로필 0.8·10동시 3.9ms, 조회(적립 경로) 3.8·9.8ms, 좋아요 1.8·11.3ms, 최신 피드 2.8·5.9ms, 댓글 2,000개 글 첫 페이지 3.0·7.2ms
 - M11 보안 뉴스 인기 (031, 스키마 변경 없음)
   - `GET /api/community/popular?sort=SCORE|COMMENTS|LIKES` (035, 기본 `SCORE` 인기 점수): 댓글순·좋아요순은 그 수 1 이상인 보이는 글만, 동점 최신순, 말머리 필터 그대로
+  - 목록 상단 TOP 3 (042): 인기 경로 세 개(`/posts/popular`, `/security-news/popular`, `/community/popular`)에 `sort=REACTIONS`(좋아요 + 댓글 합 1 이상, 합 → 댓글 수 → 최신순)와 `size=1~20`(캐시된 20건의 앞부분) 추가. TOP 3는 `period=WEEK&sort=REACTIONS&size=3`. 정렬 규칙은 `popular-ids.service.ts` `POPULAR_SORT`에 모음. 기존 인덱스로 충분(dba), perf API 첫 요청 8ms 이하
   - `GET /api/security-news/popular?period=DAY|WEEK|MONTH&region=`: 기술 인기와 같은 기준(롤링 기간, 조회수 1 이상 상위 20건, 동점 최신순)·같은 응답(`PopularPost`). 출처 선택은 받지 않음
   - `PopularIdsService`가 종류별 캐시 키(`BLOG:`·`SECURITY_NEWS:`)로 10분 캐시. 기술 인기·`isPopular` 집합은 `kind = 'BLOG'` 쿼리 그대로라 섞이지 않음
   - 지역은 출처 ID 목록으로 바꿔 거름. dba 측정(`devfeed_perf` 뉴스 4만 건) MONTH 전체 DB p95 1.4ms
@@ -301,7 +302,7 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - `server/.env.test`가 있으면 그것을, 없으면 `.env`를 읽음. `.env`를 쓸 때는 `DB_DATABASE=devfeed_test npm run test:e2e`
   - 테스트가 실패해 데이터가 남으면 `db/scripts/test-db-reset.sh`(dba)로 초기화
 - 각 테스트가 소스·태그·글·회원을 직접 만들고 끝나면 지움 (실행 후 테스트 DB 0행 확인)
-- 현재 88건
+- 현재 90건
   - 탈퇴 잔존 (002 필수): `db/queries/withdrawal-check.sql`(dba)을 그대로 읽어 실행. 탈퇴 전 데이터가 있음을 확인한 뒤 탈퇴 → 12개 테이블(좋아요·댓글·패스키·등록 챌린지·점수 원장 포함) 0건, 추천 로그 `user_id` NULL, 조회수 유지. 비밀번호 틀림 403, 탈퇴 후 로그인·리프레시·남은 토큰 거부
   - 회원 흐름: 가입 검증·중복 → 관심 태그(개수·없는 태그 검증) → 온보딩 완료 → 북마크(멱등·커서·태그 필터·피드 플래그·해제) → 조회 → 읽은 기록(순서·개별·전체 삭제) → 닉네임 변경, 온보딩 건너뛰기, 북마크 5,000건 제한
   - 인증: 리프레시 교체, 30초 이내 재사용 401, 30초 지난 재사용 시 계열 전체 폐기, 로그아웃, 5회 실패 잠금

@@ -233,6 +233,24 @@ describe('F-090~F-093 커뮤니티 (032)', () => {
     expect((await api(t, 'GET', '/community/popular?period=DAY&sort=VIEWS')).status).toBe(400);
   });
 
+  it('좋아요+댓글순: 합 1 이상, 합 → 댓글 수 내림차순, size로 앞부분만 (042)', async () => {
+    const all = (await api(t, 'GET', '/community/popular?period=WEEK&sort=REACTIONS')).body.items as { id: number; likeCount: number; commentCount: number }[];
+    expect(all.map((i) => i.id)).toEqual(expect.arrayContaining([posts.p1, posts.p2]));
+    for (const item of all) expect(item.likeCount + item.commentCount).toBeGreaterThan(0);
+    for (let i = 1; i < all.length; i++) {
+      const [a, b] = [all[i - 1], all[i]];
+      expect(a.likeCount + a.commentCount).toBeGreaterThanOrEqual(b.likeCount + b.commentCount);
+      if (a.likeCount + a.commentCount === b.likeCount + b.commentCount) expect(a.commentCount).toBeGreaterThanOrEqual(b.commentCount);
+    }
+    const top = (await api(t, 'GET', '/community/popular?period=WEEK&sort=REACTIONS&size=1')).body.items;
+    expect(top.map((i: { id: number }) => i.id)).toEqual(all.slice(0, 1).map((i) => i.id));
+    const question = await listIds('/community/popular?period=WEEK&sort=REACTIONS&category=QUESTION');
+    expect(question).toContain(posts.p1);
+    expect(question).not.toContain(posts.p2);
+    expect((await api(t, 'GET', '/community/popular?period=WEEK&sort=REACTIONS&size=21')).status).toBe(400);
+    expect((await api(t, 'GET', '/community/popular?period=WEEK&size=0')).status).toBe(400);
+  });
+
   it('수정: 작성자만, 요약 갱신, 태그 교체', async () => {
     const res = await api(t, 'PATCH', `/community/posts/${posts.p2}`, {
       token: a.token,

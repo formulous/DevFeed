@@ -87,8 +87,15 @@ export class CommunityPopularQuery {
   category?: CommunityCategory;
 
   @IsOptional()
-  @IsIn(['SCORE', 'COMMENTS', 'LIKES'], { message: 'SCORE, COMMENTS, LIKES 중 하나여야 해요' })
+  @IsIn(['SCORE', 'COMMENTS', 'LIKES', 'REACTIONS'], { message: 'SCORE, COMMENTS, LIKES, REACTIONS 중 하나여야 해요' })
   sort?: CommunityPopularSort;
+
+  @IsOptional()
+  @Transform(toInt)
+  @IsInt({ message: '정수여야 해요' })
+  @Min(1, { message: '1 이상이어야 해요' })
+  @Max(20, { message: '20 이하여야 해요' })
+  size?: number;
 }
 
 export class CreateCommunityPostDto {

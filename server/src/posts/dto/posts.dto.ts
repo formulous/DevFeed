@@ -4,7 +4,7 @@ import { toIdList, toInt } from '../../common/validation/query-transforms';
 import type { NewsRegion } from '../../entities/source.entity';
 import { FIELDS, type Field } from '../fields';
 import type { PopularPeriod } from '../period';
-import type { TechPopularSort } from '../popular-ids.service';
+import type { SecurityPopularSort, TechPopularSort } from '../popular-ids.service';
 
 export class FeedQuery {
   @IsOptional()
@@ -53,8 +53,15 @@ export class PopularQuery {
   field?: Field;
 
   @IsOptional()
-  @IsIn(['VIEWS', 'COMMENTS'], { message: 'VIEWS 또는 COMMENTS여야 해요' })
+  @IsIn(['VIEWS', 'COMMENTS', 'REACTIONS'], { message: 'VIEWS, COMMENTS, REACTIONS 중 하나여야 해요' })
   sort?: TechPopularSort;
+
+  @IsOptional()
+  @Transform(toInt)
+  @IsInt({ message: '정수여야 해요' })
+  @Min(1, { message: '1 이상이어야 해요' })
+  @Max(20, { message: '20 이하여야 해요' })
+  size?: number;
 }
 
 export class SecurityPopularQuery {
@@ -64,6 +71,17 @@ export class SecurityPopularQuery {
   @IsOptional()
   @IsIn(['DOMESTIC', 'OVERSEAS'], { message: 'DOMESTIC 또는 OVERSEAS여야 해요' })
   region?: NewsRegion;
+
+  @IsOptional()
+  @IsIn(['VIEWS', 'REACTIONS'], { message: 'VIEWS 또는 REACTIONS여야 해요' })
+  sort?: SecurityPopularSort;
+
+  @IsOptional()
+  @Transform(toInt)
+  @IsInt({ message: '정수여야 해요' })
+  @Min(1, { message: '1 이상이어야 해요' })
+  @Max(20, { message: '20 이하여야 해요' })
+  size?: number;
 }
 
 export class SecurityNewsQuery {

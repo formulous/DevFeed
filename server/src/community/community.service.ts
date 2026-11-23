@@ -6,7 +6,7 @@ import { decodeCursor, encodeCursor } from '../common/pagination/cursor';
 import { APP_ENV } from '../config/env';
 import type { AppEnv } from '../config/env';
 import { PopularPeriod, popularSince } from '../posts/period';
-import { POPULAR_LIMIT, POPULAR_TTL_MS } from '../posts/popular-ids.service';
+import { POPULAR_LIMIT, POPULAR_SORT, POPULAR_TTL_MS, SortRule } from '../posts/popular-ids.service';
 import { PostCardsService } from '../posts/post-cards.service';
 import { CommunityCategory, withoutViewCount } from '../posts/post-cards';
 import type { Viewer } from '../reactions/comment-view';
@@ -35,12 +35,15 @@ interface CommunityRow {
 const postNotFound = () => Errors.notFound('글을 찾을 수 없어요');
 const notMine = () => new AppException(403, 'FORBIDDEN', '내 글만 수정할 수 있어요');
 
-export type CommunityPopularSort = 'SCORE' | 'COMMENTS' | 'LIKES';
+export type CommunityPopularSort = 'SCORE' | 'COMMENTS' | 'LIKES' | 'REACTIONS';
 
-const COMMUNITY_SORT: Record<CommunityPopularSort, string> = {
-  SCORE: 'p.like_count * 2 + p.comment_count + p.view_count * 0.1',
-  COMMENTS: 'p.comment_count',
-  LIKES: 'p.like_count',
+const SCORE_EXPR = 'p.like_count * 2 + p.comment_count + p.view_count * 0.1';
+
+const COMMUNITY_SORT: Record<CommunityPopularSort, SortRule> = {
+  SCORE: { score: SCORE_EXPR, order: `${SCORE_EXPR} DESC` },
+  COMMENTS: POPULAR_SORT.COMMENTS,
+  LIKES: { score: 'p.like_count', order: 'p.like_count DESC' },
+  REACTIONS: POPULAR_SORT.REACTIONS,
 };
 
 @Injectable()
@@ -81,7 +84,14 @@ export class CommunityService {
     };
   }
 
-  async popular(period: PopularPeriod, category?: CommunityCategory, userId?: number, now = Date.now(), sort: CommunityPopularSort = 'SCORE') {
+  async popular(
+    period: PopularPeriod,
+    category?: CommunityCategory,
+    userId?: number,
+    now = Date.now(),
+    sort: CommunityPopularSort = 'SCORE',
+    size = POPULAR_LIMIT,
+  ) {
     const key = `${period}:${category ?? ''}:${sort}`;
     let entry = this.popularCache.get(key);
     if (!entry || now - entry.at > POPULAR_TTL_MS) {
@@ -99,7 +109,7 @@ export class CommunityService {
       ids,
     )) as { post_id: number | string }[];
     const keep = new Set(visible.map((r) => Number(r.post_id)));
-    return { items: await this.cards.load(ids.filter((id) => keep.has(id)), userId) };
+    return { items: await this.cards.load(ids.filter((id) => keep.has(id)).slice(0, size), userId) };
   }
 
   async writeStatus(userId: number, now = new Date()) {
@@ -283,9 +293,9 @@ export class CommunityService {
   }
 
   private async popularIds(period: PopularPeriod, category: CommunityCategory | undefined, now: Date, sort: CommunityPopularSort): Promise<number[]> {
-    const order = COMMUNITY_SORT[sort];
+    const { score, order } = COMMUNITY_SORT[sort];
     const where = ["cp.status = 'VISIBLE'", 'cp.published_at >= ?'];
-    if (sort !== 'SCORE') where.push(`${order} > 0`);
+    if (sort !== 'SCORE') where.push(`${score} > 0`);
     const params: unknown[] = [popularSince(period, now)];
     if (category) {
       where.push('cp.category = ?');
@@ -294,7 +304,7 @@ export class CommunityService {
     const rows = (await this.dataSource.query(
       `SELECT p.id FROM community_posts cp JOIN posts p ON p.id = cp.post_id
         WHERE ${where.join(' AND ')}
-        ORDER BY ${order} DESC, p.published_at DESC, p.id DESC LIMIT ?`,
+        ORDER BY ${order}, p.published_at DESC, p.id DESC LIMIT ?`,
       [...params, POPULAR_LIMIT],
     )) as { id: number | string }[];
     return rows.map((r) => Number(r.id));

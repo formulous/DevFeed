@@ -8,9 +8,19 @@ import { PopularPeriod, popularSince } from './period';
 export const POPULAR_LIMIT = 20;
 export const POPULAR_TTL_MS = 10 * 60 * 1000;
 
-export type TechPopularSort = 'VIEWS' | 'COMMENTS';
+export type TechPopularSort = 'VIEWS' | 'COMMENTS' | 'REACTIONS';
+export type SecurityPopularSort = 'VIEWS' | 'REACTIONS';
 
-const TECH_SORT: Record<TechPopularSort, string> = { VIEWS: 'p.view_count', COMMENTS: 'p.comment_count' };
+export interface SortRule {
+  score: string;
+  order: string;
+}
+
+export const POPULAR_SORT: Record<TechPopularSort, SortRule> = {
+  VIEWS: { score: 'p.view_count', order: 'p.view_count DESC' },
+  COMMENTS: { score: 'p.comment_count', order: 'p.comment_count DESC' },
+  REACTIONS: { score: 'p.like_count + p.comment_count', order: 'p.like_count + p.comment_count DESC, p.comment_count DESC' },
+};
 
 interface Entry {
   at: number;
@@ -30,8 +40,10 @@ export class PopularIdsService {
     return this.cached(`BLOG:${period}:${field ?? ''}:${sort}`, now, () => this.query(period, field, new Date(now), sort));
   }
 
-  securityIds(period: PopularPeriod, region?: NewsRegion, now = Date.now()): Promise<number[]> {
-    return this.cached(`SECURITY_NEWS:${period}:${region ?? ''}`, now, () => this.securityQuery(period, region, new Date(now)));
+  securityIds(period: PopularPeriod, region?: NewsRegion, now = Date.now(), sort: SecurityPopularSort = 'VIEWS'): Promise<number[]> {
+    return this.cached(`SECURITY_NEWS:${period}:${region ?? ''}:${sort}`, now, () =>
+      this.securityQuery(period, region, new Date(now), sort),
+    );
   }
 
   private cached(key: string, now: number, load: () => Promise<number[]>): Promise<number[]> {
@@ -52,7 +64,8 @@ export class PopularIdsService {
   }
 
   private async query(period: PopularPeriod, field: Field | undefined, now: Date, sort: TechPopularSort): Promise<number[]> {
-    const where = ["p.kind = 'BLOG'", 'p.published_at >= ?', `${TECH_SORT[sort]} > 0`];
+    const rule = POPULAR_SORT[sort];
+    const where = ["p.kind = 'BLOG'", 'p.published_at >= ?', `${rule.score} > 0`];
     const params: unknown[] = [popularSince(period, now)];
     if (field) {
       const tagIds = await this.directory.fieldTagIds(field);
@@ -60,11 +73,12 @@ export class PopularIdsService {
       where.push(`EXISTS (SELECT 1 FROM post_tags fx WHERE fx.post_id = p.id AND fx.tag_id IN (${tagIds.map(() => '?').join(', ')}))`);
       params.push(...tagIds);
     }
-    return this.top(where, params, TECH_SORT[sort]);
+    return this.top(where, params, rule.order);
   }
 
-  private async securityQuery(period: PopularPeriod, region: NewsRegion | undefined, now: Date): Promise<number[]> {
-    const where = ["p.kind = 'SECURITY_NEWS'", 'p.published_at >= ?', 'p.view_count > 0'];
+  private async securityQuery(period: PopularPeriod, region: NewsRegion | undefined, now: Date, sort: SecurityPopularSort): Promise<number[]> {
+    const rule = POPULAR_SORT[sort];
+    const where = ["p.kind = 'SECURITY_NEWS'", 'p.published_at >= ?', `${rule.score} > 0`];
     const params: unknown[] = [popularSince(period, now)];
     if (region) {
       const sourceIds = (await this.directory.sourcesOf('SECURITY_NEWS')).filter((s) => s.region === region).map((s) => s.id);
@@ -72,13 +86,13 @@ export class PopularIdsService {
       where.push(`p.source_id IN (${sourceIds.map(() => '?').join(', ')})`);
       params.push(...sourceIds);
     }
-    return this.top(where, params);
+    return this.top(where, params, rule.order);
   }
 
-  private async top(where: string[], params: unknown[], order = 'p.view_count'): Promise<number[]> {
+  private async top(where: string[], params: unknown[], order: string): Promise<number[]> {
     const rows = (await this.dataSource.query(
       `SELECT p.id FROM posts p WHERE ${where.join(' AND ')}
-        ORDER BY ${order} DESC, p.published_at DESC, p.id DESC LIMIT ?`,
+        ORDER BY ${order}, p.published_at DESC, p.id DESC LIMIT ?`,
       [...params, POPULAR_LIMIT],
     )) as { id: number | string }[];
     return rows.map((r) => Number(r.id));

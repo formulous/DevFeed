@@ -133,6 +133,30 @@ describe('분야 필터·보안 뉴스 분리 (021)', () => {
     await t.db.query('UPDATE posts SET comment_count = 0 WHERE id IN (?, ?, ?)', [post.b2, post.p1, post.n1]);
   });
 
+  it('좋아요+댓글순: 합 1 이상, 합 → 댓글 → 최신, 범위·분야·지역 분리, size (042)', async () => {
+    const set = (rows: [number, number, number][]) =>
+      Promise.all(rows.map(([id, likes, comments]) => t.db.query('UPDATE posts SET like_count = ?, comment_count = ? WHERE id = ?', [likes, comments, id])));
+    await set([
+      [post.b1, 2, 0],
+      [post.b2, 1, 1],
+      [post.p1, 0, 3],
+      [post.n1, 0, 1],
+      [post.n2, 4, 0],
+      [post.n3, 1, 1],
+    ]);
+    expect(ids((await api(t, 'GET', '/posts/popular?period=WEEK&sort=REACTIONS')).body)).toEqual([post.p1, post.b2, post.b1]);
+    expect(ids((await api(t, 'GET', '/posts/popular?period=WEEK&sort=REACTIONS&field=SECURITY')).body)).toEqual([post.p1, post.b1]);
+    expect(ids((await api(t, 'GET', '/security-news/popular?period=WEEK&sort=REACTIONS')).body)).toEqual([post.n2, post.n3, post.n1]);
+    expect(ids((await api(t, 'GET', '/security-news/popular?period=WEEK&sort=REACTIONS&region=DOMESTIC')).body)).toEqual([post.n3, post.n1]);
+    expect(ids((await api(t, 'GET', '/security-news/popular?period=WEEK')).body)).toEqual([post.n1, post.n2]);
+    const full = (await api(t, 'GET', '/security-news/popular?period=WEEK&sort=REACTIONS')).body.items.map((i: { id: number }) => i.id);
+    const top = await api(t, 'GET', '/security-news/popular?period=WEEK&sort=REACTIONS&size=2');
+    expect(top.body.items.map((i: { id: number }) => i.id)).toEqual(full.slice(0, 2));
+    expect((await api(t, 'GET', '/security-news/popular?period=WEEK&sort=COMMENTS')).status).toBe(400);
+    expect((await api(t, 'GET', '/posts/popular?period=WEEK&size=21')).status).toBe(400);
+    await set([post.b1, post.b2, post.p1, post.n1, post.n2, post.n3].map((id) => [id, 0, 0] as [number, number, number]));
+  });
+
   it('출처 목록은 국내 → 해외, /sources와 태그 글 수에는 뉴스 제외', async () => {
     const sources = await api(t, 'GET', '/security-news/sources');
     const mine = sources.body.items.filter((s: { id: number }) => s.id === src.domestic || s.id === src.overseas);

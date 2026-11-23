@@ -18,7 +18,7 @@ export class SecurityNewsController {
   @Get('popular')
   @UseGuards(OptionalAuthGuard)
   popular(@Query() query: SecurityPopularQuery, @CurrentUser() user?: AuthUser) {
-    return this.posts.securityPopular(query.period, query.region, user?.id);
+    return this.posts.securityPopular(query.period, query.region, user?.id, Date.now(), query.sort ?? 'VIEWS', query.size);
   }
 
   @Get('sources')

@@ -25,7 +25,7 @@ export class PostsController {
 
   @Get('popular')
   popular(@Query() query: PopularQuery, @CurrentUser() user?: AuthUser) {
-    return this.posts.popular(query.period, query.field, user?.id, Date.now(), query.sort ?? 'VIEWS');
+    return this.posts.popular(query.period, query.field, user?.id, Date.now(), query.sort ?? 'VIEWS', query.size);
   }
 
   @Throttle(throttle('views'))

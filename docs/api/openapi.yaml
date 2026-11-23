@@ -554,6 +554,7 @@ paths:
         기술 블로그 글만 (보안 뉴스 제외, 021). field가 있으면 그 분야 글 중 상위 20건 (기간 × 분야별 10분 캐시).
         isPopular 배지 집합은 field 없는 WEEK 결과 기준.
         sort=COMMENTS(035)면 같은 기간·분야의 commentCount 1 이상 글을 commentCount 내림차순(같으면 최신 발행순)으로 상위 20건.
+        sort=REACTIONS(042)면 같은 기간·필터에서 likeCount + commentCount 1 이상 글을 그 합 내림차순(같으면 commentCount 내림차순 → 최신 발행순)으로 상위 20건. 목록 상단 TOP 3는 period=WEEK&sort=REACTIONS&size=3.
         캐시는 기간 × 분야 × 정렬별 10분. 배지 집합은 sort와 무관
       security:
         - {}
@@ -569,11 +570,16 @@ paths:
         - name: sort
           in: query
           required: false
-          description: VIEWS=조회수순(기본), COMMENTS=댓글순 (035)
+          description: VIEWS=조회수순(기본), COMMENTS=댓글순 (035), REACTIONS=좋아요+댓글순 (042)
           schema:
             type: string
-            enum: [VIEWS, COMMENTS]
+            enum: [VIEWS, COMMENTS, REACTIONS]
             default: VIEWS
+        - name: size
+          in: query
+          required: false
+          description: 돌려줄 건수 1~20 (042). 같은 캐시 결과의 앞부분만 자름
+          schema: { type: integer, minimum: 1, maximum: 20, default: 20 }
       responses:
         '200':
           description: OK
@@ -1011,6 +1017,7 @@ paths:
         region이 있으면 그 지역 출처 글 중 상위 20건 (기간 × 지역별 10분 캐시). 출처 선택(sourceIds)은 받지 않음.
         보안 뉴스만 대상이며 /posts/popular 결과·isPopular 배지 집합과 섞이지 않음.
         카드는 보안 뉴스 카드 그대로(thumbnailUrl 항상 null, isPopular 항상 false). 토큰이 있으면 isBookmarked·isRead·likedByMe 포함
+        sort=REACTIONS(042)면 같은 기간·필터에서 likeCount + commentCount 1 이상 글을 그 합 내림차순(같으면 commentCount 내림차순 → 최신 발행순)으로 상위 20건. 목록 상단 TOP 3는 period=WEEK&sort=REACTIONS&size=3. 캐시는 기간 × 지역 × 정렬별 10분
       security:
         - {}
         - bearerAuth: []
@@ -1025,6 +1032,19 @@ paths:
           in: query
           description: 없으면 국내·해외 전체
           schema: { $ref: '#/components/schemas/NewsRegion' }
+        - name: sort
+          in: query
+          required: false
+          description: VIEWS=조회수순(기본), REACTIONS=좋아요+댓글순 (042)
+          schema:
+            type: string
+            enum: [VIEWS, REACTIONS]
+            default: VIEWS
+        - name: size
+          in: query
+          required: false
+          description: 돌려줄 건수 1~20 (042). 같은 캐시 결과의 앞부분만 자름
+          schema: { type: integer, minimum: 1, maximum: 20, default: 20 }
       responses:
         '200':
           description: OK
@@ -1100,6 +1120,7 @@ paths:
         기간(DAY=24시간, WEEK=7일, MONTH=30일 롤링) 안에 작성된 보이는 글 중
         점수 = likeCount × 2 + commentCount + viewCount × 0.1 내림차순, 같으면 최신 작성순. 점수 0인 글도 포함.
         sort=COMMENTS면 commentCount, sort=LIKES면 likeCount가 1 이상인 보이는 글을 그 수 내림차순(같으면 최신 작성순)으로 상위 20건 (035).
+        sort=REACTIONS(042)면 같은 기간·말머리의 보이는 글 중 likeCount + commentCount 1 이상 글을 그 합 내림차순(같으면 commentCount 내림차순 → 최신 작성순)으로 상위 20건. 목록 상단 TOP 3는 period=WEEK&sort=REACTIONS&size=3.
         기간 × 말머리 × 정렬별 10분 캐시. 0건이면 items 빈 배열
       security:
         - {}
@@ -1115,11 +1136,16 @@ paths:
         - name: sort
           in: query
           required: false
-          description: SCORE=인기 점수순(기본), COMMENTS=댓글순, LIKES=좋아요순 (035)
+          description: SCORE=인기 점수순(기본), COMMENTS=댓글순, LIKES=좋아요순 (035), REACTIONS=좋아요+댓글순 (042)
           schema:
             type: string
-            enum: [SCORE, COMMENTS, LIKES]
+            enum: [SCORE, COMMENTS, LIKES, REACTIONS]
             default: SCORE
+        - name: size
+          in: query
+          required: false
+          description: 돌려줄 건수 1~20 (042). 같은 캐시 결과의 앞부분만 자름
+          schema: { type: integer, minimum: 1, maximum: 20, default: 20 }
       responses:
         '200':
           description: OK
