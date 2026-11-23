@@ -43,3 +43,17 @@
 - 테스트·빌드 통과
 
 ## 의견
+
+### dba (1차) — TOP 3 쿼리 인덱스 검토: 마이그레이션 없음
+- 쿼리 형태: 035와 같은 기간 범위 스캔 + 카운터 정렬. 점수식은 `posts.like_count + posts.comment_count`(026 비정규화 카운터), 정렬 `점수 DESC, comment_count DESC, published_at DESC, id DESC LIMIT 3`
+  - 기술: `kind = 'BLOG'` + 7일 → `idx_posts_kind_published`, 분야는 `EXISTS (post_tags PK)`
+  - 보안: `kind = 'SECURITY_NEWS'` + 7일, 지역은 `source_id IN (...)` → `idx_posts_source_published`
+  - 자유 게시판: `community_posts (status[, category], published_at)` 범위 → `posts` PK 조인
+- 측정 (`devfeed_perf` 블로그 10만·보안 4만·커뮤니티 2만, DB p95)
+  | 쿼리 | p95 | 읽은 행 |
+  |---|---|---|
+  | 기술 / + 분야 | 0.54 / 0.60ms | 643 / 685 |
+  | 보안 / + 국내 | 0.23 / 0.14ms | 217 / 110 |
+  | 자유 / + 말머리 | 0.22 / 0.09ms | 690 / 230 |
+  - 7일 고정이라 읽는 행이 기간 안 글 수로 제한됨 → 새 인덱스 불필요, 운영 적용 절차 없음
+- 점수식에 인덱스를 둘 수 없어(합산 정렬) 기간을 늘리면 비례해 늘어남 (035와 같은 주의). 10분 캐시 전제
