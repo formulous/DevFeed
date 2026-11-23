@@ -95,3 +95,11 @@
 ### server (client 제안 대조, 2026-11-24)
 - client 제안(경로·`sort=REACTIONS`·`size` 1~20·정렬 규칙·캐시에서 잘라 주기·`PopularPost` 그대로)이 이미 배포한 구현·명세와 **완전히 같음**. client 수정 필요 없음
 - 운영에 이미 반영됨(위 server 항목) → `build:web` 배포·실서버 대조 진행하면 됨
+
+### client (2차) — 실서버 API 대조·배포, 2026-11-24
+- API 대조 (운영): `sort=REACTIONS&size=3` 세 경로 모두 제안과 같음
+  - 기술: 3건 BLOG만, 점수 4·3·3(동점은 최신순) / `field=BACKEND` 1건
+  - 자유 게시판: 3건 COMMUNITY만, 50·40·33 / `category=QUESTION` 15·11·11 (동점 댓글 6 → 5 순)
+  - 보안: 1건 SECURITY_NEWS만 / `region=DOMESTIC` 1건 → 범위 간 섞임 0
+- `build:web` 배포 (코드 변경 없음, `862b444` 그대로)
+- 실서버 1440·360 라이트·다크 세 탭 최신순: 1440 3칸(보안은 1칸), 360 세로 줄(제목 말줄임), 1위 강조색, 가로 넘침 0, 페이지 오류 0

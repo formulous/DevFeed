@@ -269,7 +269,7 @@ App
 
 ## 이번 주 인기 TOP 3 (`docs/discussions/042`)
 - 세 탭 최신순 목록 맨 위 `WeeklyTop` (`components/post/WeeklyTop.tsx`). 인기·댓글·좋아요·추천순 화면에는 없음
-- API(제안, server 확정 전 mock): 기존 인기 경로에 `period=WEEK&sort=REACTIONS&size=3` + 기술 `field`·보안 `region`·자유 게시판 `category` (`api/weeklyTop.ts`)
+- API(server 확정·운영 배포): 기존 인기 경로에 `period=WEEK&sort=REACTIONS&size=3` + 기술 `field`·보안 `region`·자유 게시판 `category` (`api/weeklyTop.ts`)
 - md 이상 3칸 카드(큰 순위 숫자, 1위만 강조색, 제목 2줄·말머리/출처·♡·💬), 그 미만 세로 3줄(순위·제목 1줄·♡·💬). `subtle` 배경 박스
 - 로딩 3칸 스켈레톤, 0건·실패면 숨김(목록 그대로). 자유 게시판은 상세, 뉴스는 원문 새 탭 + 조회 기록
 - 더 보기: 자유 게시판 → 좋아요순, 기술 뉴스 → 댓글순, 보안 뉴스 → 인기순 (기간 기본 7일, 지금 분야·말머리·지역 유지)
