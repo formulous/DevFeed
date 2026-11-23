@@ -1,3 +1,5 @@
+import { join } from 'node:path';
+
 export interface AppEnv {
   port: number;
   db: { host: string; port: number; username: string; password: string; database: string };
@@ -8,6 +10,7 @@ export interface AppEnv {
   rateLimitEnabled: boolean;
   webauthn: { rpId: string; rpName: string; origins: string[] };
   webBaseUrl: string;
+  webDistDir: string;
   postNewAccountLimitEnabled: boolean;
 }
 
@@ -89,6 +92,7 @@ export function loadEnv(env: NodeJS.ProcessEnv = process.env): AppEnv {
       origins: origins(env, 'WEBAUTHN_ORIGINS', ['http://localhost:5175']),
     },
     webBaseUrl: baseUrl(env, 'WEB_BASE_URL', 'http://localhost:5175'),
+    webDistDir: env.WEB_DIST_DIR || join(__dirname, '..', '..', '..', 'client', 'dist-root'),
     postNewAccountLimitEnabled: bool(env, 'POST_NEW_ACCOUNT_LIMIT_ENABLED', true),
   };
 }

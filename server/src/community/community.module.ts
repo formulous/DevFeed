@@ -9,5 +9,6 @@ import { ReportsService } from './reports.service';
   imports: [PostsModule],
   controllers: [CommunityController, ReportsController, AdminCommunityController],
   providers: [CommunityService, ReportsService],
+  exports: [CommunityService],
 })
 export class CommunityModule {}

@@ -90,6 +90,7 @@ src/
   - `RATE_LIMIT_ENABLED`: IP 기준 속도 제한 (기본 `true`, e2e는 기본 `false`)
   - `WEBAUTHN_RP_ID`·`WEBAUTHN_RP_NAME`·`WEBAUTHN_ORIGINS`(쉼표 구분 origin): 패스키 RP 설정. 기본값은 로컬 개발용 `localhost`·`formulous`·`http://localhost:5175`, 운영은 `formulous.org`·`formulous`·`https://formulous.org`
   - `WEB_BASE_URL`: 커뮤니티 글 정식 주소(`posts.url`)의 웹 기준 주소. 기본 `http://localhost:5175`, 운영 `https://formulous.org` (037 루트 이전 전에는 `/dev-feed`)
+  - `WEB_DIST_DIR`: SEO 주입 틀(`index.html`)·경로 표(`routes.json`) 폴더. 비우면 `../client/dist-root` (044)
   - `POST_NEW_ACCOUNT_LIMIT_ENABLED`: 커뮤니티 글쓰기 가입 24시간 제한 (기본 `true`). 034 시연 데이터 생성 때 잠시 기본 `false`로 해제했다가 복구함. 하루 5개·60초 간격은 항상 적용
 - DB 스키마는 `../db/migrations`(dba)로만 반영함. 서버는 DDL을 실행하지 않음
 
@@ -207,6 +208,14 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - 메모리 캐시 10분, `Cache-Control: public, max-age=600`, 요청 제한 없음. 주소는 `WEB_BASE_URL` 기준
   - nginx가 `= /sitemap.xml`·`= /community/rss.xml`을 server로 넘겨야 외부에서 보임 (pm)
   - 성능 (`devfeed_perf` 글 2만): sitemap 첫 요청 0.23초(2.2MB), 캐시 후 5ms. RSS 5ms
+- M14 SEO 2단계 (044 S3~S7, 명세 `docs/api/web.md` "HTML 화면 경로")
+  - `api`·sitemap·RSS 밖이고 마지막 칸에 `.`이 없는 GET·HEAD 요청을 `web-pages.middleware.ts`가 받아 HTML로 응답 (Nest 라우팅 전, 방문자 쿠키 안 붙임). nginx가 HTML 요청을 server로 넘겨야 동작 (pm)
+  - 틀 `WEB_DIST_DIR/index.html`·경로 표 `routes.json`(client 소유, 기본 `../client/dist-root`). 2초마다 수정 시각 확인해 다시 읽고, 읽기 실패면 마지막 정상 값 사용. 주입 표시(`<!--seo:head-->`…`<!--/seo:head-->`, `<!--seo:body-->`)가 없으면 틀 그대로
+  - 머리말: 경로 표 값 + canonical·`og:url`. 경로 표에 없으면 404 + `notFound` 머리말
+  - 글 상세: 글 제목·요약 120자·`article:*`·JSON-LD(채택 질문 `QAPage`, 그 외 `DiscussionForumPosting`)·`seo-data`(상세 API 비로그인 응답). 없는 글·숨김·삭제는 404. 본문은 `marked` + `sanitize-html`로 client `Markdown.tsx`와 같은 허용 목록(`markdown-html.ts`), 댓글은 채택 + 최상위 20개 평문 이스케이프
+  - `/community` 본문: 공개 글 최신 20건 제목·요약. 다른 화면은 머리말만
+  - 캐시: 경로별 5분·최대 500개, `Cache-Control: public, max-age=60`
+  - 성능 (`devfeed_perf`): 글 상세 캐시 없음 p95 5.6ms(최대 14ms), 캐시 후 0.4ms
 - M12 커뮤니티 (032, 스키마 `0015`)
   - `src/community/`: 글 목록·인기·상세·쓰기·수정·삭제·채택(`CommunityService`), 신고·관리자 신고 처리(`ReportsService`), 숨김 공통 처리(`moderation.ts`)
   - 저장: `posts`(`kind = 'COMMUNITY'`, 내부 소스) + `community_posts`. `posts.url`은 `WEB_BASE_URL/community/posts/{id}`, `posts.summary`는 마크다운을 걷어낸 앞 200자(`markdown-excerpt.ts`). 줄·목록 항목은 ` · `로 잇고, `. ! ? … :`로 끝난 줄 뒤는 공백으로 이음(035). 기존 글 요약 재생성은 `node scripts/regenerate-community-excerpts.js <database> [--apply]` (빌드 후, 기본은 미리보기만). 본문은 받은 원문 그대로 저장하고 렌더링하지 않음
@@ -309,7 +318,7 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - `server/.env.test`가 있으면 그것을, 없으면 `.env`를 읽음. `.env`를 쓸 때는 `DB_DATABASE=devfeed_test npm run test:e2e`
   - 테스트가 실패해 데이터가 남으면 `db/scripts/test-db-reset.sh`(dba)로 초기화
 - 각 테스트가 소스·태그·글·회원을 직접 만들고 끝나면 지움 (실행 후 테스트 DB 0행 확인)
-- 현재 92건
+- 현재 96건
   - 탈퇴 잔존 (002 필수): `db/queries/withdrawal-check.sql`(dba)을 그대로 읽어 실행. 탈퇴 전 데이터가 있음을 확인한 뒤 탈퇴 → 12개 테이블(좋아요·댓글·패스키·등록 챌린지·점수 원장 포함) 0건, 추천 로그 `user_id` NULL, 조회수 유지. 비밀번호 틀림 403, 탈퇴 후 로그인·리프레시·남은 토큰 거부
   - 회원 흐름: 가입 검증·중복 → 관심 태그(개수·없는 태그 검증) → 온보딩 완료 → 북마크(멱등·커서·태그 필터·피드 플래그·해제) → 조회 → 읽은 기록(순서·개별·전체 삭제) → 닉네임 변경, 온보딩 건너뛰기, 북마크 5,000건 제한
   - 인증: 리프레시 교체, 30초 이내 재사용 401, 30초 지난 재사용 시 계열 전체 폐기, 로그아웃, 5회 실패 잠금

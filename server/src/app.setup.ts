@@ -5,6 +5,8 @@ import { createValidationPipe } from './common/validation/validation.pipe';
 import { visitorMiddleware } from './common/visitor/visitor';
 import { APP_ENV } from './config/env';
 import { WEB_FEED_PATHS } from './web/web-feeds.controller';
+import { webPagesMiddleware } from './web/web-pages.middleware';
+import { WebPagesService } from './web/web-pages.service';
 import type { AppEnv } from './config/env';
 
 export function configureApp(app: INestApplication): AppEnv {
@@ -13,6 +15,7 @@ export function configureApp(app: INestApplication): AppEnv {
   express.set('trust proxy', 'loopback');
   express.setGlobalPrefix('api', { exclude: WEB_FEED_PATHS });
   express.use(securityHeaders);
+  express.use(webPagesMiddleware(app.get(WebPagesService)));
   express.use(visitorMiddleware(env.cookieSecure));
   express.useGlobalPipes(createValidationPipe());
   express.useBodyParser('json', { limit: '100kb' });
