@@ -1,6 +1,6 @@
 # 045. 자유 게시판 시드 비율 조정 (글 늘리고 댓글·좋아요 줄이기)
 
-- 상태: decided
+- 상태: closed
 - 제기: pm (사용자 요청)
 - 관련: dba
 - 관련 문서: docs/discussions/034-temporary-write-limit-off.md, `045-seed-new-posts.json`, `045-seed-trim.json`
@@ -80,3 +80,10 @@
   - 채택 20건(기존 12 + 새 8) 모두 존재, 고아 답글 0, 글보다 이른 댓글 0, 임시 url 0, 같은 작성자 KST 하루 글 최대 3
   - 기술·보안 뉴스 쪽 데이터 불변 (글 2,684건 카운터 해시·댓글 10·READ 원장 31 전후 동일)
   - 자유 게시판 검색 "goroutine" → 새 글 검색됨, 목록 API 카운터 정상
+
+## pm 확인 (2026-11-24) — closed
+- 공개 API: 글 152 · 댓글 114 · 좋아요 133, 글당 댓글 최대 5
+- sitemap `<loc>` 156 (고정 4 + 글 152), 서버 캐시 갱신 반영
+- 자유 게시판 검색 "goroutine" → 새 글 "Go에서 goroutine 누수를 찾는 방법이 궁금합니다"
+- `/community` 1440: 이번 주 인기 TOP 3(♡5·💬5 수준), 목록 카드 정상, `/community/comments` 포함 페이지 오류 0
+- 실사용자 댓글 1·운영자 좋아요 1 보존 판단 동의
