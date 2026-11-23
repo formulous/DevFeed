@@ -25,6 +25,7 @@ import { plainExcerpt } from '@/lib/excerpt';
 import { compactNumber, formatNumber } from '@/lib/format';
 import { communityEditPath, PATHS } from '@/lib/routes';
 import { ROBOTS_NOINDEX, SITE_NAME } from '@/lib/seoRoutes';
+import { seoPostPlaceholder } from '@/lib/seoData';
 import { relativeTime } from '@/lib/time';
 import { communityPostKey, communityPostQuery } from './queries';
 
@@ -271,7 +272,7 @@ export function CommunityPostPage() {
   const postId = Number(id);
   const { status } = useAuth();
   const valid = Number.isInteger(postId) && postId > 0;
-  const query = useQuery({ ...communityPostQuery(postId, status), enabled: valid && status !== 'loading' });
+  const query = useQuery({ ...communityPostQuery(postId, status), enabled: valid && status !== 'loading', placeholderData: () => seoPostPlaceholder(postId) });
   const notFound = !valid || (query.isError && query.error instanceof ApiError && query.error.status === 404);
   const post = query.data;
   useSeoOverride(

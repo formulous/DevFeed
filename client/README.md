@@ -413,6 +413,9 @@ npm run capture    # 반응형 점검·README용 스크린샷 (Playwright, 최�
   - `RouteTitle`이 화면 이동 때 `data-seo` 태그(title·description·canonical·robots·og·twitter)를 갱신하고, 처음 화면을 벗어나면 server가 넣은 다른 `data-seo` 태그(JSON-LD 등)를 지움
   - 글 상세는 데이터를 받은 뒤 `useSeoOverride`로 글 제목·요약 앞 120자(`lib/excerpt.ts`)·`og:type=article`. 첫 로드에서는 데이터가 올 때까지 server 값을 건드리지 않음. 없는 글은 `noindex`
   - 첫 경로가 글 상세면 `main.tsx`가 그 화면 코드를 먼저 불러온 뒤 render함 (`lazyPages.ts`·`lib/preloadable.ts`, 스피너 단계 없음)
+  - server가 넣은 `<script type="application/json" id="seo-data">`(상세 API 비로그인 응답)를 `lib/seoData.ts`가 읽어 씀. 주소의 글 id와 맞을 때만 씀
+    - 게스트: `main.tsx`가 비로그인 쿼리 캐시에 미리 넣어 글을 다시 받지 않음
+    - 로그인: 같은 값을 `placeholderData`로 먼저 보여 주고 로그인 응답으로 바꿈
   - `sitemap.xml`·`/community/rss.xml`은 server가 응답함 (정적 sitemap 제거). `index.html`에 RSS `alternate` 고정
 - 글 카드 배지 (F-014, `docs/discussions/020`): 소스 줄 시간 옆에 `NEW`(발행 24시간 이내, client 계산)·`인기`(`PostSummary.isPopular`, 7일 인기 상위 20) 최대 2개
   - `components/post/PostBadges.tsx`, `PostCard`의 `badges` prop: 기본 `all`, S-03 인기는 `new`(인기 배지 생략), S-09 기록은 `none`
