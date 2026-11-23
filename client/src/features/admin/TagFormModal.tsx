@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { useState, type FormEvent } from 'react';
+import { useId, useState, type FormEvent } from 'react';
 import { Button } from '@onyx/components/button/button';
 import { TextInput } from '@/components/common/TextInput';
 import { createTag, updateTag } from '@/api/admin';
@@ -23,7 +23,8 @@ interface TagFormModalProps {
   onSaved: () => void;
 }
 
-function TagForm({ tag, onClose, onSaved }: Omit<TagFormModalProps, 'open'>) {
+function TagForm({ tag, open, onClose, onSaved }: TagFormModalProps) {
+  const formId = useId();
   const [name, setName] = useState(tag?.name ?? '');
   const [slug, setSlug] = useState(tag?.slug ?? '');
   const [slugTouched, setSlugTouched] = useState(!!tag);
@@ -57,69 +58,77 @@ function TagForm({ tag, onClose, onSaved }: Omit<TagFormModalProps, 'open'>) {
   };
 
   return (
-    <form onSubmit={submit} noValidate className="space-y-3">
-      <div>
-        <TextInput
-          label="태그 이름"
-          value={name}
-          maxLength={50}
-          onChange={(e) => {
-            setName(e.target.value);
-            if (!slugTouched) setSlug(toSlug(e.target.value));
-          }}
-          className="h-9"
-        />
-        <FieldError message={show('name')} />
-      </div>
-      <div>
-        <TextInput
-          label="slug"
-          value={slug}
-          maxLength={60}
-          onChange={(e) => {
-            setSlug(e.target.value);
-            setSlugTouched(true);
-          }}
-          className="h-9"
-        />
-        <FieldError message={show('slug')} />
-      </div>
-      <TextInput label="분류 (선택)" value={category} maxLength={30} onChange={(e) => setCategory(e.target.value)} className="h-9" />
-      <div>
-        <TextInput
-          label="동의어 (쉼표로 구분)"
-          value={synonyms}
-          onChange={(e) => setSynonyms(e.target.value)}
-          placeholder="k8s, 쿠버네티스"
-          className="h-9"
-        />
-        <FieldError message={show('synonyms')} />
-      </div>
-      {tag === null && <p className="text-xs text-fg-muted">기존 글에는 전체 재태깅을 실행해야 반영돼요</p>}
-      {save.isError && Object.keys(server).length === 0 && (
-        <p role="alert" className="text-sm text-danger">
-          {errorMessage(save.error)}
-        </p>
-      )}
-      <div className="flex justify-end gap-2 pt-2">
-        <Button type="button" variant="outlined" width={72} height={36} content="취소" onClick={onClose} />
-        <Button
-          type="submit"
-          width={72}
-          height={36}
-          className="rounded-full bg-inverse text-on-inverse"
-          disabled={save.isPending}
-          content={save.isPending ? '저장 중' : '저장'}
-        />
-      </div>
-    </form>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={tag ? '태그 수정' : '태그 추가'}
+      variant="sheet"
+      footer={
+        <div className="ml-auto flex gap-2">
+          <Button type="button" variant="outlined" width={72} height={36} content="취소" onClick={onClose} />
+          <Button
+            type="submit"
+            form={formId}
+            width={72}
+            height={36}
+            className="rounded-full bg-inverse text-on-inverse"
+            disabled={save.isPending}
+            content={save.isPending ? '저장 중' : '저장'}
+          />
+        </div>
+      }
+    >
+      <form id={formId} onSubmit={submit} noValidate className="space-y-3">
+        <div>
+          <TextInput
+            label="태그 이름"
+            value={name}
+            maxLength={50}
+            onChange={(e) => {
+              setName(e.target.value);
+              if (!slugTouched) setSlug(toSlug(e.target.value));
+            }}
+            className="h-9"
+          />
+          <FieldError message={show('name')} />
+        </div>
+        <div>
+          <TextInput
+            label="slug"
+            value={slug}
+            maxLength={60}
+            onChange={(e) => {
+              setSlug(e.target.value);
+              setSlugTouched(true);
+            }}
+            className="h-9"
+          />
+          <FieldError message={show('slug')} />
+        </div>
+        <TextInput label="분류 (선택)" value={category} maxLength={30} onChange={(e) => setCategory(e.target.value)} className="h-9" />
+        <div>
+          <TextInput
+            label="동의어 (쉼표로 구분)"
+            value={synonyms}
+            onChange={(e) => setSynonyms(e.target.value)}
+            placeholder="k8s, 쿠버네티스"
+            className="h-9"
+          />
+          <FieldError message={show('synonyms')} />
+        </div>
+        {tag === null && <p className="text-xs text-fg-muted">기존 글에는 전체 재태깅을 실행해야 반영돼요</p>}
+        {save.isError && Object.keys(server).length === 0 && (
+          <p role="alert" className="text-sm text-danger">
+            {errorMessage(save.error)}
+          </p>
+        )}
+      </form>
+    </Modal>
   );
 }
 
 export function TagFormModal({ tag, open, onClose, onSaved }: TagFormModalProps) {
   return (
-    <Modal open={open} onClose={onClose} title={tag ? '태그 수정' : '태그 추가'}>
-      <TagForm key={tag?.id ?? 'new'} tag={tag} onClose={onClose} onSaved={onSaved} />
-    </Modal>
+    <TagForm key={`${tag?.id ?? 'new'}-${open}`} tag={tag} open={open} onClose={onClose} onSaved={onSaved} />
   );
 }

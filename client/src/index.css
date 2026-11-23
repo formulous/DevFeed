@@ -61,3 +61,18 @@ ins.adsbygoogle[data-ad-status='unfilled'] {
     animation: none;
   }
 }
+
+@keyframes sheet-enter {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@media (max-width: 639.98px) and (prefers-reduced-motion: no-preference) {
+  .sheet-enter {
+    animation: sheet-enter 180ms ease-out both;
+  }
+}

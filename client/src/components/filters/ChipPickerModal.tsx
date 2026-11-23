@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { FiX } from 'react-icons/fi';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/cn';
+import { SAFE_BOTTOM, SHEET_PANEL, SHEET_WRAP, SheetHandle } from '@/components/common/Modal';
 
 export interface PickerItem {
   id: number;
@@ -66,16 +67,18 @@ function PickerBody({ title, noun, items, groups, groupLabel, initial, max, onAp
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center lg:items-center lg:p-4">
+    <div className={SHEET_WRAP}>
       <div className="absolute inset-0 bg-overlay" onClick={onClose} aria-hidden />
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label={title}
+        data-variant="sheet"
         onKeyDown={trapFocus}
-        className="relative flex h-[100dvh] w-full flex-col bg-surface shadow-pop lg:border lg:border-line lg:h-auto lg:max-h-[80vh] lg:max-w-[640px] lg:rounded-[var(--radius-lg)]"
+        className={cn(SHEET_PANEL, 'sm:max-h-[80vh] sm:max-w-[640px]')}
       >
+        <SheetHandle />
         <div className="flex items-center justify-between border-b border-line px-5 py-3">
           <h2 className="text-base font-semibold">{title}</h2>
           <button type="button" onClick={onClose} aria-label="닫기" className="text-fg-muted hover:text-fg">
@@ -139,7 +142,7 @@ function PickerBody({ title, noun, items, groups, groupLabel, initial, max, onAp
           })}
           {visible.length === 0 && <li className="text-sm text-fg-muted">일치하는 {noun}가 없어요</li>}
         </ul>
-        <div className="flex items-center gap-2 border-t border-line px-5 py-3">
+        <div className={cn('flex items-center gap-2 border-t border-line px-5 pt-3', SAFE_BOTTOM)}>
           <span className="mr-auto text-sm tabular-nums text-fg-secondary" aria-live="polite">
             선택 {draft.length}/{max}
           </span>

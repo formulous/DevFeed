@@ -205,7 +205,7 @@ describe('F-082 프로필 카드 (029)', () => {
     expect(dialog.getByRole('heading', { name: '등급' })).toBeInTheDocument();
     expect(dialog.getByRole('heading', { name: '점수 얻는 법' })).toBeInTheDocument();
     const panel = screen.getByRole('dialog', { name: '등급 안내' });
-    expect(panel).toHaveClass('max-w-md');
+    expect(panel).toHaveClass('sm:max-w-md', 'max-h-[85dvh]');
     expect(panel.lastElementChild).toHaveClass('overflow-y-auto');
     expect(panel.querySelector('.break-keep')).not.toBeNull();
   });

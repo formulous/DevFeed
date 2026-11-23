@@ -184,6 +184,10 @@ App
 - 직접 로그아웃·탈퇴하면 회원 화면에 있어도 `/login`이 아니라 홈으로 이동 (`signedOutByUser`). 토큰 만료로 세션을 잃은 경우는 기존대로 `/login?redirect=`
 - `Modal`은 `onClose`가 바뀌어도 포커스를 다시 옮기지 않음 (입력 중 부모가 다시 렌더링될 때 두 번째 글자부터 입력이 사라지던 문제 수정)
 - `Modal`은 제목·닫기 줄 고정, 본문만 스크롤(최대 높이 `100dvh - 2rem`). 너비 `size` 옵션 `sm`(기본 384px)·`md`(448px) (030)
+- 모바일 다이얼로그 두 형태 (039, `sm` 640px 미만만 다르고 그 이상은 그대로)
+  - `variant="dialog"`(기본): 가운데 작은 창, 좌우 24px·최대 폭 320px. 로그인 안내·확인·신고·탈퇴·필터 구간 선택
+  - `variant="sheet"`: 아래에서 올라오는 시트, 최대 높이 `85dvh`, 위 모서리만 둥글게, 손잡이 막대, 180ms 올라오기(`prefers-reduced-motion`이면 생략). 등급 안내·관심 태그·글쓰기 태그 고르기·관리자 태그 폼, `ChipPickerModal`(태그·소스 선택, `SHEET_WRAP`·`SHEET_PANEL` 공유)
+  - `footer` prop: 하단 버튼 줄을 본문 스크롤 밖에 고정, 시트는 `env(safe-area-inset-bottom)` 여백. 관리자 태그 폼은 `form` 속성으로 footer의 저장 버튼과 연결
 
 ## 검색 (S-04, M3)
 - 검색어·태그·소스·기간·정렬·페이지가 모두 URL 쿼리. 기본값(`period=ALL`, `sort=RELEVANCE`, `page=1`)은 URL에서 뺌

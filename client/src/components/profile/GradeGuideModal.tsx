@@ -7,7 +7,7 @@ const th = 'whitespace-nowrap pb-2 text-left text-xs font-medium text-fg-muted';
 
 export function GradeGuideModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
-    <Modal open={open} onClose={onClose} title="등급 안내" size="md">
+    <Modal open={open} onClose={onClose} title="등급 안내" size="md" variant="sheet">
       <div className="break-keep">
         <p className="text-sm text-fg-secondary">읽고 참여한 만큼 점수가 쌓이고, 누적 점수에 따라 등급이 올라가요.</p>
 

@@ -397,28 +397,35 @@ function Editor({ initial, initialTags, post }: EditorProps) {
         </div>
       </div>
 
-      <Modal open={picking} onClose={() => setPicking(false)} title="태그 고르기">
+      <Modal
+        open={picking}
+        onClose={() => setPicking(false)}
+        title="태그 고르기"
+        variant="sheet"
+        footer={
+          <>
+            <span className="mr-auto text-sm tabular-nums text-fg-secondary">
+              선택 {draftTags.length}/{TAG_MAX}
+            </span>
+            <Button variant="outlined" width={64} height={36} content="취소" onClick={() => setPicking(false)} />
+            <Button
+              width={64}
+              height={36}
+              className="rounded-full bg-inverse text-on-inverse"
+              content="적용"
+              onClick={() => {
+                set('tagIds', draftTags);
+                setPicking(false);
+              }}
+            />
+          </>
+        }
+      >
         <TagPicker
           selected={draftTags}
           max={TAG_MAX}
           onToggle={(id) => setDraftTags((d) => (d.includes(id) ? d.filter((v) => v !== id) : [...d, id]))}
         />
-        <div className="mt-5 flex items-center gap-2">
-          <span className="mr-auto text-sm tabular-nums text-fg-secondary">
-            선택 {draftTags.length}/{TAG_MAX}
-          </span>
-          <Button variant="outlined" width={64} height={36} content="취소" onClick={() => setPicking(false)} />
-          <Button
-            width={64}
-            height={36}
-            className="rounded-full bg-inverse text-on-inverse"
-            content="적용"
-            onClick={() => {
-              set('tagIds', draftTags);
-              setPicking(false);
-            }}
-          />
-        </div>
       </Modal>
       <ConfirmModal
         open={leaving}

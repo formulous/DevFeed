@@ -122,26 +122,33 @@ function InterestTags() {
         {INTEREST_MIN}~{INTEREST_MAX}개. {atMin && current.length > 0 ? `최소 ${INTEREST_MIN}개가 필요해서 더 뺄 수 없어요` : '추천 피드에 반영돼요'}
       </p>
 
-      <Modal open={picking} onClose={() => setPicking(false)} title="관심 태그">
+      <Modal
+        open={picking}
+        onClose={() => setPicking(false)}
+        title="관심 태그"
+        variant="sheet"
+        footer={
+          <>
+            <span className="mr-auto text-sm tabular-nums text-fg-secondary">
+              선택 {draft.length}/{INTEREST_MAX}
+            </span>
+            <Button variant="outlined" width={64} height={36} content="취소" onClick={() => setPicking(false)} />
+            <Button
+              width={64}
+              height={36}
+              className="rounded-full bg-inverse text-on-inverse"
+              content="저장"
+              disabled={draft.length < INTEREST_MIN || save.isPending}
+              onClick={() => save.mutate(draft)}
+            />
+          </>
+        }
+      >
         <TagPicker
           selected={draft}
           max={INTEREST_MAX}
           onToggle={(id) => setDraft((d) => (d.includes(id) ? d.filter((v) => v !== id) : [...d, id]))}
         />
-        <div className="mt-5 flex items-center gap-2">
-          <span className="mr-auto text-sm tabular-nums text-fg-secondary">
-            선택 {draft.length}/{INTEREST_MAX}
-          </span>
-          <Button variant="outlined" width={64} height={36} content="취소" onClick={() => setPicking(false)} />
-          <Button
-            width={64}
-            height={36}
-            className="rounded-full bg-inverse text-on-inverse"
-            content="저장"
-            disabled={draft.length < INTEREST_MIN || save.isPending}
-            onClick={() => save.mutate(draft)}
-          />
-        </div>
       </Modal>
     </div>
   );
