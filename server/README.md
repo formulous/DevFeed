@@ -200,6 +200,13 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - 운영 반영 (2026-11-23): 0017 → server 배포 → 백필(보안 뉴스 237·자유 게시판 32, 빠짐 0) → dba 정합성 0 → client 배포·대조 완료. 새 범위 적용 시 같은 순서(색인 테이블 먼저, 배포 뒤 백필)
   - 한계: 관리자 태그 이름·동의어 변경은 자유 게시판 색인에 바로 반영 안 됨(글 수정 때 갱신). 자유 게시판 약 8천 글(색인 60MB)에서 본문 색인 길이·버퍼 풀 재검토 (dba)
   - 성능 (`devfeed_perf` 보안 뉴스 4만·자유 게시판 색인 2천, 캐시 끔, API p95): 보안 6.4~14.9ms, 자유 게시판 7.8~8.8ms. 기술 범위 SQL은 이전과 같음
+- M14 SEO 1단계 (044, 스키마 변경 없음, 명세 `docs/api/web.md`)
+  - `/api` 밖 웹 경로: `GET /sitemap.xml`, `GET /sitemap-{n}.xml`(5만 건 넘을 때 분할), `GET /community/rss.xml`. 전역 접두사 제외 목록은 `src/web/web-feeds.controller.ts` `WEB_FEED_PATHS`
+  - sitemap: 고정 화면 `/tech`·`/security`·`/community`·`/privacy` + 공개 자유 게시판 글(`lastmod` = 수정 시각 없으면 작성 시각). 정렬 화면은 canonical이 기본 목록이라 제외
+  - RSS 2.0: 공개 글 최신 50건 (제목·요약·말머리·작성자 닉네임)
+  - 메모리 캐시 10분, `Cache-Control: public, max-age=600`, 요청 제한 없음. 주소는 `WEB_BASE_URL` 기준
+  - nginx가 `= /sitemap.xml`·`= /community/rss.xml`을 server로 넘겨야 외부에서 보임 (pm)
+  - 성능 (`devfeed_perf` 글 2만): sitemap 첫 요청 0.23초(2.2MB), 캐시 후 5ms. RSS 5ms
 - M12 커뮤니티 (032, 스키마 `0015`)
   - `src/community/`: 글 목록·인기·상세·쓰기·수정·삭제·채택(`CommunityService`), 신고·관리자 신고 처리(`ReportsService`), 숨김 공통 처리(`moderation.ts`)
   - 저장: `posts`(`kind = 'COMMUNITY'`, 내부 소스) + `community_posts`. `posts.url`은 `WEB_BASE_URL/community/posts/{id}`, `posts.summary`는 마크다운을 걷어낸 앞 200자(`markdown-excerpt.ts`). 줄·목록 항목은 ` · `로 잇고, `. ! ? … :`로 끝난 줄 뒤는 공백으로 이음(035). 기존 글 요약 재생성은 `node scripts/regenerate-community-excerpts.js <database> [--apply]` (빌드 후, 기본은 미리보기만). 본문은 받은 원문 그대로 저장하고 렌더링하지 않음
@@ -302,7 +309,7 @@ curl -H "Authorization: Bearer <토큰>" localhost:3000/api/admin/stats
   - `server/.env.test`가 있으면 그것을, 없으면 `.env`를 읽음. `.env`를 쓸 때는 `DB_DATABASE=devfeed_test npm run test:e2e`
   - 테스트가 실패해 데이터가 남으면 `db/scripts/test-db-reset.sh`(dba)로 초기화
 - 각 테스트가 소스·태그·글·회원을 직접 만들고 끝나면 지움 (실행 후 테스트 DB 0행 확인)
-- 현재 90건
+- 현재 92건
   - 탈퇴 잔존 (002 필수): `db/queries/withdrawal-check.sql`(dba)을 그대로 읽어 실행. 탈퇴 전 데이터가 있음을 확인한 뒤 탈퇴 → 12개 테이블(좋아요·댓글·패스키·등록 챌린지·점수 원장 포함) 0건, 추천 로그 `user_id` NULL, 조회수 유지. 비밀번호 틀림 403, 탈퇴 후 로그인·리프레시·남은 토큰 거부
   - 회원 흐름: 가입 검증·중복 → 관심 태그(개수·없는 태그 검증) → 온보딩 완료 → 북마크(멱등·커서·태그 필터·피드 플래그·해제) → 조회 → 읽은 기록(순서·개별·전체 삭제) → 닉네임 변경, 온보딩 건너뛰기, 북마크 5,000건 제한
   - 인증: 리프레시 교체, 30초 이내 재사용 401, 30초 지난 재사용 시 계열 전체 폐기, 로그아웃, 5회 실패 잠금

@@ -4,13 +4,14 @@ import { securityHeaders } from './common/http/security-headers';
 import { createValidationPipe } from './common/validation/validation.pipe';
 import { visitorMiddleware } from './common/visitor/visitor';
 import { APP_ENV } from './config/env';
+import { WEB_FEED_PATHS } from './web/web-feeds.controller';
 import type { AppEnv } from './config/env';
 
 export function configureApp(app: INestApplication): AppEnv {
   const env = app.get<AppEnv>(APP_ENV);
   const express = app as NestExpressApplication;
   express.set('trust proxy', 'loopback');
-  express.setGlobalPrefix('api');
+  express.setGlobalPrefix('api', { exclude: WEB_FEED_PATHS });
   express.use(securityHeaders);
   express.use(visitorMiddleware(env.cookieSecure));
   express.useGlobalPipes(createValidationPipe());

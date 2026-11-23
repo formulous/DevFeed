@@ -18,6 +18,7 @@ import { PasskeysModule } from './passkeys/passkeys.module';
 import { ReactionsModule } from './reactions/reactions.module';
 import { RecommendationsModule } from './recommendations/recommendations.module';
 import { SearchModule } from './search/search.module';
+import { WebModule } from './web/web.module';
 
 @Module({
   imports: [
@@ -29,7 +30,7 @@ import { SearchModule } from './search/search.module';
         skipIf: () => !env.rateLimitEnabled,
       }),
     }),
-    HealthModule, DatabaseModule, ScheduleModule.forRoot(), AuthModule, CrawlModule, AdminModule, CatalogModule, PostsModule, SearchModule, RecommendationsModule, ReactionsModule, PasskeysModule, CommunityModule],
+    HealthModule, DatabaseModule, ScheduleModule.forRoot(), AuthModule, CrawlModule, AdminModule, CatalogModule, PostsModule, SearchModule, RecommendationsModule, ReactionsModule, PasskeysModule, CommunityModule, WebModule],
   providers: [
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
