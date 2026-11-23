@@ -9,6 +9,9 @@ import { ErrorState } from '@/components/common/ErrorState';
 import { ProfileCard } from '@/components/profile/ProfileCard';
 import { BarButton } from '@/components/filters/FilterLayout';
 import { InlinePicker } from '@/components/filters/InlinePicker';
+import { topMoreHref, WeeklyTop } from '@/components/post/WeeklyTop';
+import { PATHS } from '@/lib/routes';
+import { useSearchParams } from 'react-router';
 import { ToggleChip } from '@/components/filters/FilterPanel';
 import { Segment } from '@/components/filters/Segment';
 import { PostCard } from '@/components/post/PostCard';
@@ -81,6 +84,7 @@ export function SecurityNewsPage() {
   const { status } = useAuth();
   const state = useSecurityNewsState();
   const { query } = state;
+  const [params] = useSearchParams();
   const [panelOpen, setPanelOpen] = useState(false);
   const panelId = useId();
   const sources = useQuery(securitySourcesQuery);
@@ -160,6 +164,7 @@ export function SecurityNewsPage() {
         )}
         <p className="mb-3 text-xs text-fg-muted">국내·해외 보안 매체의 최신 기사 제목과 요약만 보여드려요. 전문은 원문에서 확인해 주세요</p>
 
+        <WeeklyTop scope="security" filter={{ region: query.region }} moreHref={topMoreHref(PATHS.securityPopular, params, 'region')} />
         {list.isPending ? (
           <div>
             {Array.from({ length: 5 }, (_, i) => (

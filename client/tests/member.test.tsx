@@ -148,7 +148,7 @@ describe('S-08 북마크', () => {
       ),
     );
     renderWithApp(<App />, '/');
-    await screen.findByText(mockPosts[0].title);
+    await screen.findAllByRole('article');
     await user.click(screen.getAllByRole('button', { name: '북마크' })[0]);
     expect(await screen.findByText('북마크는 최대 5,000개까지 저장할 수 있어요')).toBeInTheDocument();
     await waitFor(() => expect(screen.getAllByRole('button', { name: '북마크' })[0]).toHaveAttribute('aria-pressed', 'false'));

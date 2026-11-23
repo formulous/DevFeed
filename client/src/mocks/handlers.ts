@@ -1,4 +1,5 @@
 import { categoryLabel } from '@/lib/categories';
+import { parseSize, rankByReactions, REACTION_SORT } from './weeklyTop';
 import { http, HttpResponse } from 'msw';
 import type { Me, PostSummary } from '@/api/types';
 import { resetAdminState } from './adminFixtures';
@@ -160,14 +161,18 @@ export const handlers = [
     const latest = Date.parse(mockPosts[0].publishedAt);
     const member = isMember(request);
     const sort = url.searchParams.get('sort') ?? 'VIEWS';
-    if (sort !== 'VIEWS' && sort !== 'COMMENTS') return error(400, 'VALIDATION_FAILED', '정렬 값이 올바르지 않아요');
+    if (sort !== 'VIEWS' && sort !== 'COMMENTS' && sort !== REACTION_SORT) return error(400, 'VALIDATION_FAILED', '정렬 값이 올바르지 않아요');
+    const size = parseSize(url);
+    if (size === null) return error(400, 'VALIDATION_FAILED', '개수 값이 올바르지 않아요');
     const metric = (p: { viewCount: number; commentCount?: number }) => (sort === 'COMMENTS' ? (p.commentCount ?? 0) : p.viewCount);
-    const items = mockPosts
+    const inRange = mockPosts
       .filter((p) => latest - Date.parse(p.publishedAt) <= hours * 3_600_000 && inField(p))
-      .map((p) => ({ ...decorate(p, member), viewCount: mockViewCount(p.id) }))
+      .map((p) => ({ ...decorate(p, member), viewCount: mockViewCount(p.id) }));
+    if (sort === REACTION_SORT) return HttpResponse.json({ items: rankByReactions(inRange).slice(0, size) });
+    const items = inRange
       .filter((p) => metric(p) >= 1)
       .sort((a, b) => metric(b) - metric(a) || b.publishedAt.localeCompare(a.publishedAt))
-      .slice(0, 20);
+      .slice(0, size);
     return HttpResponse.json({ items });
   }),
 
@@ -244,23 +249,30 @@ export const handlers = [
 
   http.get('*/api/security-news/popular', ({ request }) => {
     const url = new URL(request.url);
-    if ([...url.searchParams.keys()].some((k) => k !== 'period' && k !== 'region')) {
+    if ([...url.searchParams.keys()].some((k) => !['period', 'region', 'sort', 'size'].includes(k))) {
       return error(400, 'VALIDATION_FAILED', '요청 값이 올바르지 않아요');
     }
     const hours = { DAY: 24, WEEK: 24 * 7, MONTH: 24 * 30 }[url.searchParams.get('period') ?? ''];
     if (!hours) return error(400, 'VALIDATION_FAILED', '기간 값이 올바르지 않아요');
     const region = url.searchParams.get('region');
     if (region && region !== 'DOMESTIC' && region !== 'OVERSEAS') return error(400, 'VALIDATION_FAILED', '지역 값이 올바르지 않아요');
+    const sort = url.searchParams.get('sort') ?? 'VIEWS';
+    if (sort !== 'VIEWS' && sort !== REACTION_SORT) return error(400, 'VALIDATION_FAILED', '정렬 값이 올바르지 않아요');
+    const size = parseSize(url);
+    if (size === null) return error(400, 'VALIDATION_FAILED', '개수 값이 올바르지 않아요');
     const regionOf = new Map(mockNewsSources.map((s) => [s.id, s.region]));
     const latest = Math.max(...mockNewsPosts.map((p) => Date.parse(p.publishedAt)));
     const member = isMember(request);
     const items = mockNewsPosts
       .filter((p) => latest - Date.parse(p.publishedAt) <= hours * 3_600_000 && (!region || regionOf.get(p.source.id) === region))
-      .map((p) => ({ ...decorate(p, member), isPopular: false, viewCount: mockViewCount(p.id) }))
-      .filter((p) => p.viewCount >= 1)
-      .sort((a, b) => b.viewCount - a.viewCount || b.publishedAt.localeCompare(a.publishedAt))
-      .slice(0, 20);
-    return HttpResponse.json({ items });
+      .map((p) => ({ ...decorate(p, member), isPopular: false, viewCount: mockViewCount(p.id) }));
+    if (sort === REACTION_SORT) return HttpResponse.json({ items: rankByReactions(items).slice(0, size) });
+    return HttpResponse.json({
+      items: items
+        .filter((p) => p.viewCount >= 1)
+        .sort((a, b) => b.viewCount - a.viewCount || b.publishedAt.localeCompare(a.publishedAt))
+        .slice(0, size),
+    });
   }),
 
   http.get('*/api/security-news', ({ request }) => {

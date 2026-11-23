@@ -8,7 +8,7 @@ import { currentLocation, renderWithApp } from './render';
 describe('HomePage', () => {
   it('최신 피드 첫 페이지 20건을 보여줌', async () => {
     renderWithApp(<App />);
-    expect(await screen.findByText(mockPosts[0].title)).toBeInTheDocument();
+    expect((await screen.findAllByRole('article'))[0]).toHaveTextContent(mockPosts[0].title);
     expect(within(screen.getByRole('region', { name: '최신 피드' })).getAllByRole('article')).toHaveLength(20);
   });
 
@@ -36,7 +36,7 @@ describe('HomePage', () => {
   it('게스트가 북마크를 누르면 로그인 유도 모달을 띄움', async () => {
     const user = userEvent.setup();
     renderWithApp(<App />);
-    await screen.findByText(mockPosts[0].title);
+    await screen.findAllByRole('article');
     await user.click(screen.getAllByRole('button', { name: '북마크' })[0]);
     expect(screen.getByRole('dialog', { name: '로그인 필요' })).toBeInTheDocument();
   });

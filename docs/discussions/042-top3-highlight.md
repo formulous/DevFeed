@@ -74,3 +74,20 @@
 ### pm (server 배포 확인, 2026-11-24)
 - 공개 API `sort=REACTIONS&size=3`: 자유 게시판 50·40·33점, 말머리 질문 15·11(댓글 6)·11(댓글 5) → 동점 댓글 수 우선 확인, 기술 뉴스 블로그만 3건, 보안 뉴스 1건(있는 만큼)
 - 남은 것: client 배포 → pm 공개 확인
+
+### client (1차) — API 형태 제안·mock 구현
+- **API 제안 (server 재량, 바꾸면 client가 맞춤)**: 새 경로 없이 기존 인기 경로 3개에 `sort=REACTIONS`와 `size`를 더함
+  - `GET /posts/popular?period=WEEK&sort=REACTIONS&size=3[&field=]`
+  - `GET /security-news/popular?period=WEEK&sort=REACTIONS&size=3[&region=]` (지금 `sort`가 없어 `VIEWS|REACTIONS` 추가)
+  - `GET /community/popular?period=WEEK&sort=REACTIONS&size=3[&category=]`
+  - `REACTIONS`: 점수 = `likeCount + commentCount` 1 이상, 점수 → 댓글 수 → 최신 발행순 (pm 기준 그대로). `size` 1~20, 기본 20 (생략하면 지금과 같음). 응답은 지금 `PopularPost` 그대로(카드에 `likeCount`·`commentCount` 필요)
+  - 캐시: 기간 × 필터 × 정렬 10분, `size`는 캐시 키에서 빼고 20건 캐시에서 잘라도 됨
+- client mock 구현 (커밋만, server 배포 전이라 `build:web` 배포 안 함)
+  - `WeeklyTop`: 기술 뉴스(`/tech`)·보안 뉴스(`/security`)·자유 게시판(`/community`) 최신순 목록 맨 위. 정렬·인기 화면에는 없음
+  - md(768px) 이상 3칸 카드: 큰 순위 숫자(1위 강조색), 제목 2줄, 말머리/출처, ♡·💬. 미만 세로 3줄: 순위·제목 1줄·♡·💬. `subtle` 배경 박스, 머리말은 트렌드 아이콘 + "이번 주 인기"
+  - 로딩 3칸 스켈레톤, 0건·실패면 숨김(목록 그대로, 재시도 없음). 클릭: 자유 게시판 상세 / 뉴스 원문 새 탭 + 조회 기록
+  - 더 보기: 자유 게시판 → `/community/likes`, 기술 뉴스 → `/tech/comments`, 보안 뉴스 → `/security/popular` (기간 기본 7일, 지금 분야·말머리·지역 유지)
+  - 필터: 기술 `field`, 보안 `region`, 자유 게시판 `category`만. 태그·소스는 안 보냄
+- 검증: 테스트 233건(`weeklyTop.test.tsx` 4건 신규: 순서·3건 이하·분야 전달·1위 강조·더 보기 주소, 자유 게시판 상세 링크, 0건·실패 숨김, 인기 화면 없음)·빌드 통과
+- 로컬 mock 1440·360 라이트·다크 세 탭: 1440 3칸(각 227px), 360 세로 3줄(제목 말줄임), 가로 넘침 0, 페이지 오류 0
+- server 배포 알림 받으면 `build:web` 배포·실서버 대조

@@ -267,6 +267,13 @@ App
 - 기간: `ranked` 탭(인기·댓글·좋아요) 사이 이동 때만 `period`를 넘김 (`tabHref`), 최신·추천으로 가면 버림
 - API: 기존 인기 API에 `sort` (`/posts/popular?sort=VIEWS|COMMENTS`, `/community/popular?sort=SCORE|COMMENTS|LIKES`, 기본값이면 생략). 순위 카드는 `RankedPosts` `metric` → `PostCard`·`ReactionBar` `emphasize`로 반응 줄의 해당 수치만 굵게 (인기순은 `조회 N` 메타 유지)
 
+## 이번 주 인기 TOP 3 (`docs/discussions/042`)
+- 세 탭 최신순 목록 맨 위 `WeeklyTop` (`components/post/WeeklyTop.tsx`). 인기·댓글·좋아요·추천순 화면에는 없음
+- API(제안, server 확정 전 mock): 기존 인기 경로에 `period=WEEK&sort=REACTIONS&size=3` + 기술 `field`·보안 `region`·자유 게시판 `category` (`api/weeklyTop.ts`)
+- md 이상 3칸 카드(큰 순위 숫자, 1위만 강조색, 제목 2줄·말머리/출처·♡·💬), 그 미만 세로 3줄(순위·제목 1줄·♡·💬). `subtle` 배경 박스
+- 로딩 3칸 스켈레톤, 0건·실패면 숨김(목록 그대로). 자유 게시판은 상세, 뉴스는 원문 새 탭 + 조회 기록
+- 더 보기: 자유 게시판 → 좋아요순, 기술 뉴스 → 댓글순, 보안 뉴스 → 인기순 (기간 기본 7일, 지금 분야·말머리·지역 유지)
+
 ## 자유 게시판 (커뮤니티, F-090~F-094, M12, `docs/discussions/032`)
 - 1단 탭 3개(033 이후 자유 게시판·기술 뉴스·보안 뉴스). 커뮤니티 내부 탭 `[최신 | 인기]` + 말머리 글자 탭(`?category=question|discussion|share`, 탭 이동 시 유지) + 오른쪽 `글쓰기`(비회원은 로그인 안내 모달). 좌측 열은 프로필 카드만 (목록 API에 태그 필터 없음)
 - 카드: `PostCard`가 `kind === 'COMMUNITY'`면 출처 대신 말머리·`해결됨`·작성자(아바타·닉네임·등급, 640px 미만은 등급 숨김)를 보이고 제목·💬는 상세(`/community/posts/:id`)로 이동. 북마크·읽은 기록 목록도 `kind`로 같은 분기

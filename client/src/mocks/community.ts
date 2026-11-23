@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw';
+import { parseSize, rankByReactions, REACTION_SORT } from './weeklyTop';
 import type {
   CommunityCategory,
   CommunityPost,
@@ -438,12 +439,16 @@ export function communityHandlers(ctx: Ctx) {
       const cat = categoryParam(url);
       if (cat.bad) return error(400, 'VALIDATION_FAILED', '말머리 값이 올바르지 않아요');
       const sort = url.searchParams.get('sort') ?? 'SCORE';
-      if (!['SCORE', 'COMMENTS', 'LIKES'].includes(sort)) return error(400, 'VALIDATION_FAILED', '정렬 값이 올바르지 않아요');
+      if (!['SCORE', 'COMMENTS', 'LIKES', REACTION_SORT].includes(sort)) return error(400, 'VALIDATION_FAILED', '정렬 값이 올바르지 않아요');
+      const size = parseSize(url);
+      if (size === null) return error(400, 'VALIDATION_FAILED', '개수 값이 올바르지 않아요');
       const v = viewer(request);
       const now = Date.now();
-      const items = visible()
+      const inRange = visible()
         .filter((p) => now - Date.parse(p.createdAt) <= hours * 3_600_000 && (!cat.value || p.category === cat.value))
-        .map((p) => ({ ...communityCard(p, v.userId !== null, v.userId), viewCount: p.viewCount }))
+        .map((p) => ({ ...communityCard(p, v.userId !== null, v.userId), viewCount: p.viewCount }));
+      if (sort === REACTION_SORT) return HttpResponse.json({ items: rankByReactions(inRange).slice(0, size) });
+      const items = inRange
         .map((p) => ({
           p,
           score:
@@ -455,7 +460,7 @@ export function communityHandlers(ctx: Ctx) {
         }))
         .filter(({ score }) => sort === 'SCORE' || score >= 1)
         .sort((a, b) => b.score - a.score || b.p.publishedAt.localeCompare(a.p.publishedAt))
-        .slice(0, 20)
+        .slice(0, size)
         .map(({ p }) => p);
       return HttpResponse.json({ items });
     }),

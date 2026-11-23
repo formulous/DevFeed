@@ -1,5 +1,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router';
+import { topMoreHref, WeeklyTop } from '@/components/post/WeeklyTop';
+import { PATHS } from '@/lib/routes';
 import { useAuth } from '@/auth/AuthProvider';
 import { EmptyState } from '@/components/common/EmptyState';
 import { ErrorState } from '@/components/common/ErrorState';
@@ -27,6 +29,7 @@ export function CommunityPage() {
   return (
     <ProfileRail>
       <section aria-label="자유 게시판 최신 글">
+        <WeeklyTop scope="community" filter={{ category: category?.api ?? null }} moreHref={topMoreHref(PATHS.communityLikes, params, 'category')} />
         {list.isPending ? (
           <div>
             {Array.from({ length: 5 }, (_, i) => (

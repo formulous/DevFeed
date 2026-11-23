@@ -10,11 +10,15 @@ import { useFeedFilterBindings, useFeedFilters } from '@/hooks/useFeedFilters';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useOpenPost, useToggleBookmark } from '@/hooks/usePostActions';
 import { feedQuery } from './queries';
+import { topMoreHref, WeeklyTop } from '@/components/post/WeeklyTop';
+import { PATHS } from '@/lib/routes';
+import { useSearchParams } from 'react-router';
 
 export function HomePage() {
   const { status } = useAuth();
   const { filters, reset } = useFeedFilters();
   const bindings = useFeedFilterBindings();
+  const [params] = useSearchParams();
   const feed = useInfiniteQuery({ ...feedQuery(filters, status), enabled: status !== 'loading' });
   const openPost = useOpenPost();
   const toggleBookmark = useToggleBookmark();
@@ -28,6 +32,7 @@ export function HomePage() {
   return (
     <FilterLayout b={bindings}>
       <section className="min-w-0 flex-1" aria-label="최신 피드">
+        <WeeklyTop scope="tech" filter={{ field: filters.field }} moreHref={topMoreHref(PATHS.techComments, params, 'field')} />
         {feed.isPending ? (
           <div>
             {Array.from({ length: 5 }, (_, i) => (
